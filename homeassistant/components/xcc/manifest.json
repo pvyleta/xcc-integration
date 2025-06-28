@@ -4,6 +4,7 @@
   "codeowners": ["@pvyleta"],
   "config_flow": true,
   "documentation": "https://github.com/pvyleta/xcc-integration",
+  "documentation_url": "https://github.com/pvyleta/xcc-integration",
   "integration_type": "device",
   "iot_class": "local_polling",
   "loggers": ["xcc_client", "homeassistant.components.xcc"],
