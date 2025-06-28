@@ -17,17 +17,34 @@ Command-line tool for XCC heat pump controllers with photovoltaic integration. R
 
 ```
 xcc-integration/
-├── xcc_cli.py              # Main CLI application
-├── xcc_client.py           # Reusable XCC client library
-├── scripts/
-│   ├── analyze_known_pages.py     # Database generator
-│   ├── api_explorer.py            # Development utility
-│   └── fetch_sample_pages.py      # Sample data fetcher
-├── test/
-│   ├── sample_pages/              # Test XML samples
-│   └── test_*.py                  # Test suite
-└── xcc_data/                      # Live XML data cache
+├── xcc_cli.py                     # Main CLI application
+├── xcc_client.py                  # Reusable XCC client library
+├── custom_components/xcc/         # Home Assistant integration
+├── homeassistant/components/xcc/  # HA core integration (dev)
+├── tests/test_xcc/               # Integration test suite
+├── scripts/                      # Development utilities
+├── .devcontainer/               # VS Code dev container
+├── mock_data/                   # Test data for mock controller
+└── xcc_data/                    # Live XML data cache
 ```
+
+## Home Assistant Integration
+
+This project includes a **complete Home Assistant integration** that transforms the CLI tool into a full smart home integration:
+
+### 🏠 **Integration Features**
+- **Automatic Discovery**: Finds all XCC parameters automatically
+- **Multi-language Support**: English/Czech with auto-detection
+- **MQTT Integration**: Auto-discovery for external systems
+- **Entity Types**: Sensors, switches, numbers, selects, binary sensors
+- **Professional UI**: Native Home Assistant configuration flow
+
+### 📦 **Installation Options**
+- **HACS**: One-click installation (recommended)
+- **Manual**: Download and copy to `custom_components/`
+- **Development**: Full testing and development environment
+
+See [Integration README](README-integration.md) for detailed installation and usage instructions.
 
 ## Installation
 
@@ -222,6 +239,77 @@ python xcc_cli.py --ip 192.168.0.50 --username myuser --password mypass pages
 ```
 
 
+
+## Testing
+
+This project includes comprehensive testing for both the CLI tool and Home Assistant integration.
+
+### 🧪 **CLI Testing**
+
+Test the command-line interface:
+
+```bash
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run CLI tests
+python -m pytest test/ -v
+
+# Test with mock data
+python test_xcc_client.py
+```
+
+### 🏠 **Home Assistant Integration Testing**
+
+Multiple testing approaches for the HA integration:
+
+#### **Quick Unit Testing (Recommended)**
+```bash
+# Fast, comprehensive testing using official HA framework
+python run_ha_tests.py
+```
+- ✅ Tests configuration flow, entity creation, MQTT discovery
+- ✅ Runs in seconds, no setup required
+- ✅ Same framework Home Assistant core uses
+
+#### **VS Code Development Container**
+```bash
+# 1. Install VS Code + Dev Containers extension
+# 2. Open project in VS Code
+# 3. Command Palette → "Dev Containers: Reopen in Container"
+# 4. Start HA: hass --config /config --debug
+# 5. Open: http://localhost:8123
+```
+- 🏠 Real Home Assistant with full UI
+- 📡 MQTT broker pre-configured
+- 🎭 Mock XCC controller included
+
+#### **Mock Controller Testing**
+```bash
+# Start mock XCC controller (no real hardware needed)
+python xcc_mock_server.py
+
+# Configure HA integration with:
+# IP: localhost:8080, User: xcc, Pass: xcc
+```
+
+#### **Docker Development Environment**
+```bash
+# Complete isolated environment
+./start_dev_environment.sh
+
+# Access: HA (8123), Mock XCC (8080), MQTT (1883)
+```
+
+### 📋 **Testing Checklist**
+
+Before deploying:
+- [ ] CLI tests pass: `pytest test/ -v`
+- [ ] Integration tests pass: `python run_ha_tests.py`
+- [ ] Mock controller works: `python xcc_mock_server.py`
+- [ ] Real hardware connection: `python xcc_cli.py --ip YOUR_IP pages`
+
+See [Integration Testing Guide](README-integration.md#testing-the-integration) for detailed instructions.
 
 ## Architecture
 

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "🎨 Running Code Linting and Formatting"
+
+# Check if ruff is available
+if ! command -v ruff &> /dev/null; then
+    echo "📦 Installing ruff..."
+    python3 -m pip install ruff
+fi
+
+echo "🔍 Running ruff check..."
+ruff check custom_components/xcc/ tests/ --fix
+
+echo "🎨 Running ruff format..."
+ruff format custom_components/xcc/ tests/
+
+echo "✅ Linting completed!"

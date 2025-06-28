@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "🚀 Starting XCC Integration Development Environment"
+
+# Create config dir if not present
+if [[ ! -d "${PWD}/config" ]]; then
+    mkdir -p "${PWD}/config"
+    export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+    hass --config "${PWD}/config" --script ensure_config
+fi
+
+# Set the path to custom_components
+# This lets us have the structure we want /custom_components/xcc
+# while at the same time have Home Assistant configuration inside /config
+export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+
+echo "📋 Configuration:"
+echo "  - Home Assistant: http://localhost:8123"
+echo "  - Config directory: ${PWD}/config"
+echo "  - Custom components: ${PWD}/custom_components"
+echo ""
+echo "🔧 To add XCC integration:"
+echo "  1. Open Home Assistant at http://localhost:8123"
+echo "  2. Go to Settings > Devices & Services"
+echo "  3. Click 'Add Integration'"
+echo "  4. Search for 'XCC Heat Pump Controller'"
+echo "  5. Configure with your XCC controller or use mock at localhost:8080"
+echo ""
+
+# Start Home Assistant
+echo "🏠 Starting Home Assistant..."
+hass --config "${PWD}/config" --debug

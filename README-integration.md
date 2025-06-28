@@ -62,34 +62,125 @@
 
 The integration will automatically discover all available parameters and create entities.
 
-## Development and Testing
+## Testing the Integration
 
-### Local Development Environment
+The XCC integration includes comprehensive testing options for both developers and users who want to verify functionality before deployment.
 
-This repository includes a complete Docker-based development environment:
+### 🧪 Option 1: Quick Unit Testing (Recommended)
 
-```bash
-# Start the development environment
-./start_dev_environment.sh
-
-# Access services
-# - Home Assistant: http://localhost:8123
-# - XCC Mock Controller: http://localhost:8080
-# - MQTT Broker: localhost:1883
-```
-
-### Running Tests
+Use the official Home Assistant testing framework for fast, comprehensive testing:
 
 ```bash
 # Install test dependencies
 pip install -r requirements-test.txt
 
-# Run tests
-python -m pytest tests/ -v
-
-# Validate integration structure
-python validate_integration.py
+# Run all integration tests
+python run_ha_tests.py
 ```
+
+**What this tests:**
+- ✅ Configuration flow (setup UI)
+- ✅ Integration loading and unloading
+- ✅ Entity discovery and creation
+- ✅ MQTT discovery functionality
+- ✅ Error handling and edge cases
+
+**Benefits:**
+- 🚀 **Fast** - tests run in seconds
+- 🧪 **Comprehensive** - tests all integration aspects
+- 💻 **No setup required** - pure Python testing
+- ✅ **Professional** - same framework Home Assistant core uses
+
+### 🎯 Option 2: VS Code Development Container
+
+For full development experience with real Home Assistant:
+
+1. **Install VS Code** + **Dev Containers extension**
+2. **Open project** in VS Code
+3. **Command Palette** → "Dev Containers: Reopen in Container"
+4. **Wait for automatic setup**
+5. **Start Home Assistant**: `hass --config /config --debug`
+6. **Open**: http://localhost:8123
+
+**What you get:**
+- 🏠 **Real Home Assistant** with full UI
+- 📡 **MQTT broker** pre-configured
+- 🎭 **Mock XCC controller** for testing
+- 🔧 **All dependencies** pre-installed
+- 🐛 **Debugging support** built-in
+
+### 🎭 Option 3: Mock Controller Testing
+
+Test with a simulated XCC controller (no real hardware needed):
+
+```bash
+# Start mock XCC controller
+python xcc_mock_server.py
+
+# In another terminal, start Home Assistant
+hass --config config --debug
+
+# Configure integration with:
+# - IP: localhost:8080
+# - Username: xcc
+# - Password: xcc
+```
+
+### 🏠 Option 4: Docker Development Environment
+
+Complete isolated environment with all services:
+
+```bash
+# Start everything (HA + MQTT + Mock XCC)
+./start_dev_environment.sh
+
+# Access services:
+# - Home Assistant: http://localhost:8123
+# - Mock XCC: http://localhost:8080
+# - MQTT: localhost:1883
+```
+
+### 📋 Testing Checklist
+
+Before deploying to your real Home Assistant:
+
+- [ ] **Unit tests pass**: `python run_ha_tests.py`
+- [ ] **Integration loads**: No errors in HA logs
+- [ ] **Entities created**: Sensors, switches, etc. appear
+- [ ] **Configuration works**: Setup UI accepts your XCC details
+- [ ] **MQTT discovery**: MQTT entities appear (if MQTT configured)
+- [ ] **Multi-language**: Entity names in correct language
+- [ ] **Error handling**: Graceful handling of connection issues
+
+### 🔧 Troubleshooting Tests
+
+**Tests fail with import errors:**
+```bash
+# Ensure you're in the project root directory
+cd /path/to/xcc-integration
+
+# Install test dependencies
+pip install -r requirements-test.txt
+```
+
+**VS Code container won't start:**
+- Ensure Docker is running
+- Install "Dev Containers" extension
+- Try "Dev Containers: Rebuild Container"
+
+**Mock controller connection fails:**
+- Check if port 8080 is available
+- Try different port in `xcc_mock_server.py`
+- Verify firewall settings
+
+### 🚀 Recommended Testing Workflow
+
+1. **Quick validation**: `python run_ha_tests.py`
+2. **Integration testing**: Use VS Code Dev Container
+3. **Real hardware**: Deploy to your Home Assistant
+4. **Production**: Install via HACS
+
+This ensures your integration works correctly at every level!
 
 ## MQTT Integration
 

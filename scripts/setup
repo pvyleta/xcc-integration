@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "🔧 Setting up XCC Integration Development Environment"
+
+# Install Python requirements
+echo "📦 Installing Python requirements..."
+python3 -m pip install --upgrade pip
+python3 -m pip install --requirement requirements-dev.txt
+
+# Create config directory if not present
+if [[ ! -d "${PWD}/config" ]]; then
+    echo "📁 Creating Home Assistant config directory..."
+    mkdir -p "${PWD}/config"
+    
+    # Initialize Home Assistant config
+    export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+    hass --config "${PWD}/config" --script ensure_config
+fi
+
+echo "✅ Setup complete!"
+echo ""
+echo "🚀 Available commands:"
+echo "  scripts/develop    - Start Home Assistant with XCC integration"
+echo "  scripts/test       - Run all tests"
+echo "  scripts/lint       - Run code linting"
+echo "  scripts/mock       - Start mock XCC controller"

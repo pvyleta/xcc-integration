@@ -4,3 +4,4 @@
 1751145517: Opening ipv6 listen socket on port 1883.
 1751145517: Opening websockets listen socket on port 9001.
 1751145517: mosquitto version 2.0.21 running
+1751147318: Saving in-memory database to /mosquitto/data//mosquitto.db.
