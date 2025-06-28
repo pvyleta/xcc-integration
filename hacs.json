@@ -1,11 +1,9 @@
 {
   "name": "XCC Heat Pump Controller",
   "content_in_root": false,
-  "filename": "xcc",
   "country": ["CZ", "SK"],
   "domains": ["sensor", "binary_sensor", "switch", "number", "select"],
   "iot_class": "Local Polling",
   "homeassistant": "2024.1.0",
-  "render_readme": true,
-  "zip_release": false
+  "render_readme": true
 }
