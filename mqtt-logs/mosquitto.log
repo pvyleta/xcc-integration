@@ -1,0 +1,6 @@
+1751145517: mosquitto version 2.0.21 starting
+1751145517: Config loaded from /mosquitto/config/mosquitto.conf.
+1751145517: Opening ipv4 listen socket on port 1883.
+1751145517: Opening ipv6 listen socket on port 1883.
+1751145517: Opening websockets listen socket on port 9001.
+1751145517: mosquitto version 2.0.21 running

@@ -46,8 +46,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
 
     # Set up MQTT device discovery if MQTT is available
-    if "mqtt" in hass.config.components:
-        await _setup_mqtt_discovery(hass, coordinator)
+    try:
+        if "mqtt" in hass.config.components:
+            await _setup_mqtt_discovery(hass, coordinator)
+        else:
+            _LOGGER.debug("MQTT not configured, skipping MQTT discovery")
+    except Exception as err:
+        _LOGGER.warning("MQTT discovery setup failed, continuing without MQTT: %s", err)
 
     return True
 
@@ -79,6 +84,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _setup_mqtt_discovery(hass: HomeAssistant, coordinator: XCCDataUpdateCoordinator) -> None:
     """Set up MQTT device discovery for XCC entities."""
     try:
+        # Check if MQTT component is loaded
+        if "mqtt" not in hass.config.components:
+            _LOGGER.debug("MQTT component not loaded, skipping MQTT discovery")
+            return
+
         from .mqtt_discovery import XCCMQTTDiscovery
 
         _LOGGER.debug("Setting up MQTT discovery for XCC controller")
@@ -90,11 +100,14 @@ async def _setup_mqtt_discovery(hass: HomeAssistant, coordinator: XCCDataUpdateC
         if success:
             # Store discovery instance for cleanup
             coordinator.mqtt_discovery = mqtt_discovery
+            _LOGGER.info("MQTT discovery setup successful for XCC controller %s", coordinator.ip_address)
+        else:
+            _LOGGER.warning("MQTT discovery setup failed for XCC controller %s", coordinator.ip_address)
 
-    except ImportError:
-        _LOGGER.debug("MQTT component not available, skipping MQTT discovery")
+    except ImportError as err:
+        _LOGGER.debug("MQTT component not available, skipping MQTT discovery: %s", err)
     except Exception as err:
-        _LOGGER.error("Error setting up MQTT discovery: %s", err)
+        _LOGGER.warning("Error setting up MQTT discovery, continuing without MQTT: %s", err)
 
 
 

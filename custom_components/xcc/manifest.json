@@ -10,7 +10,6 @@
   "requirements": ["aiohttp>=3.8.0", "lxml>=4.6.0"],
   "single_config_entry": false,
   "version": "1.0.0",
-  "dependencies": ["mqtt"],
   "after_dependencies": ["mqtt"],
   "quality_scale": "silver"
 }

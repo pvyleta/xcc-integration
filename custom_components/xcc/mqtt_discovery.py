@@ -7,7 +7,6 @@ import json
 import logging
 from typing import Any
 
-from homeassistant.components import mqtt
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -31,9 +30,16 @@ class XCCMQTTDiscovery:
     async def async_setup(self) -> bool:
         """Set up MQTT discovery."""
         try:
+            # Check if MQTT component is available
+            try:
+                from homeassistant.components import mqtt
+            except ImportError:
+                _LOGGER.debug("MQTT component not available")
+                return False
+
             # Wait for MQTT to be available
             if not await mqtt.async_wait_for_mqtt_client(self.hass):
-                _LOGGER.warning("MQTT not available, skipping MQTT discovery setup")
+                _LOGGER.warning("MQTT client not available, skipping MQTT discovery setup")
                 return False
 
             # Publish device discovery
