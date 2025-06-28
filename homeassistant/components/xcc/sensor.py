@@ -44,7 +44,7 @@ UNIT_MAPPING = {
     "A": UnitOfElectricCurrent.AMPERE,
     "Hz": UnitOfFrequency.HERTZ,
     "bar": UnitOfPressure.BAR,
-    "Pa": UnitOfPressure.PASCAL,
+    "Pa": "Pa",  # Pascal not available in this HA version
     "s": UnitOfTime.SECONDS,
     "min": UnitOfTime.MINUTES,
     "h": UnitOfTime.HOURS,
@@ -61,7 +61,7 @@ DEVICE_CLASS_MAPPING = {
     UnitOfElectricCurrent.AMPERE: SensorDeviceClass.CURRENT,
     UnitOfFrequency.HERTZ: SensorDeviceClass.FREQUENCY,
     UnitOfPressure.BAR: SensorDeviceClass.PRESSURE,
-    UnitOfPressure.PASCAL: SensorDeviceClass.PRESSURE,
+    "Pa": SensorDeviceClass.PRESSURE,  # Pascal not available in this HA version
     PERCENTAGE: SensorDeviceClass.POWER_FACTOR,  # For efficiency percentages
 }
 

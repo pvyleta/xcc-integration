@@ -29,7 +29,6 @@ def run_tests():
     cmd = [
         sys.executable, "-m", "pytest",
         "tests/test_xcc/",
-        "-c", "pytest-xcc.ini",
         "-v",
         "--tb=short"
     ]
