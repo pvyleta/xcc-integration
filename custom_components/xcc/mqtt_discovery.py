@@ -26,6 +26,7 @@ class XCCMQTTDiscovery:
         self.ip_address = coordinator.ip_address
         self.device_id = f"{MQTT_DEVICE_PREFIX}_{self.ip_address.replace('.', '_')}"
         self._published_entities: set[str] = set()
+        self._mqtt = None  # Will be set during async_setup
 
     async def async_setup(self) -> bool:
         """Set up MQTT discovery."""
@@ -33,6 +34,7 @@ class XCCMQTTDiscovery:
             # Check if MQTT component is available
             try:
                 from homeassistant.components import mqtt
+                self._mqtt = mqtt  # Store reference for later use
             except ImportError:
                 _LOGGER.debug("MQTT component not available")
                 return False
@@ -73,7 +75,7 @@ class XCCMQTTDiscovery:
 
         # Publish device availability
         availability_topic = f"{MQTT_DEVICE_PREFIX}/{self.ip_address}/availability"
-        await mqtt.async_publish(
+        await self._mqtt.async_publish(
             self.hass,
             availability_topic,
             "online",
@@ -125,7 +127,7 @@ class XCCMQTTDiscovery:
         self._add_entity_specific_mqtt_config(entity_payload, entity_info, entity_type)
 
         # Publish discovery message
-        await mqtt.async_publish(
+        await self._mqtt.async_publish(
             self.hass,
             discovery_topic,
             json.dumps(entity_payload, separators=(',', ':')),
@@ -143,7 +145,7 @@ class XCCMQTTDiscovery:
         state_topic = f"{MQTT_DEVICE_PREFIX}/{self.ip_address}/{entity_id}/state"
         state_value = entity_info.get("state", "unknown")
         
-        await mqtt.async_publish(
+        await self._mqtt.async_publish(
             self.hass,
             state_topic,
             str(state_value),
@@ -255,10 +257,10 @@ class XCCMQTTDiscovery:
                 mqtt_component = self._get_mqtt_component_for_entity_type(entity_type)
                 if mqtt_component:
                     discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/{mqtt_component}/{self.device_id}/{entity_id}/config"
-                    await mqtt.async_publish(self.hass, discovery_topic, "", retain=True)
+                    await self._mqtt.async_publish(self.hass, discovery_topic, "", retain=True)
 
         # Remove availability
         availability_topic = f"{MQTT_DEVICE_PREFIX}/{self.ip_address}/availability"
-        await mqtt.async_publish(self.hass, availability_topic, "offline", retain=True)
+        await self._mqtt.async_publish(self.hass, availability_topic, "offline", retain=True)
 
         _LOGGER.info("Removed MQTT discovery for XCC controller %s", self.ip_address)

@@ -52,30 +52,42 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
+        _LOGGER.debug("Starting data update for XCC controller %s", self.ip_address)
         try:
             # Import XCC client here to avoid import issues
             from .xcc_client import XCCClient, parse_xml_entities
 
+            _LOGGER.debug("Connecting to XCC controller %s with username %s", self.ip_address, self.username)
             async with XCCClient(
                 ip=self.ip_address,
                 username=self.username,
                 password=self.password,
             ) as client:
                 # Fetch all XCC pages
+                _LOGGER.debug("Fetching %d XCC pages: %s", len(XCC_PAGES), XCC_PAGES)
                 pages_data = await asyncio.wait_for(
                     client.fetch_pages(XCC_PAGES), timeout=DEFAULT_TIMEOUT
                 )
+                _LOGGER.debug("Successfully fetched %d pages from XCC controller", len(pages_data))
 
                 # Parse entities from all pages
                 all_entities = []
                 for page_name, xml_content in pages_data.items():
                     if not xml_content.startswith("Error:"):
                         entities = parse_xml_entities(xml_content, page_name)
+                        _LOGGER.debug("Parsed %d entities from page %s", len(entities), page_name)
                         all_entities.extend(entities)
+                    else:
+                        _LOGGER.warning("Error fetching page %s: %s", page_name, xml_content)
 
                 # Process entities and organize data
+                _LOGGER.debug("Processing %d total entities from all pages", len(all_entities))
                 processed_data = self._process_entities(all_entities)
-                
+
+                # Log summary of processed data
+                entity_counts = {key: len(value) for key, value in processed_data.items()}
+                _LOGGER.info("XCC data update successful: %s", entity_counts)
+
                 # Update device info on first successful fetch
                 if not self.device_info:
                     self.device_info = {
@@ -90,8 +102,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 return processed_data
 
         except asyncio.TimeoutError as err:
+            _LOGGER.error("Timeout communicating with XCC controller %s: %s", self.ip_address, err)
             raise UpdateFailed(f"Timeout communicating with XCC controller: {err}") from err
         except Exception as err:
+            _LOGGER.error("Error communicating with XCC controller %s: %s", self.ip_address, err)
             if "authentication" in str(err).lower() or "login" in str(err).lower():
                 raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
             raise UpdateFailed(f"Error communicating with XCC controller: {err}") from err

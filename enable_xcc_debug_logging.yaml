@@ -1,0 +1,25 @@
+# Add this to your Home Assistant configuration.yaml to enable debug logging for XCC integration
+
+logger:
+  default: info
+  logs:
+    # Enable debug logging for XCC integration
+    custom_components.xcc: debug
+    custom_components.xcc.coordinator: debug
+    custom_components.xcc.config_flow: debug
+    custom_components.xcc.xcc_client: debug
+    custom_components.xcc.mqtt_discovery: debug
+    
+    # Optional: Enable debug for MQTT if you want to see MQTT issues
+    homeassistant.components.mqtt: info
+
+# After adding this to configuration.yaml:
+# 1. Restart Home Assistant
+# 2. Go to Settings > System > Logs
+# 3. You'll see detailed debug information for XCC integration
+# 4. Look for messages like:
+#    - "Starting data update for XCC controller"
+#    - "Connecting to XCC controller"
+#    - "Successfully fetched X pages from XCC controller"
+#    - "Parsed X entities from page"
+#    - "XCC data update successful"
