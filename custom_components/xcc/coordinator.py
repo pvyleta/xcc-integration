@@ -54,7 +54,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data via library."""
         try:
             # Import XCC client here to avoid import issues
-            from xcc_client import XCCClient, parse_xml_entities
+            from .xcc_client import XCCClient, parse_xml_entities
 
             async with XCCClient(
                 ip=self.ip_address,
@@ -158,7 +158,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_value(self, entity_id: str, value: Any) -> bool:
         """Set a value on the XCC controller."""
         try:
-            from xcc_client import XCCClient
+            from .xcc_client import XCCClient
 
             async with XCCClient(
                 ip=self.ip_address,

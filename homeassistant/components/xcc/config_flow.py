@@ -43,9 +43,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    # Import XCC client here to avoid import issues
+    # Import XCC client from the integration package
     try:
-        from xcc_client import XCCClient
+        from .xcc_client import XCCClient
     except ImportError as err:
         raise CannotConnect("XCC client library not available") from err
 
