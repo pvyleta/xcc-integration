@@ -80,9 +80,15 @@ async def authenticate_session(ip, username, password):
     return session
 
 async def main():
-    ip = "192.168.0.50"
-    username = "xcc"
-    password = "xcc"
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python fetch_sample_pages.py <IP_ADDRESS> [username] [password]")
+        print("Example: python fetch_sample_pages.py 192.168.0.50")
+        sys.exit(1)
+
+    ip = sys.argv[1]
+    username = sys.argv[2] if len(sys.argv) > 2 else "xcc"
+    password = sys.argv[3] if len(sys.argv) > 3 else "xcc"
     
     print("Fetching sample pages to analyze structure...")
     

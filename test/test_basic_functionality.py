@@ -48,8 +48,8 @@ class TestXCCControllerBasic:
     def test_controller_creation(self):
         """Test that controller can be created"""
         from xcc_cli import XCCController
-        
-        controller = XCCController()
+
+        controller = XCCController(ip="192.168.0.50")
         assert controller.ip == "192.168.0.50"
         assert controller.username == "xcc"
         assert controller.password == "xcc"
@@ -76,8 +76,8 @@ class TestXCCControllerBasic:
         """Test language support functionality"""
         from xcc_cli import XCCController
         
-        controller_en = XCCController(language="en")
-        controller_cz = XCCController(language="cz")
+        controller_en = XCCController(ip="192.168.0.50", language="en")
+        controller_cz = XCCController(ip="192.168.0.50", language="cz")
         
         field_info = {
             "friendly_name": "Czech Name",
@@ -124,19 +124,20 @@ class TestFileStructure:
             'scripts/analyze_known_pages.py',
             'requirements.txt',
             'README.md',
-            'README_CZ.md',
-            'xcc'
+            'README_CZ.md'
         ]
         
         for filename in required_files:
             assert os.path.exists(filename), f"Required file {filename} not found"
             
-    def test_shell_script_executable(self):
-        """Test that shell script is executable"""
-        import stat
-        
-        file_stat = os.stat('xcc')
-        assert file_stat.st_mode & stat.S_IEXEC, "Shell script 'xcc' is not executable"
+    def test_python_script_executable(self):
+        """Test that Python script can be executed"""
+        # Test that the main script can be imported without errors
+        try:
+            import xcc_cli
+            assert hasattr(xcc_cli, 'cli')
+        except ImportError as e:
+            pytest.fail(f"Failed to import xcc_cli: {e}")
 
 
 if __name__ == "__main__":

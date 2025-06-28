@@ -52,13 +52,6 @@ jobs:
       run: |
         # Test that the CLI can be imported and shows help
         python xcc_cli.py --help
-        
-    - name: Test shell script
-      run: |
-        # Make shell script executable and test basic functionality
-        chmod +x xcc
-        # Test help (this will fail if controller connection is required, but should show usage)
-        ./xcc --help || echo "Shell script help test completed"
 
   lint:
     runs-on: ubuntu-latest

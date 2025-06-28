@@ -8,8 +8,8 @@ venv/
 # XCC live data cache (regenerated from controller)
 xcc_data/
 
-# Field database (auto-generated, but can be committed for convenience)
-# field_database.json
+# Field database (auto-generated)
+field_database.json
 
 # IDE and OS
 .vscode/

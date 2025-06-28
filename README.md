@@ -1,6 +1,6 @@
 # XCC Heat Pump Controller CLI
 
-Professional command-line interface for XCC heat pump controllers with photovoltaic integration. Read, monitor, and configure your heat pump system through a structured, page-based interface.
+Command-line tool for XCC heat pump controllers with photovoltaic integration. Read, monitor, and configure your heat pump system through a structured, page-based interface.
 
 ## Features
 
@@ -11,8 +11,7 @@ Professional command-line interface for XCC heat pump controllers with photovolt
 - 🔍 **Advanced search** across all fields and pages
 - 🔄 **Database refresh** to sync with firmware updates
 - 📈 **Rich display** with constraints, options, and current values
-- 🖥️ **Professional CLI** built with Click framework
-- 🛠️ **Shell integration** with convenient wrapper script
+- 🖥️ **Click framework** for robust CLI interface
 
 ## Project Structure
 
@@ -20,8 +19,6 @@ Professional command-line interface for XCC heat pump controllers with photovolt
 xcc-integration/
 ├── xcc_cli.py              # Main CLI application
 ├── xcc_client.py           # Reusable XCC client library
-├── xcc                     # Shell wrapper script
-├── field_database.json     # Field database (auto-generated)
 ├── scripts/
 │   ├── analyze_known_pages.py     # Database generator
 │   ├── api_explorer.py            # Development utility
@@ -51,48 +48,37 @@ xcc-integration/
    pip install -r requirements.txt
    ```
 
-4. **Set up shell integration:**
-   ```bash
-   chmod +x xcc
-   # Optional: add to PATH
-   sudo ln -s $(pwd)/xcc /usr/local/bin/xcc
-   ```
-
 **Note:** The field database is automatically generated on first run if missing.
 
 ## Quick Start
 
 ### List Available Pages
 ```bash
-# Using Python script directly
-python xcc_cli.py pages
-
-# Using shell wrapper (if installed)
-xcc pages
+python xcc_cli.py --ip 192.168.0.50 pages
 ```
 
 ### View Configuration Fields
 ```bash
 # List all settable fields in spot pricing page
-xcc spot --list
+python xcc_cli.py --ip 192.168.0.50 spot --list
 
 # List all fields (including read-only) in PV page
-xcc fve --list-all
+python xcc_cli.py --ip 192.168.0.50 fve --list-all
 
 # Show detailed info about a specific field
-xcc fve --show FVE-USEMODE
+python xcc_cli.py --ip 192.168.0.50 fve --show FVE-USEMODE
 
 # Get current value of a field
-xcc tuv1 --get TUVPOZADOVANA
+python xcc_cli.py --ip 192.168.0.50 tuv1 --get TUVPOZADOVANA
 ```
 
 ### Search and Filter
 ```bash
 # Search for battery-related fields in PV page
-xcc fve --search battery
+python xcc_cli.py --ip 192.168.0.50 fve --search battery
 
 # Search across all pages
-xcc search temperature
+python xcc_cli.py --ip 192.168.0.50 search temperature
 ```
 
 ## Configuration Pages
@@ -109,14 +95,8 @@ xcc search temperature
 
 ### Shell Script vs Python Script
 
-**Shell Script (Recommended):**
 ```bash
-xcc --lang cz spot --list
-```
-
-**Python Script (Direct):**
-```bash
-python xcc_cli.py --lang cz spot --list
+python xcc_cli.py --ip 192.168.0.50 --lang cz spot --list
 ```
 
 ### Global Options
@@ -149,34 +129,34 @@ Each page supports these subcommands:
 ### Basic Usage
 ```bash
 # View all spot pricing settings
-xcc spot --list
+python xcc_cli.py --ip 192.168.0.50 spot --list
 
 # Check current battery mode
-xcc fve --get FVE-USEMODE
+python xcc_cli.py --ip 192.168.0.50 fve --get FVE-USEMODE
 
 # Search for temperature-related settings
-xcc okruh --search temperature
+python xcc_cli.py --ip 192.168.0.50 okruh --search temperature
 ```
 
 ### Advanced Usage
 ```bash
 # Use Czech descriptions (global options come first)
-xcc --lang cz spot --list
+python xcc_cli.py --ip 192.168.0.50 --lang cz spot --list
 
 # Custom credentials with verbose output
-xcc --username admin --password secret123 -v pages
+python xcc_cli.py --ip 192.168.0.50 --username admin --password secret123 -v pages
 
 # Show entity output during data fetching
-xcc --show-entities fve --list
+python xcc_cli.py --ip 192.168.0.50 --show-entities fve --list
 ```
 
 ### Database Management
 ```bash
 # Check if database needs refresh
-xcc refresh-db
+python xcc_cli.py --ip 192.168.0.50 refresh-db
 
 # Force database refresh after firmware update
-xcc refresh-db --force
+python xcc_cli.py --ip 192.168.0.50 refresh-db --force
 ```
 
 
@@ -220,25 +200,25 @@ xcc refresh-db
 ### Connection Issues
 ```bash
 # Test with verbose output
-xcc -v pages
+python xcc_cli.py --ip 192.168.0.50 -v pages
 
 # Check with custom IP
-xcc --ip 192.168.1.100 pages
+python xcc_cli.py --ip 192.168.1.100 pages
 ```
 
 ### Database Issues
 ```bash
 # Force refresh database
-xcc refresh-db --force
+python xcc_cli.py --ip 192.168.0.50 refresh-db --force
 
 # Manual database generation
-python analyze_known_pages.py
+python scripts/analyze_known_pages.py 192.168.0.50
 ```
 
 ### Authentication Issues
 ```bash
 # Use custom credentials
-xcc --username myuser --password mypass pages
+python xcc_cli.py --ip 192.168.0.50 --username myuser --password mypass pages
 ```
 
 
@@ -251,12 +231,12 @@ xcc --username myuser --password mypass pages
 3. **Hybrid Display**: Combined static metadata with live values
 
 ### File Structure
-- `xcc_cli.py` - Main CLI application (Click-based)
-- `xcc` - Shell wrapper script with virtual environment activation
+- `xcc_cli.py` - Main CLI application
+- `xcc` - Shell wrapper script
 - `xcc_client.py` - Reusable XCC client library
 - `scripts/analyze_known_pages.py` - Database generator
 - `field_database.json` - Field database (auto-generated)
-- `requirements.txt` - Python dependencies (includes Click)
+- `requirements.txt` - Python dependencies
 
 ## Contributing
 

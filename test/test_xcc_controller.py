@@ -20,8 +20,8 @@ class TestXCCController:
     
     def test_controller_initialization(self):
         """Test controller initialization with default parameters"""
-        controller = XCCController()
-        
+        controller = XCCController(ip="192.168.0.50")
+
         assert controller.ip == "192.168.0.50"
         assert controller.username == "xcc"
         assert controller.password == "xcc"
@@ -84,7 +84,7 @@ class TestXCCController:
         
     def test_load_field_database_file_not_exists(self):
         """Test loading field database when file doesn't exist"""
-        controller = XCCController()
+        controller = XCCController(ip="192.168.0.50")
 
         with patch('os.path.exists', return_value=False), \
              patch.object(controller, 'field_database', {}), \
@@ -97,7 +97,7 @@ class TestXCCController:
         
     def test_load_field_database_success(self):
         """Test successful loading of field database"""
-        controller = XCCController()
+        controller = XCCController(ip="192.168.0.50")
 
         # Test that the method can be called without errors
         # The actual implementation loads from a real file
@@ -114,7 +114,7 @@ class TestXCCController:
 
     def test_get_available_pages(self):
         """Test getting available pages"""
-        controller = XCCController()
+        controller = XCCController(ip="192.168.0.50")
         controller.load_field_database()  # Load actual data
 
         pages = controller.get_available_pages()
@@ -123,7 +123,7 @@ class TestXCCController:
         
     def test_get_page_fields(self):
         """Test getting fields for a specific page"""
-        controller = XCCController()
+        controller = XCCController(ip="192.168.0.50")
         controller.field_database = {
             "FIELD1": {"source_page": "test.xml", "is_settable": True},
             "FIELD2": {"source_page": "test.xml", "is_settable": True},

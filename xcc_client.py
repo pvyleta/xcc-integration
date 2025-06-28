@@ -16,7 +16,7 @@ from lxml import etree
 class XCCClient:
     """Client for XCC heat pump controller communication."""
     
-    def __init__(self, ip: str = "192.168.0.50", username: str = "xcc", 
+    def __init__(self, ip: str, username: str = "xcc",
                  password: str = "xcc", cookie_file: Optional[str] = None):
         self.ip = ip
         self.username = username

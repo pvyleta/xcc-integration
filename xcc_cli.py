@@ -12,7 +12,7 @@ import click
 from xcc_client import XCCClient
 
 class XCCController:
-    def __init__(self, ip: str = "192.168.0.50", username: str = "xcc", password: str = "xcc",
+    def __init__(self, ip: str, username: str = "xcc", password: str = "xcc",
                  verbose: bool = False, show_entities: bool = False, language: str = "en"):
         self.ip = ip
         self.username = username
@@ -125,8 +125,11 @@ class XCCController:
     def load_field_database(self, filename: str = "field_database.json"):
         """Load the field database from analysis file, generate if missing"""
         if not os.path.exists(filename):
-            print(f"Field database not found, generating...")
-            self._generate_field_database()
+            print(f"Field database not found, will generate on first use...")
+            # Don't auto-generate during initialization, only when actually needed
+            self.field_database = {}
+            self.pages_info = {}
+            return
 
         try:
             with open(filename, "r", encoding="utf-8") as f:
@@ -159,7 +162,7 @@ class XCCController:
         try:
             import subprocess
             result = subprocess.run([
-                sys.executable, "scripts/analyze_known_pages.py"
+                sys.executable, "scripts/analyze_known_pages.py", self.ip, self.username, self.password
             ], capture_output=True, text=True, timeout=60)
 
             if result.returncode == 0:
@@ -168,7 +171,7 @@ class XCCController:
                 print(f"⚠️ Database generation failed: {result.stderr}")
         except Exception as e:
             print(f"⚠️ Could not generate database: {e}")
-            print("Please run 'python scripts/analyze_known_pages.py' manually")
+            print(f"Please run 'python scripts/analyze_known_pages.py {self.ip}' manually")
             
     async def get_current_values(self):
         """Fetch current values from the controller"""
@@ -261,6 +264,10 @@ class XCCController:
 
     def get_available_pages(self) -> List[str]:
         """Get list of available pages"""
+        if not self.field_database and not os.path.exists("field_database.json"):
+            print("Field database not found. Please generate it first:")
+            print(f"  python scripts/analyze_known_pages.py {self.ip}")
+            return []
         pages = set()
         for field_info in self.field_database.values():
             if "source_page" in field_info:
@@ -393,7 +400,7 @@ class XCCController:
 
 # Global Click context for sharing controller instance
 @click.group()
-@click.option('--ip', default='192.168.0.50', help='Controller IP address')
+@click.option('--ip', required=True, help='Controller IP address')
 @click.option('--username', default='xcc', help='Username (default: xcc)')
 @click.option('--password', default='xcc', help='Password (default: xcc)')
 @click.option('-v', '--verbose', is_flag=True, help='Enable verbose output')
@@ -403,8 +410,7 @@ class XCCController:
 def cli(ctx, ip, username, password, verbose, show_entities, lang):
     """XCC Heat Pump Controller CLI Tool
 
-    A comprehensive command-line interface for managing XCC heat pump controllers
-    with photovoltaic integration support.
+    Command-line tool for managing XCC heat pump controllers with photovoltaic integration.
     """
     # Ensure context object exists
     ctx.ensure_object(dict)
@@ -611,7 +617,7 @@ def create_page_command(page_name: str, page_info: Dict[str, Any]):
 def init_page_commands():
     """Initialize page-specific commands"""
     # Create a temporary controller to get page info
-    temp_controller = XCCController(verbose=False)
+    temp_controller = XCCController(ip="127.0.0.1", verbose=False)
     temp_controller.load_field_database()
 
     # Create commands for each page
@@ -645,7 +651,7 @@ async def refresh_field_database(controller: XCCController, force: bool = False)
     try:
         # Run the analysis script
         result = subprocess.run([
-            "python", "scripts/analyze_known_pages.py"
+            "python", "scripts/analyze_known_pages.py", controller.ip, controller.username, controller.password
         ], capture_output=True, text=True, timeout=120)
 
         if result.returncode == 0:

@@ -11,8 +11,8 @@ Komplexní nástroj příkazové řádky pro správu řadičů tepelných čerpa
 - 🔍 **Pokročilé Vyhledávání** napříč všemi poli a stránkami
 - 🔄 **Obnovení Databáze** pro synchronizaci s aktualizacemi firmwaru
 - 📈 **Bohaté Zobrazení** s omezeními, možnostmi a aktuálními hodnotami
-- 🖥️ **Profesionální CLI** postavené na Click frameworku
-- 🛠️ **Shell Integrace** s pohodlným wrapper skriptem
+- 🖥️ **Click framework** pro robustní CLI rozhraní
+- 🛠️ **Shell integrace** s wrapper skriptem
 
 ## Instalace
 
@@ -53,11 +53,7 @@ Komplexní nástroj příkazové řádky pro správu řadičů tepelných čerpa
 
 ### Seznam Dostupných Stránek
 ```bash
-# Použití Python skriptu přímo
-python xcc_cli.py pages
-
-# Použití shell wrapperu (pokud je nainstalován)
-xcc pages
+python xcc_cli.py --ip 192.168.0.50 pages
 ```
 
 ### Zobrazení Konfiguračních Polí
@@ -103,9 +99,8 @@ xcc search temperature
 xcc --lang cz spot --list
 ```
 
-**Python Skript (Přímo):**
 ```bash
-python xcc_cli.py --lang cz spot --list
+python xcc_cli.py --ip 192.168.0.50 --lang cz spot --list
 ```
 
 ### Globální Možnosti
@@ -240,12 +235,12 @@ xcc --username mojeuživatel --password mojeheslo pages
 3. **Hybridní Zobrazení**: Kombinace statických metadat s živými hodnotami
 
 ### Struktura Souborů
-- `xcc_cli.py` - Hlavní CLI aplikace (založená na Click)
-- `xcc` - Shell wrapper skript s aktivací virtuálního prostředí
+- `xcc_cli.py` - Hlavní CLI aplikace
+- `xcc` - Shell wrapper skript
 - `xcc_client.py` - Znovupoužitelná XCC klientská knihovna
 - `scripts/analyze_known_pages.py` - Generátor databáze
 - `field_database.json` - Databáze polí (automaticky generovaná)
-- `requirements.txt` - Python závislosti (včetně Click)
+- `requirements.txt` - Python závislosti
 
 ## Přispívání
 
