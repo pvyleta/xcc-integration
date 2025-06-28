@@ -1,0 +1,16 @@
+{
+  "domain": "xcc",
+  "name": "XCC Heat Pump Controller",
+  "codeowners": ["@pvyleta"],
+  "config_flow": true,
+  "documentation": "https://github.com/pvyleta/xcc-integration",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "loggers": ["xcc_client", "homeassistant.components.xcc"],
+  "requirements": ["aiohttp>=3.8.0", "lxml>=4.6.0"],
+  "single_config_entry": false,
+  "version": "1.0.0",
+  "dependencies": ["mqtt"],
+  "after_dependencies": ["mqtt"],
+  "quality_scale": "silver"
+}

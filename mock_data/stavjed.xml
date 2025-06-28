@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<PAGE>
+  <TITLE>Status</TITLE>
+  <ITEM>
+    <NAME>Teplota venkovní</NAME>
+    <NAME_EN>Outdoor Temperature</NAME_EN>
+    <UNIT>°C</UNIT>
+    <TYPE>TEMP</TYPE>
+    <P>T_OUTDOOR</P>
+  </ITEM>
+  <ITEM>
+    <NAME>Teplota přívodní</NAME>
+    <NAME_EN>Supply Temperature</NAME_EN>
+    <UNIT>°C</UNIT>
+    <TYPE>TEMP</TYPE>
+    <P>T_SUPPLY</P>
+  </ITEM>
+  <ITEM>
+    <NAME>Teplota vratná</NAME>
+    <NAME_EN>Return Temperature</NAME_EN>
+    <UNIT>°C</UNIT>
+    <TYPE>TEMP</TYPE>
+    <P>T_RETURN</P>
+  </ITEM>
+  <ITEM>
+    <NAME>Výkon kompresoru</NAME>
+    <NAME_EN>Compressor Power</NAME_EN>
+    <UNIT>kW</UNIT>
+    <TYPE>POWER</TYPE>
+    <P>P_COMPRESSOR</P>
+  </ITEM>
+  <ITEM>
+    <NAME>Stav provozu</NAME>
+    <NAME_EN>Operation Status</NAME_EN>
+    <TYPE>STATUS</TYPE>
+    <P>STATUS_OPERATION</P>
+    <OPTIONS>
+      <OPTION VALUE="0" TEXT="Vypnuto" TEXT_EN="Off"/>
+      <OPTION VALUE="1" TEXT="Vytápění" TEXT_EN="Heating"/>
+      <OPTION VALUE="2" TEXT="Chlazení" TEXT_EN="Cooling"/>
+      <OPTION VALUE="3" TEXT="TUV" TEXT_EN="DHW"/>
+    </OPTIONS>
+  </ITEM>
+  <ITEM>
+    <NAME>Běží kompresor</NAME>
+    <NAME_EN>Compressor Running</NAME_EN>
+    <TYPE>BOOL</TYPE>
+    <P>COMPRESSOR_RUNNING</P>
+  </ITEM>
+</PAGE>

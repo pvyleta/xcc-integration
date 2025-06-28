@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  homeassistant:
+    container_name: homeassistant-dev
+    image: homeassistant/home-assistant:latest
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - TZ=Europe/Prague
+    volumes:
+      - ./ha-config:/config
+      - ./homeassistant/components/xcc:/config/custom_components/xcc
+      - /run/dbus:/run/dbus:ro
+    ports:
+      - "8123:8123"
+    networks:
+      - ha-network
+
+  mqtt:
+    container_name: mqtt-dev
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mqtt-config:/mosquitto/config
+      - ./mqtt-data:/mosquitto/data
+      - ./mqtt-logs:/mosquitto/log
+    networks:
+      - ha-network
+
+  # Mock XCC controller for testing
+  xcc-mock:
+    container_name: xcc-mock
+    build:
+      context: .
+      dockerfile: Dockerfile.xcc-mock
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - ha-network
+
+networks:
+  ha-network:
+    driver: bridge
