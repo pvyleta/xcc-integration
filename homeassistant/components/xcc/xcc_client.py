@@ -30,7 +30,18 @@ class XCCClient:
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
-        
+
+    async def close(self):
+        """Close the session and clean up connections."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
+        if self.session and not self.session.closed:
+            _LOGGER.debug("Closing XCC client session for %s", self.ip)
+            await self.session.close()
+            # Wait a bit for connections to close properly
+            await asyncio.sleep(0.1)
+
     async def connect(self):
         """Establish connection with session reuse."""
         cookie_jar = aiohttp.CookieJar(unsafe=True)

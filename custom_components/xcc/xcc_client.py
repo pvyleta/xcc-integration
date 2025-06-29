@@ -30,7 +30,18 @@ class XCCClient:
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
-        
+
+    async def close(self):
+        """Close the session and clean up connections."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
+        if self.session and not self.session.closed:
+            _LOGGER.debug("Closing XCC client session for %s", self.ip)
+            await self.session.close()
+            # Wait a bit for connections to close properly
+            await asyncio.sleep(0.1)
+
     async def connect(self):
         """Establish connection with session reuse."""
         cookie_jar = aiohttp.CookieJar(unsafe=True)
@@ -49,7 +60,20 @@ class XCCClient:
             except Exception:
                 pass  # Continue with fresh login
                 
-        self.session = aiohttp.ClientSession(cookie_jar=cookie_jar)
+        # Create session with strict connection limits for XCC controllers
+        connector = aiohttp.TCPConnector(
+            limit=1,           # Total connection pool limit
+            limit_per_host=1,  # Per-host connection limit
+            ttl_dns_cache=300, # DNS cache TTL
+            use_dns_cache=True,
+            keepalive_timeout=30,
+            enable_cleanup_closed=True
+        )
+        self.session = aiohttp.ClientSession(
+            connector=connector,
+            cookie_jar=cookie_jar,
+            timeout=aiohttp.ClientTimeout(total=30)
+        )
         
         # Test if existing session works, otherwise authenticate
         import logging
@@ -84,18 +108,48 @@ class XCCClient:
             return False
             
     async def _authenticate(self):
-        """Perform authentication and save session."""
+        """Perform authentication and save session with retry logic."""
         import logging
+        import asyncio
         _LOGGER = logging.getLogger(__name__)
 
         _LOGGER.debug("Starting authentication for %s with username %s", self.ip, self.username)
 
-        # Get login page for session ID
-        async with self.session.get(f"http://{self.ip}/LOGIN.XML") as resp:
-            if resp.status != 200:
-                _LOGGER.error("Failed to get LOGIN.XML: status %d", resp.status)
-                raise Exception("Failed to get LOGIN.XML")
-            _LOGGER.debug("Successfully retrieved LOGIN.XML")
+        # Retry logic for connection limit errors
+        max_retries = 3
+        retry_delay = 2  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                # Get login page for session ID
+                async with self.session.get(f"http://{self.ip}/LOGIN.XML") as resp:
+                    if resp.status == 500:
+                        error_text = await resp.text()
+                        if "maximum number of connection" in error_text.lower():
+                            if attempt < max_retries - 1:
+                                _LOGGER.warning("XCC connection limit reached, retrying in %d seconds (attempt %d/%d)",
+                                              retry_delay, attempt + 1, max_retries)
+                                await asyncio.sleep(retry_delay)
+                                retry_delay *= 2  # Exponential backoff
+                                continue
+                            else:
+                                _LOGGER.error("XCC connection limit reached after %d attempts", max_retries)
+                                raise Exception("XCC controller connection limit reached")
+
+                    if resp.status != 200:
+                        _LOGGER.error("Failed to get LOGIN.XML: status %d", resp.status)
+                        raise Exception("Failed to get LOGIN.XML")
+                    _LOGGER.debug("Successfully retrieved LOGIN.XML")
+                    break  # Success, exit retry loop
+
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    _LOGGER.warning("Authentication attempt %d failed: %s, retrying...", attempt + 1, e)
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    raise
 
         # Extract session ID from cookie
         session_id = None
@@ -186,12 +240,22 @@ class XCCClient:
                 return raw_bytes.decode("utf-8", errors="replace")
             
     async def fetch_pages(self, pages: List[str]) -> Dict[str, str]:
-        """Fetch multiple pages."""
+        """Fetch multiple pages with delays to avoid overwhelming XCC controller."""
+        import asyncio
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
         results = {}
-        for page in pages:
+        for i, page in enumerate(pages):
             try:
+                # Add small delay between requests to avoid connection limit
+                if i > 0:
+                    await asyncio.sleep(0.2)  # 200ms delay between requests
+
                 results[page] = await self.fetch_page(page)
+                _LOGGER.debug("Successfully fetched page %s (%d/%d)", page, i+1, len(pages))
             except Exception as e:
+                _LOGGER.warning("Error fetching page %s: %s", page, e)
                 results[page] = f"Error: {e}"
         return results
         
