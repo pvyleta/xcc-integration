@@ -131,26 +131,89 @@ class XCCClient:
             await self.session.close()
 
 
-def parse_xml_entities(xml_content: str, page_name: str, 
+def parse_xml_entities(xml_content: str, page_name: str,
                       entity_prefix: str = "xcc") -> List[Dict]:
     """Parse XML content into entity data."""
     entities = []
-    
+
     try:
-        root = etree.fromstring(xml_content.encode())
+        # Try different encodings for XCC XML files
+        encodings = ['utf-8', 'windows-1250', 'iso-8859-1']
+        root = None
+
+        for encoding in encodings:
+            try:
+                root = etree.fromstring(xml_content.encode(encoding))
+                break
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                continue
+            except Exception:
+                continue
+
+        if root is None:
+            # If encoding fails, try parsing as-is (already a string)
+            try:
+                root = etree.fromstring(xml_content)
+            except Exception:
+                return entities
     except Exception:
         return entities
-        
-    # Extract all elements with values
+
+    # Try different XCC XML formats
+
+    # Format 1: XCC Values format (STAVJED1.XML style) - <INPUT P="name" VALUE="value"/>
+    input_elements = root.xpath(".//INPUT[@P and @VALUE]")
+    if input_elements:
+        for elem in input_elements:
+            prop = elem.get("P")
+            value = elem.get("VALUE")
+
+            if not prop or not value:
+                continue
+
+            entity_id = f"{entity_prefix}_{prop.lower().replace('-', '_')}"
+
+            # Determine entity type and attributes
+            entity_type = "sensor"
+            attributes = {
+                "source_page": page_name,
+                "field_name": prop,
+                "friendly_name": prop.replace("-", " ").replace("_", " ").title()
+            }
+
+            # Parse NAME attribute for more info
+            name_attr = elem.get("NAME", "")
+            if "_REAL_" in name_attr:
+                attributes["device_class"] = "temperature" if "T" in prop.upper() else None
+                attributes["unit_of_measurement"] = "°C" if "T" in prop.upper() else None
+            elif "_BOOL_" in name_attr:
+                entity_type = "binary_sensor"
+                value = "1" if value == "1" else "0"
+            elif "_USINT_" in name_attr or "_UINT_" in name_attr:
+                try:
+                    value = str(int(float(value)))
+                except:
+                    pass
+
+            entities.append({
+                "entity_id": entity_id,
+                "type": entity_type,
+                "value": value,
+                **attributes
+            })
+
+        return entities
+
+    # Format 2: XCC Structure format with values (prop attributes with text)
     for elem in root.xpath(".//*[@prop and text()]"):
         prop = elem.get("prop")
         if not prop:
             continue
-            
+
         value = elem.text.strip() if elem.text else ""
         if not value:
             continue
-            
+
         entity_id = f"{entity_prefix}_{prop.lower().replace('-', '_')}"
         
         # Determine entity type and attributes
