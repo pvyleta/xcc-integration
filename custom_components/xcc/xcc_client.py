@@ -134,41 +134,71 @@ class XCCClient:
 def parse_xml_entities(xml_content: str, page_name: str,
                       entity_prefix: str = "xcc") -> List[Dict]:
     """Parse XML content into entity data."""
+    import logging
+    _LOGGER = logging.getLogger(__name__)
+
     entities = []
+
+    _LOGGER.debug("Parsing XML for page %s, content length: %d bytes", page_name, len(xml_content))
 
     try:
         # Try different encodings for XCC XML files
         encodings = ['utf-8', 'windows-1250', 'iso-8859-1']
         root = None
+        used_encoding = None
 
         for encoding in encodings:
             try:
                 root = etree.fromstring(xml_content.encode(encoding))
+                used_encoding = encoding
+                _LOGGER.debug("Successfully parsed XML with %s encoding", encoding)
                 break
-            except (UnicodeEncodeError, UnicodeDecodeError):
+            except (UnicodeEncodeError, UnicodeDecodeError) as e:
+                _LOGGER.debug("Encoding %s failed: %s", encoding, e)
                 continue
-            except Exception:
+            except Exception as e:
+                _LOGGER.debug("XML parsing with %s failed: %s", encoding, e)
                 continue
 
         if root is None:
             # If encoding fails, try parsing as-is (already a string)
             try:
                 root = etree.fromstring(xml_content)
-            except Exception:
+                used_encoding = "direct"
+                _LOGGER.debug("Successfully parsed XML directly (no encoding)")
+            except Exception as e:
+                _LOGGER.warning("All XML parsing attempts failed for %s: %s", page_name, e)
                 return entities
-    except Exception:
+    except Exception as e:
+        _LOGGER.error("Unexpected error parsing XML for %s: %s", page_name, e)
         return entities
 
     # Try different XCC XML formats
+    _LOGGER.debug("XML root element: %s", root.tag if root is not None else "None")
 
     # Format 1: XCC Values format (STAVJED1.XML style) - <INPUT P="name" VALUE="value"/>
     input_elements = root.xpath(".//INPUT[@P and @VALUE]")
+    _LOGGER.debug("Found %d INPUT elements with P and VALUE attributes", len(input_elements))
+
     if input_elements:
-        for elem in input_elements:
+        _LOGGER.debug("Processing INPUT elements for %s", page_name)
+        processed_count = 0
+        skipped_count = 0
+
+        for i, elem in enumerate(input_elements):
             prop = elem.get("P")
             value = elem.get("VALUE")
 
-            if not prop or not value:
+            if i < 3:  # Log first 3 elements for debugging
+                _LOGGER.debug("INPUT element %d: P='%s' VALUE='%s'", i, prop, value)
+
+            if not prop:
+                _LOGGER.debug("Skipping element %d: no P attribute", i)
+                skipped_count += 1
+                continue
+            if not value:
+                _LOGGER.debug("Skipping element %d: no VALUE attribute", i)
+                skipped_count += 1
                 continue
 
             entity_id = f"{entity_prefix}_{prop.lower().replace('-', '_')}"
@@ -201,11 +231,20 @@ def parse_xml_entities(xml_content: str, page_name: str,
                 "value": value,
                 **attributes
             })
+            processed_count += 1
 
+        _LOGGER.debug("INPUT processing complete: %d processed, %d skipped, %d total entities",
+                     processed_count, skipped_count, len(entities))
         return entities
 
     # Format 2: XCC Structure format with values (prop attributes with text)
-    for elem in root.xpath(".//*[@prop and text()]"):
+    prop_elements = root.xpath(".//*[@prop and text()]")
+    _LOGGER.debug("Found %d elements with prop attributes and text content", len(prop_elements))
+
+    if prop_elements:
+        _LOGGER.debug("Processing prop elements for %s", page_name)
+
+    for elem in prop_elements:
         prop = elem.get("prop")
         if not prop:
             continue
@@ -247,7 +286,14 @@ def parse_xml_entities(xml_content: str, page_name: str,
             "state": value,
             "attributes": attributes
         })
-        
+
+    _LOGGER.debug("XML parsing complete for %s: %d total entities found", page_name, len(entities))
+    if len(entities) == 0:
+        _LOGGER.warning("No entities found in %s - this may indicate an XML format issue", page_name)
+        # Log a sample of the XML content for debugging
+        sample_content = xml_content[:500] if len(xml_content) > 500 else xml_content
+        _LOGGER.debug("Sample XML content for %s: %s", page_name, sample_content)
+
     return entities
 
 

@@ -134,29 +134,43 @@ class XCCClient:
 def parse_xml_entities(xml_content: str, page_name: str,
                       entity_prefix: str = "xcc") -> List[Dict]:
     """Parse XML content into entity data."""
+    import logging
+    _LOGGER = logging.getLogger(__name__)
+
     entities = []
+
+    _LOGGER.debug("Parsing XML for page %s, content length: %d bytes", page_name, len(xml_content))
 
     try:
         # Try different encodings for XCC XML files
         encodings = ['utf-8', 'windows-1250', 'iso-8859-1']
         root = None
+        used_encoding = None
 
         for encoding in encodings:
             try:
                 root = etree.fromstring(xml_content.encode(encoding))
+                used_encoding = encoding
+                _LOGGER.debug("Successfully parsed XML with %s encoding", encoding)
                 break
-            except (UnicodeEncodeError, UnicodeDecodeError):
+            except (UnicodeEncodeError, UnicodeDecodeError) as e:
+                _LOGGER.debug("Encoding %s failed: %s", encoding, e)
                 continue
-            except Exception:
+            except Exception as e:
+                _LOGGER.debug("XML parsing with %s failed: %s", encoding, e)
                 continue
 
         if root is None:
             # If encoding fails, try parsing as-is (already a string)
             try:
                 root = etree.fromstring(xml_content)
-            except Exception:
+                used_encoding = "direct"
+                _LOGGER.debug("Successfully parsed XML directly (no encoding)")
+            except Exception as e:
+                _LOGGER.warning("All XML parsing attempts failed for %s: %s", page_name, e)
                 return entities
-    except Exception:
+    except Exception as e:
+        _LOGGER.error("Unexpected error parsing XML for %s: %s", page_name, e)
         return entities
 
     # Try different XCC XML formats

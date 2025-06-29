@@ -26,6 +26,9 @@ PLATFORMS_TO_SETUP = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up XCC Heat Pump Controller from a config entry."""
+    # Log integration version for debugging
+    from .const import VERSION
+    _LOGGER.info("Setting up XCC integration v%s for %s", VERSION, entry.data.get("ip_address"))
     _LOGGER.debug("Setting up XCC integration for %s", entry.data.get("ip_address"))
 
     # Create data update coordinator
