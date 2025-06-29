@@ -297,9 +297,9 @@ def parse_xml_entities(xml_content: str, page_name: str,
 
             entities.append({
                 "entity_id": entity_id,
-                "type": entity_type,
-                "value": value,
-                **attributes
+                "entity_type": entity_type,
+                "state": value,
+                "attributes": attributes
             })
             processed_count += 1
 
