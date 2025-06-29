@@ -57,10 +57,21 @@ class XCCClient:
             
     async def _test_session(self) -> bool:
         """Test if current session is valid."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
         try:
+            _LOGGER.debug("Testing session validity for %s", self.ip)
             async with self.session.get(f"http://{self.ip}/stavjed.xml") as resp:
-                return resp.status == 200
-        except Exception:
+                content = await resp.text()
+                is_valid = resp.status == 200 and "LOGIN" not in content
+                _LOGGER.debug("Session test result: status=%d, contains_login=%s, valid=%s",
+                             resp.status, "LOGIN" in content, is_valid)
+                if not is_valid:
+                    _LOGGER.debug("Session test content: %s", content[:200])
+                return is_valid
+        except Exception as e:
+            _LOGGER.debug("Session test failed with exception: %s", e)
             return False
             
     async def _authenticate(self):

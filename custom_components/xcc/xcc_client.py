@@ -52,45 +52,84 @@ class XCCClient:
         self.session = aiohttp.ClientSession(cookie_jar=cookie_jar)
         
         # Test if existing session works, otherwise authenticate
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
+        _LOGGER.debug("Checking if existing session is valid")
         if not await self._test_session():
+            _LOGGER.debug("Session invalid, performing authentication")
             await self._authenticate()
+        else:
+            _LOGGER.debug("Existing session is valid, skipping authentication")
             
     async def _test_session(self) -> bool:
         """Test if current session is valid."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
         try:
+            _LOGGER.debug("Testing session validity for %s", self.ip)
             async with self.session.get(f"http://{self.ip}/stavjed.xml") as resp:
-                return resp.status == 200
-        except Exception:
+                content = await resp.text()
+                is_valid = resp.status == 200 and "LOGIN" not in content
+                _LOGGER.debug("Session test result: status=%d, contains_login=%s, valid=%s",
+                             resp.status, "LOGIN" in content, is_valid)
+                if not is_valid:
+                    _LOGGER.debug("Session test content: %s", content[:200])
+                return is_valid
+        except Exception as e:
+            _LOGGER.debug("Session test failed with exception: %s", e)
             return False
             
     async def _authenticate(self):
         """Perform authentication and save session."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
+        _LOGGER.debug("Starting authentication for %s with username %s", self.ip, self.username)
+
         # Get login page for session ID
         async with self.session.get(f"http://{self.ip}/LOGIN.XML") as resp:
             if resp.status != 200:
+                _LOGGER.error("Failed to get LOGIN.XML: status %d", resp.status)
                 raise Exception("Failed to get LOGIN.XML")
-                
+            _LOGGER.debug("Successfully retrieved LOGIN.XML")
+
         # Extract session ID from cookie
         session_id = None
+        _LOGGER.debug("Extracting session ID from cookies")
         for cookie in self.session.cookie_jar:
+            _LOGGER.debug("Found cookie: %s=%s", cookie.key, cookie.value)
             if cookie.key == "SoftPLC":
                 session_id = cookie.value
                 break
-                
+
         if not session_id:
+            _LOGGER.error("No SoftPLC cookie found in %d cookies", len(list(self.session.cookie_jar)))
             raise Exception("No SoftPLC cookie found")
+
+        _LOGGER.debug("Found session ID: %s", session_id)
             
         # Login with hashed password
         passhash = hashlib.sha1(f"{session_id}{self.password}".encode()).hexdigest()
         login_data = {"USER": self.username, "PASS": passhash}
-        
-        async with self.session.post(f"http://{self.ip}/RPC/WEBSES/create.asp", 
+
+        _LOGGER.debug("Attempting login with username=%s, passhash=%s", self.username, passhash[:10] + "...")
+
+        async with self.session.post(f"http://{self.ip}/RPC/WEBSES/create.asp",
                                    data=login_data) as resp:
+            response_text = await resp.text()
+            _LOGGER.debug("Login response: status=%d, content=%s", resp.status, response_text[:200])
+
             if resp.status != 200:
+                _LOGGER.error("Authentication failed with status %d: %s", resp.status, response_text)
                 raise Exception("Authentication failed")
-                
+
+            _LOGGER.info("Authentication successful for %s", self.ip)
+
         # Save session cookie
         if self.cookie_file:
+            _LOGGER.debug("Saving session cookie to %s", self.cookie_file)
             self._save_session()
             
     def _save_session(self):
