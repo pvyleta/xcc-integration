@@ -69,13 +69,15 @@ class XCCClient:
 
         try:
             _LOGGER.debug("Testing session validity for %s", self.ip)
-            async with self.session.get(f"http://{self.ip}/stavjed.xml") as resp:
-                content = await resp.text()
-                is_valid = resp.status == 200 and "LOGIN" not in content
-                _LOGGER.debug("Session test result: status=%d, contains_login=%s, valid=%s",
-                             resp.status, "LOGIN" in content, is_valid)
+            # Use INDEX.XML like the working script
+            async with self.session.get(f"http://{self.ip}/INDEX.XML") as resp:
+                raw = await resp.read()
+                text = raw.decode(resp.get_encoding() or "utf-8")
+                is_valid = resp.status == 200 and "<LOGIN>" not in text and "500" not in text
+                _LOGGER.debug("Session test result: status=%d, contains_login=%s, contains_500=%s, valid=%s",
+                             resp.status, "<LOGIN>" in text, "500" in text, is_valid)
                 if not is_valid:
-                    _LOGGER.debug("Session test content: %s", content[:200])
+                    _LOGGER.debug("Session test content: %s", text[:200])
                 return is_valid
         except Exception as e:
             _LOGGER.debug("Session test failed with exception: %s", e)
@@ -121,8 +123,10 @@ class XCCClient:
             response_text = await resp.text()
             _LOGGER.debug("Login response: status=%d, content=%s", resp.status, response_text[:200])
 
-            if resp.status != 200:
-                _LOGGER.error("Authentication failed with status %d: %s", resp.status, response_text)
+            # Check both status and content like the working script
+            if resp.status != 200 or "<LOGIN>" in response_text:
+                _LOGGER.error("Authentication failed: status=%d, contains_login=%s, content=%s",
+                             resp.status, "<LOGIN>" in response_text, response_text[:200])
                 raise Exception("Authentication failed")
 
             _LOGGER.info("Authentication successful for %s", self.ip)
@@ -148,11 +152,38 @@ class XCCClient:
             pass  # Non-critical
             
     async def fetch_page(self, page: str) -> str:
-        """Fetch XML page content."""
+        """Fetch XML page content with proper encoding detection."""
+        import re
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
         async with self.session.get(f"http://{self.ip}/{page}") as resp:
             if resp.status != 200:
                 raise Exception(f"Failed to fetch {page}: {resp.status}")
-            return await resp.text()
+
+            # Use proper encoding detection like the working script
+            raw_bytes = await resp.read()
+
+            # Extract declared encoding from XML header
+            encoding = "utf-8"  # default
+            match = re.search(br'<\?xml[^>]+encoding=["\']([^"\']+)["\']', raw_bytes[:200])
+            if match:
+                encoding = match.group(1).decode("ascii", errors="replace").lower()
+
+            _LOGGER.debug("Page %s: detected encoding %s", page, encoding)
+
+            try:
+                content = raw_bytes.decode(encoding, errors="replace")
+                # Basic sanitization like the working script
+                content = (content
+                          .replace('\u00A0', ' ')
+                          .replace('\u202F', ' ')
+                          .replace('\u200B', '')
+                          .replace('\uFEFF', ''))
+                return content
+            except Exception as e:
+                _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
+                return raw_bytes.decode("utf-8", errors="replace")
             
     async def fetch_pages(self, pages: List[str]) -> Dict[str, str]:
         """Fetch multiple pages."""

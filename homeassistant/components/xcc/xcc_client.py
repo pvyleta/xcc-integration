@@ -62,13 +62,15 @@ class XCCClient:
 
         try:
             _LOGGER.debug("Testing session validity for %s", self.ip)
-            async with self.session.get(f"http://{self.ip}/stavjed.xml") as resp:
-                content = await resp.text()
-                is_valid = resp.status == 200 and "LOGIN" not in content
-                _LOGGER.debug("Session test result: status=%d, contains_login=%s, valid=%s",
-                             resp.status, "LOGIN" in content, is_valid)
+            # Use INDEX.XML like the working script
+            async with self.session.get(f"http://{self.ip}/INDEX.XML") as resp:
+                raw = await resp.read()
+                text = raw.decode(resp.get_encoding() or "utf-8")
+                is_valid = resp.status == 200 and "<LOGIN>" not in text and "500" not in text
+                _LOGGER.debug("Session test result: status=%d, contains_login=%s, contains_500=%s, valid=%s",
+                             resp.status, "<LOGIN>" in text, "500" in text, is_valid)
                 if not is_valid:
-                    _LOGGER.debug("Session test content: %s", content[:200])
+                    _LOGGER.debug("Session test content: %s", text[:200])
                 return is_valid
         except Exception as e:
             _LOGGER.debug("Session test failed with exception: %s", e)
