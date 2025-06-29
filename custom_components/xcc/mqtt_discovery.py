@@ -27,6 +27,7 @@ class XCCMQTTDiscovery:
         self.device_id = f"{MQTT_DEVICE_PREFIX}_{self.ip_address.replace('.', '_')}"
         self._published_entities: set[str] = set()
         self._mqtt = None  # Will be set during async_setup
+        self._update_task = None  # Track the periodic update task
 
     async def async_setup(self) -> bool:
         """Set up MQTT discovery."""
@@ -236,20 +237,36 @@ class XCCMQTTDiscovery:
                     await self._publish_entity_state(entity_id, entity_data["data"])
 
         # Schedule periodic updates
-        self.hass.async_create_task(self._periodic_update_loop(update_states))
+        self._update_task = self.hass.async_create_task(self._periodic_update_loop(update_states))
 
     async def _periodic_update_loop(self, update_func) -> None:
         """Run periodic updates."""
-        while True:
-            try:
-                await asyncio.sleep(self.coordinator.update_interval.total_seconds())
-                await update_func()
-            except Exception as err:
-                _LOGGER.error("Error in periodic MQTT update: %s", err)
-                await asyncio.sleep(60)  # Wait before retrying
+        try:
+            while True:
+                try:
+                    await asyncio.sleep(self.coordinator.update_interval.total_seconds())
+                    await update_func()
+                except asyncio.CancelledError:
+                    _LOGGER.debug("MQTT periodic update loop cancelled")
+                    break
+                except Exception as err:
+                    _LOGGER.error("Error in periodic MQTT update: %s", err)
+                    await asyncio.sleep(60)  # Wait before retrying
+        except asyncio.CancelledError:
+            _LOGGER.debug("MQTT periodic update loop cancelled during sleep")
+        finally:
+            _LOGGER.debug("MQTT periodic update loop ended")
 
     async def async_remove(self) -> None:
         """Remove MQTT discovery messages."""
+        # Cancel the periodic update task
+        if self._update_task and not self._update_task.done():
+            self._update_task.cancel()
+            try:
+                await self._update_task
+            except asyncio.CancelledError:
+                pass
+
         for entity_id in self._published_entities:
             entity_data = self.coordinator.get_entity_data(entity_id)
             if entity_data:

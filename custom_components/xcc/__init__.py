@@ -45,10 +45,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
 
-    # Set up MQTT device discovery if MQTT is available
+    # Set up MQTT device discovery if MQTT is available (non-blocking)
     try:
         if "mqtt" in hass.config.components:
-            await _setup_mqtt_discovery(hass, coordinator)
+            # Schedule MQTT setup as a background task to avoid blocking startup
+            hass.async_create_task(_setup_mqtt_discovery(hass, coordinator))
         else:
             _LOGGER.debug("MQTT not configured, skipping MQTT discovery")
     except Exception as err:
@@ -90,12 +91,13 @@ async def _setup_mqtt_discovery(hass: HomeAssistant, coordinator: XCCDataUpdateC
             return
 
         from .mqtt_discovery import XCCMQTTDiscovery
+        import asyncio
 
         _LOGGER.debug("Setting up MQTT discovery for XCC controller")
 
-        # Create and setup MQTT discovery
+        # Create and setup MQTT discovery with timeout
         mqtt_discovery = XCCMQTTDiscovery(hass, coordinator)
-        success = await mqtt_discovery.async_setup()
+        success = await asyncio.wait_for(mqtt_discovery.async_setup(), timeout=30.0)
 
         if success:
             # Store discovery instance for cleanup
@@ -104,6 +106,8 @@ async def _setup_mqtt_discovery(hass: HomeAssistant, coordinator: XCCDataUpdateC
         else:
             _LOGGER.warning("MQTT discovery setup failed for XCC controller %s", coordinator.ip_address)
 
+    except asyncio.TimeoutError:
+        _LOGGER.warning("MQTT discovery setup timed out after 30 seconds, continuing without MQTT")
     except ImportError as err:
         _LOGGER.debug("MQTT component not available, skipping MQTT discovery: %s", err)
     except Exception as err:

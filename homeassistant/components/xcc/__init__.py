@@ -45,10 +45,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
 
-    # Set up MQTT device discovery if MQTT is available
+    # Set up MQTT device discovery if MQTT is available (non-blocking)
     try:
         if "mqtt" in hass.config.components:
-            await _setup_mqtt_discovery(hass, coordinator)
+            # Schedule MQTT setup as a background task to avoid blocking startup
+            hass.async_create_task(_setup_mqtt_discovery(hass, coordinator))
         else:
             _LOGGER.debug("MQTT not configured, skipping MQTT discovery")
     except Exception as err:

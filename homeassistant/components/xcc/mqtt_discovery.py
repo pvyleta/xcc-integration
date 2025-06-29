@@ -26,6 +26,8 @@ class XCCMQTTDiscovery:
         self.ip_address = coordinator.ip_address
         self.device_id = f"{MQTT_DEVICE_PREFIX}_{self.ip_address.replace('.', '_')}"
         self._published_entities: set[str] = set()
+        self._mqtt = None  # Will be set during async_setup
+        self._update_task = None  # Track the periodic update task
 
     async def async_setup(self) -> bool:
         """Set up MQTT discovery."""
