@@ -85,33 +85,37 @@ async def async_setup_entry(
     """Set up XCC sensor entities from a config entry."""
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Get all sensor entities from coordinator
-    sensor_entities = coordinator.get_entities_by_type("sensors")
+    # Wait for first data update to ensure descriptors are loaded
+    await coordinator.async_config_entry_first_refresh()
 
-    entities = []
-    for entity_id, entity_data in sensor_entities.items():
-        try:
-            entity = XCCSensor(coordinator, entity_id)
-            entities.append(entity)
-            _LOGGER.debug("Created sensor entity: %s", entity_id)
-        except Exception as err:
-            _LOGGER.error("Error creating sensor entity %s: %s", entity_id, err)
+    # Create sensor entities for read-only properties only
+    sensors = []
+    for entity_data in coordinator.data.get("entities", []):
+        prop = entity_data.get("prop", "").upper()
+        entity_type = coordinator.get_entity_type(prop)
 
-    if entities:
-        async_add_entities(entities)
-        _LOGGER.info("Added %d XCC sensor entities", len(entities))
+        # Only create sensors for read-only entities or entities that don't have specific platforms
+        if entity_type == "sensor" or not coordinator.is_writable(prop):
+            sensor = XCCSensor(coordinator, entity_data)
+            sensors.append(sensor)
+            _LOGGER.debug("Created sensor entity: %s (%s)", sensor.name, prop)
+
+    if sensors:
+        async_add_entities(sensors)
+        _LOGGER.info("Added %d XCC sensor entities", len(sensors))
 
 
 class XCCSensor(XCCEntity, SensorEntity):
     """Representation of an XCC sensor."""
 
-    def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_id: str) -> None:
+    def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]) -> None:
         """Initialize the XCC sensor."""
         try:
+            entity_id = entity_data.get("entity_id", "")
             _LOGGER.debug("Initializing XCCSensor for entity_id: %s", entity_id)
 
             # Create entity description
-            description = self._create_entity_description(coordinator, entity_id)
+            description = self._create_entity_description(coordinator, entity_data)
             _LOGGER.debug("Created entity description for %s", entity_id)
 
             # Initialize parent class
@@ -119,21 +123,21 @@ class XCCSensor(XCCEntity, SensorEntity):
             _LOGGER.debug("Successfully initialized XCCSensor for %s", entity_id)
 
         except Exception as err:
-            _LOGGER.error("Error in XCCSensor.__init__ for %s: %s", entity_id, err)
+            _LOGGER.error("Error in XCCSensor.__init__ for %s: %s", entity_data.get("entity_id", "unknown"), err)
             raise
 
     def _create_entity_description(
-        self, coordinator: XCCDataUpdateCoordinator, entity_id: str
+        self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]
     ) -> SensorEntityDescription:
         """Create entity description for the sensor."""
-        entity_data = coordinator.get_entity_data(entity_id)
-        if not entity_data:
-            raise ValueError(f"Entity data not found for {entity_id}")
+        entity_id = entity_data.get("entity_id", "")
+        prop = entity_data.get("prop", "").upper()
 
-        attributes = entity_data["data"].get("attributes", {})
+        # Get entity config from descriptors
+        entity_config = coordinator.get_entity_config(prop)
 
-        # Get unit and convert to HA standard
-        xcc_unit = attributes.get("unit", "")
+        # Get unit from descriptor or entity data
+        xcc_unit = unit or entity_data.get("unit", "")
         ha_unit = UNIT_MAPPING.get(xcc_unit, xcc_unit) if xcc_unit else None
 
         # Determine device class
@@ -160,12 +164,16 @@ class XCCSensor(XCCEntity, SensorEntity):
         state_class = None
         if device_class in STATE_CLASS_MAPPING:
             state_class = STATE_CLASS_MAPPING[device_class]
-        elif attributes.get("data_type") == "numeric":
+        else:
             # Default to measurement for numeric values
             state_class = SensorStateClass.MEASUREMENT
 
-        # Get entity name directly from attributes (can't use self._get_entity_name() yet)
-        entity_name = self._get_entity_name_from_attributes(attributes, entity_id)
+        # Get entity name from descriptor or entity data
+        friendly_name = entity_config.get('friendly_name_en') or entity_config.get('friendly_name')
+        if friendly_name:
+            entity_name = friendly_name
+        else:
+            entity_name = entity_data.get("friendly_name", entity_data.get("name", prop))
 
         return SensorEntityDescription(
             key=entity_id,
@@ -174,24 +182,6 @@ class XCCSensor(XCCEntity, SensorEntity):
             device_class=device_class,
             state_class=state_class,
         )
-
-    def _get_entity_name_from_attributes(self, attributes: dict, entity_id: str) -> str:
-        """Get entity name from attributes dict (used during initialization)."""
-        # Try to get localized name based on Home Assistant language
-        hass_language = "en"  # Default to English during initialization
-
-        if hass_language.startswith("cs") or hass_language.startswith("cz"):
-            # Czech language preference
-            name = attributes.get("friendly_name", "")
-            if not name:
-                name = attributes.get("friendly_name_en", entity_id)
-        else:
-            # English language preference (default)
-            name = attributes.get("friendly_name_en", "")
-            if not name:
-                name = attributes.get("friendly_name", entity_id)
-
-        return name or entity_id
 
     @property
     def native_value(self) -> Any:
