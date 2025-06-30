@@ -34,7 +34,12 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         if not self._entity_data:
             raise ValueError(f"Entity data not found for {entity_id}")
 
+        _LOGGER.debug("Entity %s data structure: %s", entity_id,
+                     {k: type(v).__name__ for k, v in self._entity_data.items()})
+
         self._xcc_data = self._entity_data.get("data", {})
+        _LOGGER.debug("Entity %s xcc_data keys: %s", entity_id, list(self._xcc_data.keys()) if isinstance(self._xcc_data, dict) else type(self._xcc_data).__name__)
+
         self._attributes = self._xcc_data.get("attributes", {})
 
         # Ensure _attributes is always a dict

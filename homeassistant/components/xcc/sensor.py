@@ -107,9 +107,20 @@ class XCCSensor(XCCEntity, SensorEntity):
 
     def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_id: str) -> None:
         """Initialize the XCC sensor."""
-        # Create entity description
-        description = self._create_entity_description(coordinator, entity_id)
-        super().__init__(coordinator, entity_id, description)
+        try:
+            _LOGGER.debug("Initializing XCCSensor for entity_id: %s", entity_id)
+
+            # Create entity description
+            description = self._create_entity_description(coordinator, entity_id)
+            _LOGGER.debug("Created entity description for %s", entity_id)
+
+            # Initialize parent class
+            super().__init__(coordinator, entity_id, description)
+            _LOGGER.debug("Successfully initialized XCCSensor for %s", entity_id)
+
+        except Exception as err:
+            _LOGGER.error("Error in XCCSensor.__init__ for %s: %s", entity_id, err)
+            raise
 
     def _create_entity_description(
         self, coordinator: XCCDataUpdateCoordinator, entity_id: str
@@ -192,7 +203,13 @@ class XCCSensor(XCCEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         attrs = super().extra_state_attributes
-        
+
+        # Safety check for _attributes
+        if not hasattr(self, '_attributes') or not isinstance(self._attributes, dict):
+            _LOGGER.warning("XCCSensor %s missing or invalid _attributes, returning base attributes only",
+                          getattr(self, 'entity_id_suffix', 'unknown'))
+            return attrs or {}
+
         # Add enum option text for enum sensors
         if self._attributes.get("data_type") == "enum":
             current_value = str(self.native_value)
