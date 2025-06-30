@@ -222,8 +222,26 @@ def parse_xml_entities(xml_content: str, page_name: str,
             # Parse NAME attribute for more info
             name_attr = elem.get("NAME", "")
             if "_REAL_" in name_attr:
-                attributes["device_class"] = "temperature" if "T" in prop.upper() else None
-                attributes["unit_of_measurement"] = "°C" if "T" in prop.upper() else None
+                # Only assign temperature device class if it's actually a temperature sensor
+                if any(temp_indicator in prop.upper() for temp_indicator in ["TEMP", "TEPLOTA", "SVENKU", "SVNITR"]):
+                    attributes["device_class"] = "temperature"
+                    attributes["unit_of_measurement"] = "°C"
+                elif any(power_indicator in prop.upper() for power_indicator in ["POWER", "VYKON", "WATT"]):
+                    attributes["device_class"] = "power"
+                    attributes["unit_of_measurement"] = "W"
+                elif any(energy_indicator in prop.upper() for energy_indicator in ["ENERGY", "ENERGIE", "KWH"]):
+                    attributes["device_class"] = "energy"
+                    attributes["unit_of_measurement"] = "kWh"
+                elif any(current_indicator in prop.upper() for current_indicator in ["CURRENT", "PROUD", "AMP"]):
+                    attributes["device_class"] = "current"
+                    attributes["unit_of_measurement"] = "A"
+                elif any(voltage_indicator in prop.upper() for voltage_indicator in ["VOLTAGE", "NAPETI", "VOLT"]):
+                    attributes["device_class"] = "voltage"
+                    attributes["unit_of_measurement"] = "V"
+                elif any(price_indicator in prop.upper() for price_indicator in ["PRICE", "CENA", "COST"]):
+                    attributes["device_class"] = "monetary"
+                    attributes["unit_of_measurement"] = "CZK"
+                # Don't assign device class for other REAL values
             elif "_BOOL_" in name_attr:
                 entity_type = "binary_sensor"
                 value = "1" if value == "1" else "0"

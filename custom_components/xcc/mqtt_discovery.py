@@ -186,12 +186,17 @@ class XCCMQTTDiscovery:
         attributes = entity_info.get("attributes", {})
         
         # Add unit of measurement if available
-        if "unit" in attributes:
+        if "unit_of_measurement" in attributes and attributes["unit_of_measurement"]:
+            payload["unit_of_measurement"] = attributes["unit_of_measurement"]
+        elif "unit" in attributes and attributes["unit"]:
             payload["unit_of_measurement"] = attributes["unit"]
-        
-        # Add device class if available
-        if "device_class" in attributes:
-            payload["device_class"] = attributes["device_class"]
+
+        # Add device class if available, but only if we have a proper unit
+        if "device_class" in attributes and attributes["device_class"]:
+            # Only add device class if we have a unit or it's a unitless device class
+            unitless_device_classes = ["timestamp", "enum", "duration_days", "duration_hours", "duration_minutes", "duration_seconds"]
+            if "unit_of_measurement" in payload or attributes["device_class"] in unitless_device_classes:
+                payload["device_class"] = attributes["device_class"]
         
         # Add state class for sensors
         if entity_type == "sensors" and "state_class" in attributes:
