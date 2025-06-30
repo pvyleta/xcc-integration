@@ -103,6 +103,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except Exception as err:
                 _LOGGER.error("Error cleaning up MQTT discovery: %s", err)
 
+    # Clean up coordinator resources
+    try:
+        await coordinator.async_shutdown()
+    except Exception as err:
+        _LOGGER.error("Error shutting down coordinator: %s", err)
+
     # Remove coordinator from hass data
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)

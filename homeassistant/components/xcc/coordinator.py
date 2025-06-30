@@ -48,7 +48,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Store discovered entities and their metadata
         self.entities: dict[str, dict[str, Any]] = {}
         self.device_info: dict[str, Any] = {}
-        self._client = None
+        self._client = None  # Persistent XCC client for session reuse
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
@@ -56,15 +56,21 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Import XCC client here to avoid import issues
             from .xcc_client import XCCClient, parse_xml_entities
 
-            async with XCCClient(
-                ip=self.ip_address,
-                username=self.username,
-                password=self.password,
-            ) as client:
-                # Fetch all XCC pages
-                pages_data = await asyncio.wait_for(
-                    client.fetch_pages(XCC_PAGES), timeout=DEFAULT_TIMEOUT
+            # Create or reuse persistent client for session management
+            if self._client is None:
+                self._client = XCCClient(
+                    ip=self.ip_address,
+                    username=self.username,
+                    password=self.password,
                 )
+                await self._client.__aenter__()  # Initialize the client
+
+            client = self._client
+
+            # Fetch all XCC pages
+            pages_data = await asyncio.wait_for(
+                client.fetch_pages(XCC_PAGES), timeout=DEFAULT_TIMEOUT
+            )
 
                 # Parse entities from all pages
                 all_entities = []
@@ -173,3 +179,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Error setting value for entity %s: %s", entity_id, err)
             return False
+
+    async def async_shutdown(self) -> None:
+        """Shutdown the coordinator and clean up resources."""
+        if self._client is not None:
+            try:
+                await self._client.__aexit__(None, None, None)
+            except Exception as err:
+                _LOGGER.warning("Error closing XCC client: %s", err)
+            finally:
+                self._client = None
