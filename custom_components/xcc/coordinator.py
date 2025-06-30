@@ -88,26 +88,26 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     else:
                         _LOGGER.warning("Error fetching page %s: %s", page_name, xml_content)
 
-                # Process entities and organize data
-                _LOGGER.debug("Processing %d total entities from all pages", len(all_entities))
-                processed_data = self._process_entities(all_entities)
+            # Process entities and organize data
+            _LOGGER.debug("Processing %d total entities from all pages", len(all_entities))
+            processed_data = self._process_entities(all_entities)
 
-                # Log summary of processed data
-                entity_counts = {key: len(value) for key, value in processed_data.items()}
-                _LOGGER.info("XCC data update successful: %s", entity_counts)
+            # Log summary of processed data
+            entity_counts = {key: len(value) for key, value in processed_data.items()}
+            _LOGGER.info("XCC data update successful: %s", entity_counts)
 
-                # Update device info on first successful fetch
-                if not self.device_info:
-                    self.device_info = {
-                        "identifiers": {(DOMAIN, self.ip_address)},
-                        "name": f"XCC Controller ({self.ip_address})",
-                        "manufacturer": "XCC",
-                        "model": "Heat Pump Controller",
-                        "sw_version": "Unknown",
-                        "configuration_url": f"http://{self.ip_address}",
-                    }
+            # Update device info on first successful fetch
+            if not self.device_info:
+                self.device_info = {
+                    "identifiers": {(DOMAIN, self.ip_address)},
+                    "name": f"XCC Controller ({self.ip_address})",
+                    "manufacturer": "XCC",
+                    "model": "Heat Pump Controller",
+                    "sw_version": "Unknown",
+                    "configuration_url": f"http://{self.ip_address}",
+                }
 
-                return processed_data
+            return processed_data
 
         except asyncio.TimeoutError as err:
             _LOGGER.error("Timeout communicating with XCC controller %s: %s", self.ip_address, err)
