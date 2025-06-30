@@ -64,7 +64,7 @@ class XCCMQTTDiscovery:
     async def _publish_device_discovery(self) -> None:
         """Publish device discovery message."""
         device_info = self.coordinator.device_info
-        
+
         device_payload = {
             "identifiers": [self.device_id],
             "name": device_info["name"],
@@ -97,7 +97,7 @@ class XCCMQTTDiscovery:
         """Publish discovery message for a single entity."""
         entity_info = entity_data["data"]
         entity_type = entity_data["type"]
-        
+
         # Map entity type to MQTT discovery component
         mqtt_component = self._get_mqtt_component_for_entity_type(entity_type)
         if not mqtt_component:
@@ -106,7 +106,7 @@ class XCCMQTTDiscovery:
 
         # Create discovery topic and payload
         discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/{mqtt_component}/{self.device_id}/{entity_id}/config"
-        
+
         # Base entity payload
         entity_payload = {
             "unique_id": f"{self.device_id}_{entity_id}",
@@ -145,7 +145,7 @@ class XCCMQTTDiscovery:
         """Publish current state for an entity."""
         state_topic = f"{MQTT_DEVICE_PREFIX}/{self.ip_address}/{entity_id}/state"
         state_value = entity_info.get("state", "unknown")
-        
+
         await self._mqtt.async_publish(
             self.hass,
             state_topic,
@@ -167,16 +167,16 @@ class XCCMQTTDiscovery:
     def _get_entity_name(self, entity_info: dict[str, Any]) -> str:
         """Get localized entity name."""
         attributes = entity_info.get("attributes", {})
-        
+
         # Get language preference
         hass_language = self.hass.config.language if self.hass else "en"
         use_czech = hass_language.startswith("cs") or hass_language.startswith("cz")
-        
+
         if use_czech:
             name = attributes.get("friendly_name", attributes.get("friendly_name_en", ""))
         else:
             name = attributes.get("friendly_name_en", attributes.get("friendly_name", ""))
-        
+
         return name or attributes.get("field_name", "Unknown")
 
     def _add_entity_specific_mqtt_config(
@@ -184,7 +184,7 @@ class XCCMQTTDiscovery:
     ) -> None:
         """Add entity-specific MQTT configuration."""
         attributes = entity_info.get("attributes", {})
-        
+
         # Add unit of measurement if available
         if "unit_of_measurement" in attributes and attributes["unit_of_measurement"]:
             payload["unit_of_measurement"] = attributes["unit_of_measurement"]
@@ -197,16 +197,16 @@ class XCCMQTTDiscovery:
             unitless_device_classes = ["timestamp", "enum", "duration_days", "duration_hours", "duration_minutes", "duration_seconds"]
             if "unit_of_measurement" in payload or attributes["device_class"] in unitless_device_classes:
                 payload["device_class"] = attributes["device_class"]
-        
+
         # Add state class for sensors
         if entity_type == "sensors" and "state_class" in attributes:
             payload["state_class"] = attributes["state_class"]
-        
+
         # Add options for select entities
         if entity_type == "selects" and "options" in attributes:
             hass_language = self.hass.config.language if self.hass else "en"
             use_czech = hass_language.startswith("cs") or hass_language.startswith("cz")
-            
+
             options = []
             for opt in attributes["options"]:
                 if use_czech:
@@ -215,7 +215,7 @@ class XCCMQTTDiscovery:
                     text = opt.get("text_en", opt.get("text", opt["value"]))
                 options.append(text)
             payload["options"] = options
-        
+
         # Add min/max for number entities
         if entity_type == "numbers":
             if "min_value" in attributes:

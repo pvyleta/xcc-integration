@@ -6,7 +6,7 @@ from typing import Final
 
 # Integration domain
 DOMAIN: Final = "xcc"
-VERSION: Final = "1.5.0"  # Integration version for debugging
+VERSION: Final = "1.5.1"  # Integration version for debugging
 
 # Configuration constants
 CONF_IP_ADDRESS: Final = "ip_address"
@@ -45,7 +45,7 @@ UPDATE_INTERVAL_SLOW: Final = 300  # seconds - for configuration values
 # Entity platforms supported
 PLATFORMS: Final = [
     "sensor",
-    "binary_sensor", 
+    "binary_sensor",
     "switch",
     "number",
     "select",
@@ -55,7 +55,7 @@ PLATFORMS: Final = [
 # XCC specific constants
 XCC_PAGES: Final = [
     "stavjed.xml", "STAVJED1.XML",  # Status
-    "okruh.xml", "OKRUH10.XML",     # Heating circuits  
+    "okruh.xml", "OKRUH10.XML",     # Heating circuits
     "tuv1.xml", "TUV11.XML",        # Hot water
     "biv.xml", "BIV1.XML",          # Bivalent heating
     "fve.xml", "FVE4.XML",          # Photovoltaics
@@ -65,7 +65,7 @@ XCC_PAGES: Final = [
 # Entity types mapping
 ENTITY_TYPE_MAPPING: Final = {
     "numeric": "number",
-    "enum": "select", 
+    "enum": "select",
     "boolean": "switch",
     "readonly": "sensor",
     "status": "binary_sensor",

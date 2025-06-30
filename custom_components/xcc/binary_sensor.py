@@ -31,7 +31,7 @@ async def async_setup_entry(
 
     # Get all binary sensor entities from coordinator
     binary_sensor_entities = coordinator.get_entities_by_type("binary_sensors")
-    
+
     entities = []
     for entity_id, entity_data in binary_sensor_entities.items():
         try:
@@ -75,7 +75,7 @@ class XCCBinarySensor(XCCEntity, BinarySensorEntity):
     def _determine_device_class(self, entity_id: str) -> BinarySensorDeviceClass | None:
         """Determine device class from entity ID and attributes."""
         field_name_lower = entity_id.lower()
-        
+
         # Map common field patterns to device classes
         if any(pattern in field_name_lower for pattern in ["alarm", "error", "chyba", "porucha"]):
             return BinarySensorDeviceClass.PROBLEM
@@ -99,7 +99,7 @@ class XCCBinarySensor(XCCEntity, BinarySensorEntity):
             return BinarySensorDeviceClass.OCCUPANCY
         elif any(pattern in field_name_lower for pattern in ["safety", "bezpecnost"]):
             return BinarySensorDeviceClass.SAFETY
-        
+
         # Default to None (generic binary sensor)
         return None
 
@@ -120,10 +120,10 @@ class XCCBinarySensor(XCCEntity, BinarySensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         attrs = super().extra_state_attributes
-        
+
         # Add raw value for debugging
         raw_value = self._get_current_value()
         if raw_value is not None:
             attrs["raw_value"] = raw_value
-        
+
         return attrs

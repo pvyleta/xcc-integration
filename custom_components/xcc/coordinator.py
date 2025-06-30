@@ -33,7 +33,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.ip_address = entry.data[CONF_IP_ADDRESS]
         self.username = entry.data[CONF_USERNAME]
         self.password = entry.data[CONF_PASSWORD]
-        
+
         # Set update interval from config or default
         scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         update_interval = timedelta(seconds=scan_interval)
@@ -58,7 +58,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Starting data update for XCC controller %s", self.ip_address)
         try:
             # Import XCC client here to avoid import issues
-            from .xcc_client import XCCClient, parse_xml_entities, fetch_all_data_with_descriptors
+            from .xcc_client import XCCClient, parse_xml_entities
             from .descriptor_parser import XCCDescriptorParser
 
             # Create or reuse persistent client for session management
@@ -140,7 +140,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         for entity in entities:
             entity_id = entity["attributes"]["field_name"]
             entity_type = self._determine_entity_type(entity)
-            
+
             # Store entity metadata for later use
             self.entities[entity_id] = {
                 "type": entity_type,

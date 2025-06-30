@@ -38,7 +38,7 @@ async def async_setup_entry(
             select = XCCSelect(coordinator, entity_data)
             selects.append(select)
             _LOGGER.debug("Created select entity: %s (%s)", select.name, prop)
-    
+
     entities = []
     for entity_id, entity_data in select_entities.items():
         try:
@@ -61,7 +61,7 @@ class XCCSelect(XCCEntity, SelectEntity):
         # Create entity description
         description = self._create_entity_description(coordinator, entity_id)
         super().__init__(coordinator, entity_id, description)
-        
+
         # Store option mapping for value conversion
         self._option_mapping = self._create_option_mapping()
         self._reverse_option_mapping = {v: k for k, v in self._option_mapping.items()}
@@ -101,7 +101,7 @@ class XCCSelect(XCCEntity, SelectEntity):
             else:
                 # Prefer English text, fallback to Czech, then value
                 text = option.get("text_en", option.get("text", option["value"]))
-            
+
             localized_options.append(text)
 
         return localized_options
@@ -120,12 +120,12 @@ class XCCSelect(XCCEntity, SelectEntity):
         mapping = {}
         for option in options:
             xcc_value = option["value"]
-            
+
             if use_czech:
                 display_text = option.get("text", option.get("text_en", xcc_value))
             else:
                 display_text = option.get("text_en", option.get("text", xcc_value))
-            
+
             mapping[xcc_value] = display_text
 
         return mapping
@@ -164,13 +164,13 @@ class XCCSelect(XCCEntity, SelectEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         attrs = super().extra_state_attributes
-        
+
         # Add raw value for debugging
         raw_value = self._get_current_value()
         if raw_value is not None:
             attrs["raw_value"] = raw_value
-        
+
         # Add option mapping for debugging
         attrs["option_mapping"] = self._option_mapping
-        
+
         return attrs

@@ -13,17 +13,15 @@ from yarl import URL
 from lxml import etree
 
 try:
-    from .xml_parser import parse_xml_entities
     from .descriptor_parser import XCCDescriptorParser
 except ImportError:
     # For standalone usage
-    from xml_parser import parse_xml_entities
     from descriptor_parser import XCCDescriptorParser
 
 
 class XCCClient:
     """Client for XCC heat pump controller communication."""
-    
+
     def __init__(self, ip: str, username: str = "xcc",
                  password: str = "xcc", cookie_file: Optional[str] = None):
         self.ip = ip
@@ -32,11 +30,11 @@ class XCCClient:
         self.cookie_file = cookie_file
         self.session = None
         self.descriptor_parser = XCCDescriptorParser()
-        
+
     async def __aenter__(self):
         await self.connect()
         return self
-        
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
@@ -54,7 +52,7 @@ class XCCClient:
     async def connect(self):
         """Establish connection with session reuse."""
         cookie_jar = aiohttp.CookieJar(unsafe=True)
-        
+
         # Try to reuse existing session
         if self.cookie_file and os.path.exists(self.cookie_file):
             try:
@@ -63,12 +61,12 @@ class XCCClient:
                     session_cookie = saved.get("SoftPLC")
                     if session_cookie:
                         cookie_jar.update_cookies(
-                            {"SoftPLC": session_cookie}, 
+                            {"SoftPLC": session_cookie},
                             response_url=URL(f"http://{self.ip}/")
                         )
             except Exception:
                 pass  # Continue with fresh login
-                
+
         # Create session with strict connection limits for XCC controllers
         connector = aiohttp.TCPConnector(
             limit=1,           # Total connection pool limit
@@ -83,7 +81,7 @@ class XCCClient:
             cookie_jar=cookie_jar,
             timeout=aiohttp.ClientTimeout(total=30)
         )
-        
+
         # Test if existing session works, otherwise authenticate
         import logging
         _LOGGER = logging.getLogger(__name__)
@@ -94,7 +92,7 @@ class XCCClient:
             await self._authenticate()
         else:
             _LOGGER.debug("Existing session is valid, skipping authentication")
-            
+
     async def _test_session(self) -> bool:
         """Test if current session is valid."""
         import logging
@@ -115,7 +113,7 @@ class XCCClient:
         except Exception as e:
             _LOGGER.debug("Session test failed with exception: %s", e)
             return False
-            
+
     async def _authenticate(self):
         """Perform authentication and save session with retry logic."""
         import logging
@@ -174,7 +172,7 @@ class XCCClient:
             raise Exception("No SoftPLC cookie found")
 
         _LOGGER.debug("Found session ID: %s", session_id)
-            
+
         # Login with hashed password
         passhash = hashlib.sha1(f"{session_id}{self.password}".encode()).hexdigest()
         login_data = {"USER": self.username, "PASS": passhash}
@@ -198,7 +196,7 @@ class XCCClient:
         if self.cookie_file:
             _LOGGER.debug("Saving session cookie to %s", self.cookie_file)
             self._save_session()
-            
+
     def _save_session(self):
         """Save session cookie to file."""
         try:
@@ -208,12 +206,12 @@ class XCCClient:
                 if cookie.key == "SoftPLC":
                     session_data["SoftPLC"] = cookie.value
                     break
-                    
+
             with open(self.cookie_file, "w") as f:
                 json.dump(session_data, f)
         except Exception:
             pass  # Non-critical
-            
+
     async def fetch_page(self, page: str) -> str:
         """Fetch XML page content with proper encoding detection."""
         import re
@@ -247,7 +245,7 @@ class XCCClient:
             except Exception as e:
                 _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
                 return raw_bytes.decode("utf-8", errors="replace")
-            
+
     async def fetch_pages(self, pages: List[str]) -> Dict[str, str]:
         """Fetch multiple pages with delays to avoid overwhelming XCC controller."""
         import asyncio
@@ -267,7 +265,7 @@ class XCCClient:
                 _LOGGER.warning("Error fetching page %s: %s", page, e)
                 results[page] = f"Error: {e}"
         return results
-        
+
     async def close(self):
         """Close the session."""
         if self.session:
@@ -415,7 +413,7 @@ def parse_xml_entities(xml_content: str, page_name: str,
             continue
 
         entity_id = f"{entity_prefix}_{prop.lower().replace('-', '_')}"
-        
+
         # Determine entity type and attributes
         entity_type = "sensor"
         attributes = {
@@ -423,24 +421,24 @@ def parse_xml_entities(xml_content: str, page_name: str,
             "field_name": prop,
             "friendly_name": prop.replace("-", " ").title()
         }
-        
+
         # Add type-specific attributes
         if elem.get("unit"):
             attributes["unit_of_measurement"] = elem.get("unit")
             attributes["device_class"] = _get_device_class(elem.get("unit"))
-            
+
         if elem.get("min") and elem.get("max"):
             try:
                 attributes["min_value"] = float(elem.get("min"))
                 attributes["max_value"] = float(elem.get("max"))
             except ValueError:
                 pass
-                
+
         # Handle boolean values
         if value in ("0", "1") and not elem.get("unit"):
             entity_type = "binary_sensor"
             value = value == "1"
-            
+
         entities.append({
             "entity_id": entity_id,
             "entity_type": entity_type,
@@ -522,7 +520,7 @@ async def fetch_all_data_with_descriptors(client: 'XCCClient') -> Tuple[Dict[str
 # Standard page sets for different use cases
 STANDARD_PAGES = [
     "stavjed.xml", "STAVJED1.XML",  # Status
-    "okruh.xml", "OKRUH10.XML",     # Heating circuits  
+    "okruh.xml", "OKRUH10.XML",     # Heating circuits
     "tuv1.xml", "TUV11.XML",        # Hot water
     "biv.xml", "BIV1.XML",          # Bivalent heating
     "fve.xml", "FVE4.XML",          # Photovoltaics

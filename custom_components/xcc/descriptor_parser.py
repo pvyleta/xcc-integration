@@ -9,23 +9,23 @@ _LOGGER = logging.getLogger(__name__)
 
 class XCCDescriptorParser:
     """Parser for XCC descriptor files to determine entity types and capabilities."""
-    
+
     def __init__(self):
         """Initialize the descriptor parser."""
         self.entity_configs = {}
-        
+
     def parse_descriptor_files(self, descriptor_data: Dict[str, str]) -> Dict[str, Dict[str, Any]]:
         """
         Parse descriptor XML files to determine entity types and configurations.
-        
+
         Args:
             descriptor_data: Dict mapping page names to XML content
-            
+
         Returns:
             Dict mapping entity prop names to their configuration
         """
         entity_configs = {}
-        
+
         for page_name, xml_content in descriptor_data.items():
             _LOGGER.debug("Parsing descriptor file %s", page_name)
             try:
@@ -34,10 +34,10 @@ class XCCDescriptorParser:
                 _LOGGER.debug("Found %d entity configurations in %s", len(page_configs), page_name)
             except Exception as err:
                 _LOGGER.error("Error parsing descriptor %s: %s", page_name, err)
-                
+
         _LOGGER.info("Parsed %d total entity configurations from descriptors", len(entity_configs))
         return entity_configs
-        
+
     def _parse_single_descriptor(self, xml_content: str, page_name: str) -> Dict[str, Dict[str, Any]]:
         """Parse a single descriptor XML file."""
         try:
@@ -45,37 +45,37 @@ class XCCDescriptorParser:
         except ET.ParseError as err:
             _LOGGER.error("Failed to parse XML for %s: %s", page_name, err)
             return {}
-            
+
         entity_configs = {}
-        
+
         # Find all interactive elements that can be changed
         for element in root.iter():
             if element.tag in ['number', 'switch', 'choice', 'option', 'button']:
                 prop = element.get('prop')
                 if not prop:
                     continue
-                    
+
                 config = self._determine_entity_config(element, page_name)
                 if config:
                     entity_configs[prop] = config
-                    
+
         return entity_configs
-        
+
     def _determine_entity_config(self, element: ET.Element, page_name: str) -> Optional[Dict[str, Any]]:
         """Determine the entity configuration from an XML element."""
         prop = element.get('prop')
         if not prop:
             return None
-            
+
         # Check if element is readonly
         config_attr = element.get('config', '')
         if 'readonly' in config_attr:
             return None  # Skip readonly elements
-            
+
         # Get friendly names
         text = element.get('text', '')
         text_en = element.get('text_en', text)
-        
+
         # Get parent row for additional context
         parent_row = self._find_parent_row(element)
         if parent_row is not None:
@@ -87,7 +87,7 @@ class XCCDescriptorParser:
                 friendly_name = text_en or text or row_text_en or row_text or prop
         else:
             friendly_name = text_en or text or prop
-            
+
         # Determine entity type and configuration
         entity_config = {
             'prop': prop,
@@ -96,13 +96,13 @@ class XCCDescriptorParser:
             'page': page_name,
             'writable': True,
         }
-        
+
         if element.tag == 'switch':
             entity_config.update({
                 'entity_type': 'switch',
                 'data_type': 'bool',
             })
-            
+
         elif element.tag == 'number':
             entity_config.update({
                 'entity_type': 'number',
@@ -114,7 +114,7 @@ class XCCDescriptorParser:
                 'unit': element.get('unit', ''),
                 'unit_en': element.get('unit_en', element.get('unit', '')),
             })
-            
+
         elif element.tag == 'choice':
             # Get available options
             options = self._get_choice_options(element)
@@ -123,24 +123,24 @@ class XCCDescriptorParser:
                 'data_type': 'enum',
                 'options': options,
             })
-            
+
         elif element.tag == 'button':
             entity_config.update({
                 'entity_type': 'button',
                 'data_type': 'action',
             })
-            
+
         else:
             return None  # Unknown element type
-            
+
         return entity_config
-        
+
     def _find_parent_row(self, element: ET.Element) -> Optional[ET.Element]:
         """Find the parent row element for context."""
         # This is a simplified approach since we're working with parsed XML
         # In a real implementation, we'd need to traverse the tree properly
         return None
-        
+
     def _get_float_attr(self, element: ET.Element, attr: str, default: Optional[float] = None) -> Optional[float]:
         """Get a float attribute from an element."""
         value = element.get(attr)
@@ -150,7 +150,7 @@ class XCCDescriptorParser:
             return float(value)
         except ValueError:
             return default
-            
+
     def _get_int_attr(self, element: ET.Element, attr: str, default: Optional[int] = None) -> Optional[int]:
         """Get an integer attribute from an element."""
         value = element.get(attr)
@@ -160,7 +160,7 @@ class XCCDescriptorParser:
             return int(value)
         except ValueError:
             return default
-            
+
     def _get_choice_options(self, choice_element: ET.Element) -> List[Dict[str, str]]:
         """Get options for a choice element."""
         options = []
@@ -172,12 +172,12 @@ class XCCDescriptorParser:
             }
             options.append(option_data)
         return options
-        
+
     def get_entity_type_for_prop(self, prop: str) -> str:
         """Get the entity type for a given property."""
         config = self.entity_configs.get(prop, {})
         return config.get('entity_type', 'sensor')
-        
+
     def is_writable(self, prop: str) -> bool:
         """Check if a property is writable."""
         config = self.entity_configs.get(prop, {})

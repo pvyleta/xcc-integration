@@ -27,7 +27,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
     ) -> None:
         """Initialize the XCC entity."""
         super().__init__(coordinator)
-        
+
         self.entity_id_suffix = entity_id
         self._entity_data = coordinator.get_entity_data(entity_id)
 
@@ -49,17 +49,17 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             self._attributes = {}
 
         _LOGGER.debug("Initialized entity %s with attributes: %s", entity_id, list(self._attributes.keys()))
-        
+
         # Set entity description if provided
         if description:
             self.entity_description = description
-        
+
         # Generate unique ID
         self._attr_unique_id = f"{coordinator.ip_address}_{entity_id}"
-        
+
         # Set entity name
         self._attr_name = self._get_entity_name()
-        
+
         # Set device info
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.ip_address)},
@@ -74,7 +74,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         """Get the entity name based on language preference."""
         # Try to get localized name based on Home Assistant language
         hass_language = self.hass.config.language if self.hass else "en"
-        
+
         if hass_language.startswith("cs") or hass_language.startswith("cz"):
             # Czech language preference
             name = self._attributes.get("friendly_name", "")
@@ -85,7 +85,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             name = self._attributes.get("friendly_name_en", "")
             if not name:
                 name = self._attributes.get("friendly_name", self.entity_id_suffix)
-        
+
         return name or self.entity_id_suffix
 
     @property
@@ -102,11 +102,11 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             "xcc_data_type": self._attributes.get("data_type", "unknown"),
             "xcc_element_type": self._attributes.get("element_type", "unknown"),
         }
-        
+
         # Add settable indicator
         if "is_settable" in self._attributes:
             attrs["xcc_settable"] = self._attributes["is_settable"]
-        
+
         # Add constraints for numeric fields
         if self._attributes.get("data_type") == "numeric":
             if "min_value" in self._attributes:
@@ -115,7 +115,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 attrs["xcc_max_value"] = self._attributes["max_value"]
             if "unit" in self._attributes:
                 attrs["xcc_unit"] = self._attributes["unit"]
-        
+
         # Add options for enum fields
         elif self._attributes.get("data_type") == "enum" and "options" in self._attributes:
             options = []
@@ -123,7 +123,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 option_text = option.get("text_en", option.get("text", option["value"]))
                 options.append(f"{option['value']}: {option_text}")
             attrs["xcc_options"] = options
-        
+
         return attrs
 
     @callback
@@ -134,33 +134,33 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         if self._entity_data:
             self._xcc_data = self._entity_data["data"]
             self._attributes = self._xcc_data.get("attributes", {})
-        
+
         super()._handle_coordinator_update()
 
     def _get_current_value(self) -> Any:
         """Get the current value from coordinator data."""
         entity_type = self._entity_data["type"]
-        
+
         if entity_type in self.coordinator.data:
             entity_data = self.coordinator.data[entity_type].get(self.entity_id_suffix)
             if entity_data:
                 return entity_data.get("state")
-        
+
         return None
 
     def _convert_value_for_ha(self, value: Any) -> Any:
         """Convert XCC value to Home Assistant compatible value."""
         if value is None:
             return None
-            
+
         data_type = self._attributes.get("data_type", "unknown")
-        
+
         # Convert boolean values
         if data_type == "boolean":
             if isinstance(value, str):
                 return value.lower() in ("1", "true", "on", "yes")
             return bool(value)
-        
+
         # Convert numeric values
         elif data_type == "numeric":
             try:
@@ -170,7 +170,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 return float(value)
             except (ValueError, TypeError):
                 return value
-        
+
         # Return string values as-is
         return str(value) if value is not None else None
 

@@ -87,7 +87,7 @@ async def async_setup_entry(
 
     # Get all sensor entities from coordinator
     sensor_entities = coordinator.get_entities_by_type("sensors")
-    
+
     entities = []
     for entity_id, entity_data in sensor_entities.items():
         try:
@@ -131,11 +131,11 @@ class XCCSensor(XCCEntity, SensorEntity):
             raise ValueError(f"Entity data not found for {entity_id}")
 
         attributes = entity_data["data"].get("attributes", {})
-        
+
         # Get unit and convert to HA standard
         xcc_unit = attributes.get("unit", "")
         ha_unit = UNIT_MAPPING.get(xcc_unit, xcc_unit) if xcc_unit else None
-        
+
         # Determine device class
         device_class = None
         if ha_unit in DEVICE_CLASS_MAPPING:
@@ -155,7 +155,7 @@ class XCCSensor(XCCEntity, SensorEntity):
                 device_class = SensorDeviceClass.CURRENT
             elif "pressure" in field_name_lower or "tlak" in field_name_lower:
                 device_class = SensorDeviceClass.PRESSURE
-        
+
         # Determine state class
         state_class = None
         if device_class in STATE_CLASS_MAPPING:
@@ -242,9 +242,9 @@ class XCCSensor(XCCEntity, SensorEntity):
                         option_text = option.get("text", option.get("text_en", ""))
                     else:
                         option_text = option.get("text_en", option.get("text", ""))
-                    
+
                     if option_text:
                         attrs["option_text"] = option_text
                     break
-        
+
         return attrs

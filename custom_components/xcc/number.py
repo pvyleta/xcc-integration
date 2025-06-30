@@ -101,12 +101,12 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             raise ValueError(f"Entity data not found for {entity_id}")
 
         attributes = entity_data["data"].get("attributes", {})
-        
+
         # Get min/max values
         min_value = attributes.get("min_value", 0)
         max_value = attributes.get("max_value", 100)
         step = attributes.get("step", 1)
-        
+
         # Convert to float if needed
         try:
             min_value = float(min_value)
@@ -134,12 +134,12 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         """Return the native value of the number."""
         raw_value = self._get_current_value()
         converted_value = self._convert_value_for_ha(raw_value)
-        
+
         if converted_value is not None:
             try:
                 return float(converted_value)
             except (ValueError, TypeError):
-                _LOGGER.warning("Could not convert value %s to float for %s", 
+                _LOGGER.warning("Could not convert value %s to float for %s",
                               converted_value, self.entity_id_suffix)
                 return None
         return None
@@ -189,7 +189,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
 
         # Convert to appropriate format for XCC
         xcc_value = self._convert_value_for_xcc(value)
-        
+
         success = await self.async_set_xcc_value(xcc_value)
         if not success:
             _LOGGER.error("Failed to set value %s for number %s", value, self.entity_id_suffix)
@@ -205,10 +205,10 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         attrs = super().extra_state_attributes
-        
+
         # Add raw value for debugging
         raw_value = self._get_current_value()
         if raw_value is not None:
             attrs["raw_value"] = raw_value
-        
+
         return attrs
