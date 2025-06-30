@@ -12,6 +12,14 @@ from typing import Dict, List, Optional, Tuple
 from yarl import URL
 from lxml import etree
 
+try:
+    from .xml_parser import parse_xml_entities
+    from .descriptor_parser import XCCDescriptorParser
+except ImportError:
+    # For standalone usage
+    from xml_parser import parse_xml_entities
+    from descriptor_parser import XCCDescriptorParser
+
 
 class XCCClient:
     """Client for XCC heat pump controller communication."""
@@ -23,6 +31,7 @@ class XCCClient:
         self.password = password
         self.cookie_file = cookie_file
         self.session = None
+        self.descriptor_parser = XCCDescriptorParser()
         
     async def __aenter__(self):
         await self.connect()
@@ -461,6 +470,53 @@ def _get_device_class(unit: str) -> Optional[str]:
         "bar": "pressure"
     }
     return unit_map.get(unit)
+
+
+async def fetch_all_data_with_descriptors(client: 'XCCClient') -> Tuple[Dict[str, str], Dict[str, str]]:
+    """Fetch all XCC data pages and their corresponding descriptor files."""
+    import asyncio
+
+    # Data pages (with values)
+    data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+    # Descriptor pages (with UI definitions)
+    descriptor_pages = ["STAVJED.XML", "OKRUH.XML", "TUV1.XML", "BIV.XML", "FVE.XML", "SPOT.XML"]
+
+    all_data = {}
+    all_descriptors = {}
+
+    # Fetch data pages
+    for page in data_pages:
+        try:
+            data = await client.fetch_page(page)
+            if data:
+                all_data[page] = data
+                print(f"✓ Successfully fetched data {page} ({len(data)} bytes)")
+            else:
+                print(f"✗ Failed to fetch data {page}")
+
+            # Small delay between requests
+            await asyncio.sleep(0.2)
+
+        except Exception as e:
+            print(f"✗ Error fetching data {page}: {e}")
+
+    # Fetch descriptor pages
+    for page in descriptor_pages:
+        try:
+            data = await client.fetch_page(page)
+            if data:
+                all_descriptors[page] = data
+                print(f"✓ Successfully fetched descriptor {page} ({len(data)} bytes)")
+            else:
+                print(f"✗ Failed to fetch descriptor {page}")
+
+            # Small delay between requests
+            await asyncio.sleep(0.2)
+
+        except Exception as e:
+            print(f"✗ Error fetching descriptor {page}: {e}")
+
+    return all_data, all_descriptors
 
 
 # Standard page sets for different use cases

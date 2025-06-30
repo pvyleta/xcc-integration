@@ -49,13 +49,17 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.entities: dict[str, dict[str, Any]] = {}
         self.device_info: dict[str, Any] = {}
         self._client = None  # Persistent XCC client for session reuse
+        self.descriptor_parser = None  # Parser for entity type detection
+        self.entity_configs = {}  # Cached entity configurations
+        self._descriptors_loaded = False  # Track if descriptors have been loaded
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
         _LOGGER.debug("Starting data update for XCC controller %s", self.ip_address)
         try:
             # Import XCC client here to avoid import issues
-            from .xcc_client import XCCClient, parse_xml_entities
+            from .xcc_client import XCCClient, parse_xml_entities, fetch_all_data_with_descriptors
+            from .descriptor_parser import XCCDescriptorParser
 
             # Create or reuse persistent client for session management
             if self._client is None:
@@ -70,6 +74,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Reusing existing XCC client for %s", self.ip_address)
 
             client = self._client
+
+            # Load descriptors on first run to determine entity types
+            if not self._descriptors_loaded:
+                await self._load_descriptors(client)
 
             # Fetch all XCC pages
             _LOGGER.debug("Fetching %d XCC pages: %s", len(XCC_PAGES), XCC_PAGES)
@@ -214,3 +222,76 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.warning("Error closing XCC client: %s", err)
             finally:
                 self._client = None
+
+    async def _load_descriptors(self, client: 'XCCClient') -> None:
+        """Load descriptor files to determine entity types."""
+        try:
+            from .descriptor_parser import XCCDescriptorParser
+            import asyncio
+
+            _LOGGER.debug("Loading XCC descriptor files for entity type detection")
+
+            # Descriptor pages (with UI definitions)
+            descriptor_pages = ["STAVJED.XML", "OKRUH.XML", "TUV1.XML", "BIV.XML", "FVE.XML", "SPOT.XML"]
+
+            descriptor_data = {}
+            for page in descriptor_pages:
+                try:
+                    data = await client.fetch_page(page)
+                    if data:
+                        descriptor_data[page] = data
+                        _LOGGER.debug("Loaded descriptor %s (%d bytes)", page, len(data))
+                    else:
+                        _LOGGER.warning("Failed to load descriptor %s", page)
+
+                    # Small delay between requests
+                    await asyncio.sleep(0.1)
+
+                except Exception as e:
+                    _LOGGER.error("Error loading descriptor %s: %s", page, e)
+
+            # Parse descriptors to determine entity types
+            if descriptor_data:
+                self.descriptor_parser = XCCDescriptorParser()
+                self.entity_configs = self.descriptor_parser.parse_descriptor_files(descriptor_data)
+
+                _LOGGER.info("Loaded %d entity configurations from %d descriptor files",
+                           len(self.entity_configs), len(descriptor_data))
+
+                # Log summary by entity type
+                by_type = {}
+                for config in self.entity_configs.values():
+                    entity_type = config.get('entity_type', 'unknown')
+                    by_type[entity_type] = by_type.get(entity_type, 0) + 1
+
+                _LOGGER.info("Entity types: %s", by_type)
+
+            self._descriptors_loaded = True
+
+        except Exception as err:
+            _LOGGER.error("Failed to load descriptors: %s", err)
+            self._descriptors_loaded = True  # Don't retry on every update
+
+    def get_entity_type(self, prop: str) -> str:
+        """Get the entity type for a given property."""
+        if not self.entity_configs:
+            return 'sensor'  # Default to sensor if no descriptors loaded
+
+        config = self.entity_configs.get(prop)
+        if config:
+            return config.get('entity_type', 'sensor')
+        return 'sensor'
+
+    def is_writable(self, prop: str) -> bool:
+        """Check if a property is writable."""
+        if not self.entity_configs:
+            return False
+
+        config = self.entity_configs.get(prop)
+        if config:
+            return config.get('writable', False)
+        return False
+
+    def get_entity_config(self, prop: str) -> dict:
+        """Get the full entity configuration for a property."""
+        return self.entity_configs.get(prop, {})

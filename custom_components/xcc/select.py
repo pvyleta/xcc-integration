@@ -9,10 +9,10 @@ from homeassistant.components.select import SelectEntity, SelectEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
-from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,8 +25,19 @@ async def async_setup_entry(
     """Set up XCC select entities from a config entry."""
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Get all select entities from coordinator
-    select_entities = coordinator.get_entities_by_type("selects")
+    # Wait for first data update to ensure descriptors are loaded
+    await coordinator.async_config_entry_first_refresh()
+
+    # Create select entities for all writable select properties
+    selects = []
+    for entity_data in coordinator.data.get("entities", []):
+        prop = entity_data.get("prop", "").upper()
+        entity_type = coordinator.get_entity_type(prop)
+
+        if entity_type == "select" and coordinator.is_writable(prop):
+            select = XCCSelect(coordinator, entity_data)
+            selects.append(select)
+            _LOGGER.debug("Created select entity: %s (%s)", select.name, prop)
     
     entities = []
     for entity_id, entity_data in select_entities.items():
