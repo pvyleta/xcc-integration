@@ -30,12 +30,20 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         
         self.entity_id_suffix = entity_id
         self._entity_data = coordinator.get_entity_data(entity_id)
-        
+
         if not self._entity_data:
             raise ValueError(f"Entity data not found for {entity_id}")
-            
-        self._xcc_data = self._entity_data["data"]
+
+        self._xcc_data = self._entity_data.get("data", {})
         self._attributes = self._xcc_data.get("attributes", {})
+
+        # Ensure _attributes is always a dict
+        if not isinstance(self._attributes, dict):
+            _LOGGER.warning("Entity %s has invalid attributes type: %s, using empty dict",
+                          entity_id, type(self._attributes))
+            self._attributes = {}
+
+        _LOGGER.debug("Initialized entity %s with attributes: %s", entity_id, list(self._attributes.keys()))
         
         # Set entity description if provided
         if description:
