@@ -164,13 +164,34 @@ class XCCSensor(XCCEntity, SensorEntity):
             # Default to measurement for numeric values
             state_class = SensorStateClass.MEASUREMENT
 
+        # Get entity name directly from attributes (can't use self._get_entity_name() yet)
+        entity_name = self._get_entity_name_from_attributes(attributes, entity_id)
+
         return SensorEntityDescription(
             key=entity_id,
-            name=self._get_entity_name(),
+            name=entity_name,
             native_unit_of_measurement=ha_unit,
             device_class=device_class,
             state_class=state_class,
         )
+
+    def _get_entity_name_from_attributes(self, attributes: dict, entity_id: str) -> str:
+        """Get entity name from attributes dict (used during initialization)."""
+        # Try to get localized name based on Home Assistant language
+        hass_language = "en"  # Default to English during initialization
+
+        if hass_language.startswith("cs") or hass_language.startswith("cz"):
+            # Czech language preference
+            name = attributes.get("friendly_name", "")
+            if not name:
+                name = attributes.get("friendly_name_en", entity_id)
+        else:
+            # English language preference (default)
+            name = attributes.get("friendly_name_en", "")
+            if not name:
+                name = attributes.get("friendly_name", entity_id)
+
+        return name or entity_id
 
     @property
     def native_value(self) -> Any:
