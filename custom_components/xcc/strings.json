@@ -8,13 +8,15 @@
           "ip_address": "IP Address",
           "username": "Username",
           "password": "Password",
-          "scan_interval": "Scan Interval (seconds)"
+          "scan_interval": "Scan Interval (seconds)",
+          "entity_type": "Entity Type"
         },
         "data_description": {
           "ip_address": "The IP address of your XCC controller",
           "username": "Username for XCC controller (default: xcc)",
           "password": "Password for XCC controller (default: xcc)",
-          "scan_interval": "How often to update data from the controller (10-3600 seconds)"
+          "scan_interval": "How often to update data from the controller (10-3600 seconds)",
+          "entity_type": "Choose how entities are created: MQTT (via MQTT broker) or Integration (direct Home Assistant entities)"
         }
       }
     },

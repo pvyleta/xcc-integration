@@ -6,19 +6,25 @@ from typing import Final
 
 # Integration domain
 DOMAIN: Final = "xcc"
-VERSION: Final = "1.3.1"  # Integration version for debugging
+VERSION: Final = "1.4.0"  # Integration version for debugging
 
 # Configuration constants
 CONF_IP_ADDRESS: Final = "ip_address"
 CONF_USERNAME: Final = "username"
 CONF_PASSWORD: Final = "password"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
+CONF_ENTITY_TYPE: Final = "entity_type"
 
 # Default values
 DEFAULT_USERNAME: Final = "xcc"
 DEFAULT_PASSWORD: Final = "xcc"
 DEFAULT_SCAN_INTERVAL: Final = 30  # seconds
 DEFAULT_TIMEOUT: Final = 10  # seconds
+
+# Entity type options
+ENTITY_TYPE_INTEGRATION: Final = "integration"
+ENTITY_TYPE_MQTT: Final = "mqtt"
+DEFAULT_ENTITY_TYPE: Final = ENTITY_TYPE_MQTT
 
 # Device information
 MANUFACTURER: Final = "XCC"

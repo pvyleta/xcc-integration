@@ -14,14 +14,19 @@ from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_SCAN_INTERVAL,
+    CONF_ENTITY_TYPE,
     DEFAULT_PASSWORD,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DEFAULT_USERNAME,
     DOMAIN,
+    ENTITY_TYPE_INTEGRATION,
+    ENTITY_TYPE_MQTT,
+    DEFAULT_ENTITY_TYPE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,6 +38,15 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_PASSWORD, default=DEFAULT_PASSWORD): str,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=10, max=3600)
+        ),
+        vol.Optional(CONF_ENTITY_TYPE, default=DEFAULT_ENTITY_TYPE): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    selector.SelectOptionDict(value=ENTITY_TYPE_MQTT, label="MQTT Entities"),
+                    selector.SelectOptionDict(value=ENTITY_TYPE_INTEGRATION, label="Integration Entities"),
+                ],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
         ),
     }
 )
