@@ -5,9 +5,11 @@ import sys
 from pathlib import Path
 
 # Add the custom_components directory to the path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "custom_components" / "xcc"))
+custom_components_path = Path(__file__).parent.parent.parent / "custom_components"
+sys.path.insert(0, str(custom_components_path))
 
-from coordinator import XCCDataUpdateCoordinator
+# Import with proper module path
+from custom_components.xcc.coordinator import XCCDataUpdateCoordinator
 
 
 @pytest.fixture

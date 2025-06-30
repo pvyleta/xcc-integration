@@ -134,23 +134,51 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "switches": {},
             "numbers": {},
             "selects": {},
+            "buttons": {},
             "climates": {},
         }
 
-        for entity in entities:
-            entity_id = entity["attributes"]["field_name"]
-            entity_type = self._determine_entity_type(entity)
+        # Create entities list for the new platform approach
+        entities_list = []
 
-            # Store entity metadata for later use
-            self.entities[entity_id] = {
+        for entity in entities:
+            prop = entity["attributes"]["field_name"]
+            entity_type = self.get_entity_type(prop)
+
+            # Create entity data structure for new platforms
+            entity_data = {
+                "entity_id": f"xcc_{prop.lower()}",
+                "prop": prop,
+                "name": entity["attributes"].get("friendly_name", prop),
+                "friendly_name": entity["attributes"].get("friendly_name", prop),
+                "state": entity["attributes"].get("value", ""),
+                "unit": entity["attributes"].get("unit", ""),
+                "page": entity["attributes"].get("page", "unknown"),
+            }
+
+            entities_list.append(entity_data)
+
+            # Store entity metadata for later use (keep old format for compatibility)
+            self.entities[prop] = {
                 "type": entity_type,
                 "data": entity,
                 "page": entity["attributes"].get("page", "unknown"),
             }
 
-            # Add to appropriate category
-            if entity_type in processed_data:
-                processed_data[entity_type][entity_id] = entity
+            # Count by entity type for logging
+            if entity_type == "switch":
+                processed_data["switches"][prop] = entity
+            elif entity_type == "number":
+                processed_data["numbers"][prop] = entity
+            elif entity_type == "select":
+                processed_data["selects"][prop] = entity
+            elif entity_type == "button":
+                processed_data["buttons"][prop] = entity
+            else:
+                processed_data["sensors"][prop] = entity
+
+        # Store entities list for new platforms
+        processed_data["entities"] = entities_list
 
         return processed_data
 
