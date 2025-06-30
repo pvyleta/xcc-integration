@@ -25,10 +25,10 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
-from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ async def async_setup_entry(
         _LOGGER.info("Added %d XCC sensor entities", len(sensors))
 
 
-class XCCSensor(XCCEntity, SensorEntity):
+class XCCSensor(CoordinatorEntity[XCCDataUpdateCoordinator], SensorEntity):
     """Representation of an XCC sensor."""
 
     def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]) -> None:

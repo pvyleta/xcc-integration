@@ -13,10 +13,10 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
-from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,10 +30,10 @@ async def async_setup_entry(
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     # Get all binary sensor entities from coordinator
-    binary_sensor_entities = coordinator.get_entities_by_type("binary_sensors")
+    sensors = coordinator.get_entities_by_type("binary_sensors")
 
     entities = []
-    for entity_id, entity_data in binary_sensor_entities.items():
+    for entity_id, entity_data in sensors.items():
         try:
             entity = XCCBinarySensor(coordinator, entity_id)
             entities.append(entity)
@@ -46,7 +46,7 @@ async def async_setup_entry(
         _LOGGER.info("Added %d XCC binary sensor entities", len(entities))
 
 
-class XCCBinarySensor(XCCEntity, BinarySensorEntity):
+class XCCBinarySensor(CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorEntity):
     """Representation of an XCC binary sensor."""
 
     def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_id: str) -> None:

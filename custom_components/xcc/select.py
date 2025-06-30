@@ -39,15 +39,6 @@ async def async_setup_entry(
             selects.append(select)
             _LOGGER.debug("Created select entity: %s (%s)", select.name, prop)
 
-    entities = []
-    for entity_id, entity_data in select_entities.items():
-        try:
-            entity = XCCSelect(coordinator, entity_id)
-            entities.append(entity)
-            _LOGGER.debug("Created select entity: %s", entity_id)
-        except Exception as err:
-            _LOGGER.error("Error creating select entity %s: %s", entity_id, err)
-
     if selects:
         async_add_entities(selects)
         _LOGGER.info("Added %d XCC select entities", len(selects))

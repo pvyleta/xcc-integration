@@ -67,43 +67,43 @@ def test_all_python_files():
 
 def test_import_statements():
     """Test that import statements are valid."""
-    
+
     xcc_dir = Path(__file__).parent.parent / "custom_components" / "xcc"
     python_files = list(xcc_dir.glob("*.py"))
-    
+
     print(f"🔍 Testing import statements in {len(python_files)} files...")
-    
+
     issues = []
-    
+
     for py_file in python_files:
         try:
             with open(py_file, 'r', encoding='utf-8') as f:
                 source = f.read()
-            
+
             # Parse AST and check imports
             tree = ast.parse(source, filename=str(py_file))
-            
+
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         # Check for common problematic imports
                         if alias.name in ['xml_parser', 'nonexistent_module']:
                             issues.append(f"{py_file.name}: Suspicious import '{alias.name}'")
-                
+
                 elif isinstance(node, ast.ImportFrom):
                     if node.module:
                         # Check for relative imports that might not exist
                         if node.module.startswith('.') and 'xml_parser' in node.module:
                             issues.append(f"{py_file.name}: Suspicious relative import '{node.module}'")
-                        
+
                         # Check for specific problematic imports
                         for alias in node.names:
                             if alias.name == 'parse_xml_entities' and node.module and 'xml_parser' in node.module:
                                 issues.append(f"{py_file.name}: parse_xml_entities should be imported from xcc_client, not xml_parser")
-        
+
         except Exception as e:
             issues.append(f"{py_file.name}: Error analyzing imports: {e}")
-    
+
     if issues:
         print(f"\n❌ Found {len(issues)} import issues:")
         for issue in issues:
@@ -111,6 +111,56 @@ def test_import_statements():
         return False
     else:
         print("✅ All import statements look good!")
+        return True
+
+
+def test_undefined_variables():
+    """Test for specific undefined variable patterns that cause NameError."""
+
+    xcc_dir = Path(__file__).parent.parent / "custom_components" / "xcc"
+    python_files = list(xcc_dir.glob("*.py"))
+
+    print(f"🔍 Testing for undefined variables in {len(python_files)} files...")
+
+    issues = []
+
+    for py_file in python_files:
+        try:
+            with open(py_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Check for specific problematic patterns that cause NameError
+            lines = content.split('\n')
+
+            for line_num, line in enumerate(lines, 1):
+                # Skip comments and strings
+                if line.strip().startswith('#') or '"""' in line or "'''" in line:
+                    continue
+
+                # Check for undefined entity collection variables
+                if 'select_entities.items()' in line:
+                    issues.append(f"{py_file.name}:{line_num}: 'select_entities' is not defined (should be 'selects')")
+                elif 'number_entities.items()' in line:
+                    issues.append(f"{py_file.name}:{line_num}: 'number_entities' is not defined (should be 'numbers')")
+                elif 'switch_entities.items()' in line:
+                    issues.append(f"{py_file.name}:{line_num}: 'switch_entities' is not defined (should be 'switches')")
+                elif 'sensor_entities.items()' in line:
+                    issues.append(f"{py_file.name}:{line_num}: 'sensor_entities' is not defined (should be 'sensors')")
+
+                # Check for old class inheritance (but skip entity.py where XCCEntity is defined)
+                elif 'class XCC' in line and 'XCCEntity' in line and py_file.name != 'entity.py':
+                    issues.append(f"{py_file.name}:{line_num}: 'XCCEntity' is not defined (should inherit from 'CoordinatorEntity')")
+
+        except Exception as e:
+            issues.append(f"{py_file.name}: Error checking variables: {e}")
+
+    if issues:
+        print(f"\n❌ Found {len(issues)} undefined variable issues:")
+        for issue in issues:
+            print(f"  • {issue}")
+        return False
+    else:
+        print("✅ No undefined variable issues found!")
         return True
 
 
@@ -170,6 +220,10 @@ if __name__ == "__main__":
         
         print()
         if not test_indentation():
+            all_passed = False
+
+        print()
+        if not test_undefined_variables():
             all_passed = False
         
         print("\n" + "=" * 50)
