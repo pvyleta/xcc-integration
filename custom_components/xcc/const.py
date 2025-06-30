@@ -6,7 +6,7 @@ from typing import Final
 
 # Integration domain
 DOMAIN: Final = "xcc"
-VERSION: Final = "1.5.5"  # Integration version for debugging
+VERSION: Final = "1.5.7"  # Integration version for debugging
 
 # Configuration constants
 CONF_IP_ADDRESS: Final = "ip_address"
@@ -53,14 +53,28 @@ PLATFORMS: Final = [
 ]
 
 # XCC specific constants
-XCC_PAGES: Final = [
-    "stavjed.xml", "STAVJED1.XML",  # Status
-    "okruh.xml", "OKRUH10.XML",     # Heating circuits
-    "tuv1.xml", "TUV11.XML",        # Hot water
-    "biv.xml", "BIV1.XML",          # Bivalent heating
-    "fve.xml", "FVE4.XML",          # Photovoltaics
-    "spot.xml", "SPOT1.XML",        # Spot pricing
+# Descriptor files (only fetched once during setup)
+XCC_DESCRIPTOR_PAGES: Final = [
+    "stavjed.xml",   # Status descriptor
+    "okruh.xml",     # Heating circuits descriptor
+    "tuv1.xml",      # Hot water descriptor
+    "biv.xml",       # Bivalent heating descriptor
+    "fve.xml",       # Photovoltaics descriptor
+    "spot.xml",      # Spot pricing descriptor
 ]
+
+# Data files (fetched on every update)
+XCC_DATA_PAGES: Final = [
+    "STAVJED1.XML",  # Status data
+    "OKRUH10.XML",   # Heating circuits data
+    "TUV11.XML",     # Hot water data
+    "BIV1.XML",      # Bivalent heating data
+    "FVE4.XML",      # Photovoltaics data
+    "SPOT1.XML",     # Spot pricing data
+]
+
+# Legacy combined list (for backward compatibility)
+XCC_PAGES: Final = XCC_DESCRIPTOR_PAGES + XCC_DATA_PAGES
 
 # Entity types mapping
 ENTITY_TYPE_MAPPING: Final = {

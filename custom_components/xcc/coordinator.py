@@ -18,7 +18,8 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,
-    XCC_PAGES,
+    XCC_DESCRIPTOR_PAGES,
+    XCC_DATA_PAGES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -79,10 +80,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             if not self._descriptors_loaded:
                 await self._load_descriptors(client)
 
-            # Fetch all XCC pages
-            _LOGGER.debug("Fetching %d XCC pages: %s", len(XCC_PAGES), XCC_PAGES)
+            # Fetch only data pages (not descriptors)
+            _LOGGER.debug("Fetching %d XCC data pages: %s", len(XCC_DATA_PAGES), XCC_DATA_PAGES)
             pages_data = await asyncio.wait_for(
-                client.fetch_pages(XCC_PAGES), timeout=DEFAULT_TIMEOUT
+                client.fetch_pages(XCC_DATA_PAGES), timeout=DEFAULT_TIMEOUT
             )
             _LOGGER.debug("Successfully fetched %d pages from XCC controller", len(pages_data))
 
@@ -144,6 +145,12 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         for entity in entities:
             prop = entity["attributes"]["field_name"]
             entity_type = self.get_entity_type(prop)
+
+            # Debug logging for entity type detection
+            if prop in self.entity_configs:
+                _LOGGER.debug("Entity %s: found in descriptors, type=%s", prop, entity_type)
+            else:
+                _LOGGER.debug("Entity %s: NOT in descriptors, defaulting to sensor", prop)
 
             # Create entity data structure for new platforms
             entity_data = {
@@ -259,11 +266,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             _LOGGER.debug("Loading XCC descriptor files for entity type detection")
 
-            # Descriptor pages (with UI definitions)
-            descriptor_pages = ["STAVJED.XML", "OKRUH.XML", "TUV1.XML", "BIV.XML", "FVE.XML", "SPOT.XML"]
-
+            # Use the proper descriptor pages from const
             descriptor_data = {}
-            for page in descriptor_pages:
+            for page in XCC_DESCRIPTOR_PAGES:
                 try:
                     data = await client.fetch_page(page)
                     if data:
