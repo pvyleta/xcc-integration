@@ -1,1 +1,0 @@
-"""XCC integration tests."""
