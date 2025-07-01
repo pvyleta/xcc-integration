@@ -82,6 +82,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Fetch only data pages (not descriptors)
             _LOGGER.debug("Fetching %d XCC data pages: %s", len(XCC_DATA_PAGES), XCC_DATA_PAGES)
+            _LOGGER.debug("Update triggered by: %s", getattr(self, '_update_source', 'unknown'))
             pages_data = await asyncio.wait_for(
                 client.fetch_pages(XCC_DATA_PAGES), timeout=DEFAULT_TIMEOUT
             )

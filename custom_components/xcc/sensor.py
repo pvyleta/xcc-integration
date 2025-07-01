@@ -29,6 +29,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
+from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,7 +106,7 @@ async def async_setup_entry(
         _LOGGER.info("Added %d XCC sensor entities", len(sensors))
 
 
-class XCCSensor(CoordinatorEntity[XCCDataUpdateCoordinator], SensorEntity):
+class XCCSensor(XCCEntity, SensorEntity):
     """Representation of an XCC sensor."""
 
     def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]) -> None:
@@ -116,9 +117,8 @@ class XCCSensor(CoordinatorEntity[XCCDataUpdateCoordinator], SensorEntity):
 
             # Create entity description
             description = self._create_entity_description(coordinator, entity_data)
-            _LOGGER.debug("Created entity description for %s", entity_id)
 
-            # Initialize parent class
+            # Initialize parent class (XCCEntity handles the coordinator and entity setup)
             super().__init__(coordinator, entity_id, description)
             _LOGGER.debug("Successfully initialized XCCSensor for %s", entity_id)
 
@@ -213,13 +213,13 @@ class XCCSensor(CoordinatorEntity[XCCDataUpdateCoordinator], SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
-        attrs = super().extra_state_attributes
+        attrs = super().extra_state_attributes or {}
 
         # Safety check for _attributes
         if not hasattr(self, '_attributes') or not isinstance(self._attributes, dict):
             _LOGGER.warning("XCCSensor %s missing or invalid _attributes, returning base attributes only",
                           getattr(self, 'entity_id_suffix', 'unknown'))
-            return attrs or {}
+            return attrs
 
         # Add enum option text for enum sensors
         if self._attributes.get("data_type") == "enum":
