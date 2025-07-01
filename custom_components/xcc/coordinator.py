@@ -147,10 +147,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             entity_type = self.get_entity_type(prop)
 
             # Debug logging for entity type detection
-            if prop in self.entity_configs:
-                _LOGGER.debug("Entity %s: found in descriptors, type=%s", prop, entity_type)
+            if entity_type != "sensor":
+                _LOGGER.debug("Entity %s: classified as %s (has descriptor)", prop, entity_type)
             else:
-                _LOGGER.debug("Entity %s: NOT in descriptors, defaulting to sensor", prop)
+                if prop in self.entity_configs:
+                    _LOGGER.debug("Entity %s: has descriptor but classified as sensor", prop)
+                else:
+                    _LOGGER.debug("Entity %s: no descriptor found, defaulting to sensor", prop)
 
             # Create entity data structure for new platforms
             entity_data = {
@@ -186,6 +189,17 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Store entities list for new platforms
         processed_data["entities"] = entities_list
+
+        # Log final entity distribution
+        entity_counts = {
+            "switches": len(processed_data["switches"]),
+            "numbers": len(processed_data["numbers"]),
+            "selects": len(processed_data["selects"]),
+            "buttons": len(processed_data["buttons"]),
+            "sensors": len(processed_data["sensors"]),
+            "total": len(entities_list)
+        }
+        _LOGGER.info("Final entity distribution: %s", entity_counts)
 
         return processed_data
 
@@ -306,25 +320,68 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             self._descriptors_loaded = True  # Don't retry on every update
 
     def get_entity_type(self, prop: str) -> str:
-        """Get the entity type for a given property."""
+        """Get the entity type for a given property with smart matching."""
         if not self.entity_configs:
             return 'sensor'  # Default to sensor if no descriptors loaded
 
+        # First try exact match
         config = self.entity_configs.get(prop)
         if config:
             return config.get('entity_type', 'sensor')
+
+        # Try normalized matching (handle different naming conventions)
+        normalized_prop = self._normalize_property_name(prop)
+        for config_prop, config in self.entity_configs.items():
+            if self._normalize_property_name(config_prop) == normalized_prop:
+                _LOGGER.debug("Entity %s matched descriptor %s via normalization", prop, config_prop)
+                return config.get('entity_type', 'sensor')
+
+        # No match found - default to sensor
         return 'sensor'
 
+    def _normalize_property_name(self, prop: str) -> str:
+        """Normalize property names for matching."""
+        # Convert to uppercase and replace common separators
+        normalized = prop.upper().replace("_", "-").replace(".", "-")
+
+        # Handle common prefixes/suffixes that might differ
+        # Remove common prefixes that might be added/removed
+        prefixes_to_remove = ["WEB-", "MAIN-", "CONFIG-"]
+        for prefix in prefixes_to_remove:
+            if normalized.startswith(prefix):
+                normalized = normalized[len(prefix):]
+
+        return normalized
+
     def is_writable(self, prop: str) -> bool:
-        """Check if a property is writable."""
+        """Check if a property is writable with smart matching."""
         if not self.entity_configs:
             return False
 
+        # First try exact match
         config = self.entity_configs.get(prop)
         if config:
             return config.get('writable', False)
+
+        # Try normalized matching
+        normalized_prop = self._normalize_property_name(prop)
+        for config_prop, config in self.entity_configs.items():
+            if self._normalize_property_name(config_prop) == normalized_prop:
+                return config.get('writable', False)
+
         return False
 
     def get_entity_config(self, prop: str) -> dict:
-        """Get the full entity configuration for a property."""
-        return self.entity_configs.get(prop, {})
+        """Get the full entity configuration for a property with smart matching."""
+        # First try exact match
+        config = self.entity_configs.get(prop)
+        if config:
+            return config
+
+        # Try normalized matching
+        normalized_prop = self._normalize_property_name(prop)
+        for config_prop, config in self.entity_configs.items():
+            if self._normalize_property_name(config_prop) == normalized_prop:
+                return config
+
+        return {}
