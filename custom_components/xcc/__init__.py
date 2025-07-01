@@ -59,6 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entity_type == ENTITY_TYPE_INTEGRATION:
         # Set up integration platforms (sensors, binary_sensors, etc.)
         _LOGGER.debug("Setting up integration entities")
+        _LOGGER.info("Setting up platforms: %s", [p.value for p in PLATFORMS_TO_SETUP])
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
     elif entity_type == ENTITY_TYPE_MQTT:
         # Set up MQTT device discovery only

@@ -84,22 +84,26 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up XCC sensor entities from a config entry."""
+    _LOGGER.info("Setting up XCC sensor platform")
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     # Wait for first data update to ensure descriptors are loaded
+    _LOGGER.debug("Waiting for coordinator first refresh")
     await coordinator.async_config_entry_first_refresh()
+    _LOGGER.debug("Coordinator data keys: %s", list(coordinator.data.keys()) if coordinator.data else "No data")
 
-    # Create sensor entities for read-only properties only
+    # Create sensor entities from the sensors data structure
     sensors = []
-    for entity_data in coordinator.data.get("entities", []):
-        prop = entity_data.get("prop", "").upper()
-        entity_type = coordinator.get_entity_type(prop)
+    sensor_entities = coordinator.data.get("sensors", {})
+    _LOGGER.info("Setting up %d sensor entities", len(sensor_entities))
 
-        # Only create sensors for read-only entities or entities that don't have specific platforms
-        if entity_type == "sensor" or not coordinator.is_writable(prop):
+    for prop, entity_data in sensor_entities.items():
+        try:
             sensor = XCCSensor(coordinator, entity_data)
             sensors.append(sensor)
-            _LOGGER.debug("Created sensor entity: %s (%s)", sensor.name, prop)
+            _LOGGER.debug("Created sensor entity: %s (%s)", getattr(sensor, 'name', 'unknown'), prop)
+        except Exception as err:
+            _LOGGER.error("Failed to create sensor for %s: %s", prop, err)
 
     if sensors:
         async_add_entities(sensors)

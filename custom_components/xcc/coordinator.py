@@ -53,10 +53,31 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.descriptor_parser = None  # Parser for entity type detection
         self.entity_configs = {}  # Cached entity configurations
         self._descriptors_loaded = False  # Track if descriptors have been loaded
+        self._update_lock = asyncio.Lock()  # Prevent concurrent updates
+        self._last_update_time = 0  # Track last update time
+        self._min_update_interval = 1.0  # Minimum 1 second between updates
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
-        _LOGGER.debug("Starting data update for XCC controller %s", self.ip_address)
+        import time
+
+        # Check if we need to throttle updates
+        current_time = time.time()
+        if current_time - self._last_update_time < self._min_update_interval:
+            _LOGGER.debug("Throttling update request - too soon after last update")
+            return self.data or {}
+
+        # Use lock to prevent concurrent updates
+        async with self._update_lock:
+            # Double-check after acquiring lock
+            current_time = time.time()
+            if current_time - self._last_update_time < self._min_update_interval:
+                _LOGGER.debug("Another update completed while waiting for lock")
+                return self.data or {}
+
+            _LOGGER.debug("Starting data update for XCC controller %s", self.ip_address)
+            self._last_update_time = current_time
+
         try:
             # Import XCC client here to avoid import issues
             from .xcc_client import XCCClient, parse_xml_entities
