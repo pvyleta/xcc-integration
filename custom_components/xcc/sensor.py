@@ -137,7 +137,7 @@ class XCCSensor(CoordinatorEntity[XCCDataUpdateCoordinator], SensorEntity):
         entity_config = coordinator.get_entity_config(prop)
 
         # Get unit from descriptor or entity data
-        xcc_unit = unit or entity_data.get("unit", "")
+        xcc_unit = entity_config.get("unit") or entity_data.get("unit", "")
         ha_unit = UNIT_MAPPING.get(xcc_unit, xcc_unit) if xcc_unit else None
 
         # Determine device class
