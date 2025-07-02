@@ -191,11 +191,12 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             entities_list.append(entity_data)
 
-            # Store entity metadata for later use (keep old format for compatibility)
-            self.entities[prop] = {
+            # Store entity metadata for later use (use entity_id as key for proper lookup)
+            self.entities[entity_id] = {
                 "type": entity_type,
                 "data": entity,
                 "page": entity["attributes"].get("page", "unknown"),
+                "prop": prop,  # Keep prop for reference
             }
 
             # Count by entity type for logging
