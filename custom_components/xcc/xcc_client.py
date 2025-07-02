@@ -6,6 +6,7 @@ Reusable authentication and data fetching for CLI, pyscript, and HA integration.
 
 import hashlib
 import aiohttp
+import asyncio
 import json
 import os
 from typing import Dict, List, Optional, Tuple
@@ -17,6 +18,9 @@ try:
 except ImportError:
     # For standalone usage
     from descriptor_parser import XCCDescriptorParser
+
+# Global lock to prevent concurrent authentication attempts to the same IP
+_auth_locks = {}
 
 
 class XCCClient:
@@ -89,7 +93,17 @@ class XCCClient:
         _LOGGER.debug("Checking if existing session is valid")
         if not await self._test_session():
             _LOGGER.debug("Session invalid, performing authentication")
-            await self._authenticate()
+
+            # Use global lock to prevent concurrent authentication to same IP
+            if self.ip not in _auth_locks:
+                _auth_locks[self.ip] = asyncio.Lock()
+
+            async with _auth_locks[self.ip]:
+                # Re-test session in case another client just authenticated
+                if not await self._test_session():
+                    await self._authenticate()
+                else:
+                    _LOGGER.debug("Session became valid while waiting for lock")
         else:
             _LOGGER.debug("Existing session is valid, skipping authentication")
 

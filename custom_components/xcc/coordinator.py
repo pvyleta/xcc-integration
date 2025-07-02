@@ -87,10 +87,15 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Create or reuse persistent client for session management
             if self._client is None:
                 _LOGGER.debug("Creating new XCC client for %s with username %s", self.ip_address, self.username)
+
+                # Use Home Assistant's config directory for cookie storage
+                cookie_file = f"{self.hass.config.config_dir}/.xcc_session_{self.ip_address.replace('.', '_')}.json"
+
                 self._client = XCCClient(
                     ip=self.ip_address,
                     username=self.username,
                     password=self.password,
+                    cookie_file=cookie_file,
                 )
                 await self._client.__aenter__()  # Initialize the client
             else:
@@ -278,10 +283,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 client = self._client
             else:
                 from .xcc_client import XCCClient
+                # Use same cookie file for temporary clients
+                cookie_file = f"{self.hass.config.config_dir}/.xcc_session_{self.ip_address.replace('.', '_')}.json"
                 async with XCCClient(
                     ip=self.ip_address,
                     username=self.username,
                     password=self.password,
+                    cookie_file=cookie_file,
                 ) as client:
                     # TODO: Implement value setting logic
                     # This would require extending the XCC client to support setting values
