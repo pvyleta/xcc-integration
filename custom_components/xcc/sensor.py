@@ -32,6 +32,7 @@ from .coordinator import XCCDataUpdateCoordinator
 from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.setLevel(logging.DEBUG)  # Force debug logging for sensor platform
 
 # Unit mapping from XCC to Home Assistant
 UNIT_MAPPING = {
@@ -94,20 +95,58 @@ async def async_setup_entry(
 
     # Create sensor entities from the sensors data structure
     sensors = []
+
+    # Detailed logging of coordinator data structure
+    _LOGGER.info("=== SENSOR PLATFORM SETUP DEBUG ===")
+    _LOGGER.info("Coordinator data type: %s", type(coordinator.data))
+    _LOGGER.info("Coordinator data keys: %s", list(coordinator.data.keys()) if coordinator.data else "No data")
+
+    if coordinator.data:
+        for key, value in coordinator.data.items():
+            if isinstance(value, dict):
+                _LOGGER.info("Data[%s]: %d items", key, len(value))
+            else:
+                _LOGGER.info("Data[%s]: %s", key, type(value))
+
     sensor_entities = coordinator.data.get("sensors", {})
-    _LOGGER.info("Setting up %d sensor entities", len(sensor_entities))
+    _LOGGER.info("Found %d sensor entities in coordinator.data['sensors']", len(sensor_entities))
+
+    if not sensor_entities:
+        _LOGGER.warning("No sensor entities found! Checking alternative data structures...")
+        # Check if entities are stored differently
+        entities_list = coordinator.data.get("entities", [])
+        _LOGGER.info("Found %d entities in coordinator.data['entities']", len(entities_list))
+
+        # Try to find sensors in the entities list
+        sensor_count = 0
+        for entity in entities_list:
+            entity_type = entity.get("type", "unknown")
+            if entity_type == "sensor":
+                sensor_count += 1
+        _LOGGER.info("Found %d sensor-type entities in entities list", sensor_count)
 
     for prop, entity_data in sensor_entities.items():
         try:
+            _LOGGER.debug("Creating sensor for prop: %s", prop)
+            _LOGGER.debug("Entity data keys: %s", list(entity_data.keys()) if isinstance(entity_data, dict) else "Not a dict")
+
             sensor = XCCSensor(coordinator, entity_data)
             sensors.append(sensor)
-            _LOGGER.debug("Created sensor entity: %s (%s)", getattr(sensor, 'name', 'unknown'), prop)
+            _LOGGER.info("✅ Successfully created sensor: %s (%s)", getattr(sensor, 'name', 'unknown'), prop)
         except Exception as err:
-            _LOGGER.error("Failed to create sensor for %s: %s", prop, err)
+            _LOGGER.error("❌ Failed to create sensor for %s: %s", prop, err)
+            import traceback
+            _LOGGER.error("Full traceback: %s", traceback.format_exc())
+
+    _LOGGER.info("=== SENSOR CREATION SUMMARY ===")
+    _LOGGER.info("Total sensors created: %d", len(sensors))
 
     if sensors:
         async_add_entities(sensors)
-        _LOGGER.info("Added %d XCC sensor entities", len(sensors))
+        _LOGGER.info("✅ Added %d XCC sensor entities to Home Assistant", len(sensors))
+    else:
+        _LOGGER.error("❌ NO SENSORS CREATED - This is the problem!")
+        _LOGGER.error("Coordinator data structure: %s", coordinator.data)
 
 
 class XCCSensor(XCCEntity, SensorEntity):

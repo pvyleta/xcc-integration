@@ -23,6 +23,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.setLevel(logging.DEBUG)  # Force debug logging for coordinator
 
 
 class XCCDataUpdateCoordinator(DataUpdateCoordinator):
@@ -212,7 +213,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Store entities list for new platforms
         processed_data["entities"] = entities_list
 
-        # Log final entity distribution
+        # Log final entity distribution with detailed breakdown
         entity_counts = {
             "switches": len(processed_data["switches"]),
             "numbers": len(processed_data["numbers"]),
@@ -221,7 +222,19 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "sensors": len(processed_data["sensors"]),
             "total": len(entities_list)
         }
+        _LOGGER.info("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
         _LOGGER.info("Final entity distribution: %s", entity_counts)
+
+        # Log some example sensors for debugging
+        if processed_data["sensors"]:
+            _LOGGER.info("Example sensors created:")
+            for i, (prop, entity_data) in enumerate(list(processed_data["sensors"].items())[:5]):
+                _LOGGER.info("  %d. %s -> %s", i+1, prop, entity_data.get("entity_id", "unknown"))
+        else:
+            _LOGGER.error("❌ NO SENSORS IN PROCESSED DATA - This is the root problem!")
+
+        # Log data structure that will be returned
+        _LOGGER.info("Returning processed_data with keys: %s", list(processed_data.keys()))
 
         return processed_data
 

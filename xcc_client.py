@@ -131,23 +131,47 @@ class XCCClient:
             await self.session.close()
 
 
-def parse_xml_entities(xml_content: str, page_name: str, 
+def parse_xml_entities(xml_content: str, page_name: str,
                       entity_prefix: str = "xcc") -> List[Dict]:
     """Parse XML content into entity data."""
     entities = []
-    
+
     try:
-        root = etree.fromstring(xml_content.encode())
-    except Exception:
-        return entities
+        # Handle encoding properly - convert to bytes with proper encoding
+        if isinstance(xml_content, str):
+            # First try to encode as windows-1250 if the XML declares it
+            if 'windows-1250' in xml_content:
+                try:
+                    xml_bytes = xml_content.encode('windows-1250')
+                except UnicodeEncodeError:
+                    # Fall back to UTF-8 if windows-1250 fails
+                    xml_bytes = xml_content.encode('utf-8')
+            else:
+                xml_bytes = xml_content.encode('utf-8')
+        else:
+            xml_bytes = xml_content
+
+        root = etree.fromstring(xml_bytes)
+        # Successfully parsed XML
+    except Exception as e:
+        # Try alternative parsing with encoding fix
+        try:
+            # Remove encoding declaration and parse as UTF-8
+            xml_clean = xml_content.replace('encoding="windows-1250"', 'encoding="utf-8"')
+            root = etree.fromstring(xml_clean.encode('utf-8'))
+        except Exception:
+            return entities
         
-    # Extract all elements with values
-    for elem in root.xpath(".//*[@prop and text()]"):
-        prop = elem.get("prop")
+    # Extract all INPUT elements with P attribute and VALUE attribute
+    # Extract all INPUT elements with P attribute and VALUE attribute
+    input_elements = root.xpath(".//INPUT[@P and @VALUE]")
+
+    for elem in input_elements:
+        prop = elem.get("P")
         if not prop:
             continue
-            
-        value = elem.text.strip() if elem.text else ""
+
+        value = elem.get("VALUE", "")
         if not value:
             continue
             
@@ -162,28 +186,58 @@ def parse_xml_entities(xml_content: str, page_name: str,
         }
         
         # Add type-specific attributes
-        if elem.get("unit"):
-            attributes["unit_of_measurement"] = elem.get("unit")
-            attributes["device_class"] = _get_device_class(elem.get("unit"))
+        if elem.get("UNIT"):
+            attributes["unit_of_measurement"] = elem.get("UNIT")
+            attributes["device_class"] = _get_device_class(elem.get("UNIT"))
             
-        if elem.get("min") and elem.get("max"):
+        if elem.get("MIN") and elem.get("MAX"):
             try:
-                attributes["min_value"] = float(elem.get("min"))
-                attributes["max_value"] = float(elem.get("max"))
+                attributes["min_value"] = float(elem.get("MIN"))
+                attributes["max_value"] = float(elem.get("MAX"))
             except ValueError:
                 pass
                 
         # Handle boolean values
-        if value in ("0", "1") and not elem.get("unit"):
+        if value in ("0", "1") and not elem.get("UNIT"):
             entity_type = "binary_sensor"
             value = value == "1"
             
-        entities.append({
-            "entity_id": entity_id,
-            "entity_type": entity_type,
-            "state": value,
-            "attributes": attributes
-        })
+        # Determine data type
+        if isinstance(value, bool):
+            data_type = "boolean"
+        elif isinstance(value, str) and value.replace(".", "").replace("-", "").isdigit():
+            data_type = "numeric"
+        else:
+            data_type = "string"
+
+        # Create entity structure that matches coordinator expectations
+        entity = {
+            "prop": prop,
+            "value": value,
+            "attributes": {
+                "page": page_name,
+                "friendly_name": prop.replace("-", " ").title(),
+                "value": value,
+                "unit": elem.get("UNIT", ""),
+                "data_type": data_type,
+                "is_settable": False,  # Data pages are read-only
+            }
+        }
+
+        # Add unit and device class if available
+        if elem.get("UNIT"):
+            entity["attributes"]["unit_of_measurement"] = elem.get("UNIT")
+            entity["attributes"]["device_class"] = _get_device_class(elem.get("UNIT"))
+
+        # Add min/max if available
+        if elem.get("MIN") and elem.get("MAX"):
+            try:
+                entity["attributes"]["min_value"] = float(elem.get("MIN"))
+                entity["attributes"]["max_value"] = float(elem.get("MAX"))
+            except ValueError:
+                pass
+
+        entities.append(entity)
         
     return entities
 
