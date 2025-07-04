@@ -139,13 +139,36 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
 
     def _get_current_value(self) -> Any:
         """Get the current value from coordinator data."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
         entity_type = self._entity_data["type"]
 
-        if entity_type in self.coordinator.data:
-            entity_data = self.coordinator.data[entity_type].get(self.entity_id_suffix)
-            if entity_data:
-                return entity_data.get("state")
+        _LOGGER.debug("Getting current value for entity %s (type: %s, suffix: %s)",
+                     self.entity_id, entity_type, self.entity_id_suffix)
 
+        # Debug coordinator data structure
+        if hasattr(self.coordinator, 'data') and self.coordinator.data:
+            _LOGGER.debug("Coordinator data keys: %s", list(self.coordinator.data.keys()))
+            if entity_type in self.coordinator.data:
+                type_data = self.coordinator.data[entity_type]
+                _LOGGER.debug("Entity type '%s' data keys: %s", entity_type, list(type_data.keys()) if isinstance(type_data, dict) else type(type_data))
+
+                entity_data = type_data.get(self.entity_id_suffix) if isinstance(type_data, dict) else None
+                if entity_data:
+                    state_value = entity_data.get("state")
+                    _LOGGER.info("📊 ENTITY VALUE UPDATE: %s = %s (from coordinator data)",
+                               self.entity_id, state_value)
+                    return state_value
+                else:
+                    _LOGGER.warning("No entity data found for suffix '%s' in type '%s'",
+                                  self.entity_id_suffix, entity_type)
+            else:
+                _LOGGER.warning("Entity type '%s' not found in coordinator data", entity_type)
+        else:
+            _LOGGER.warning("No coordinator data available")
+
+        _LOGGER.warning("❌ ENTITY VALUE: %s = None (no data found)", self.entity_id)
         return None
 
     def _convert_value_for_ha(self, value: Any) -> Any:

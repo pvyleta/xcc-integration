@@ -204,17 +204,18 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "prop": prop,  # Keep prop for reference
             }
 
-            # Count by entity type for logging
+            # Count by entity type for logging (use entity_id as key for proper lookup)
+            entity_id = entity_data["entity_id"]
             if entity_type == "switch":
-                processed_data["switches"][prop] = entity
+                processed_data["switches"][entity_id] = entity
             elif entity_type == "number":
-                processed_data["numbers"][prop] = entity
+                processed_data["numbers"][entity_id] = entity
             elif entity_type == "select":
-                processed_data["selects"][prop] = entity
+                processed_data["selects"][entity_id] = entity
             elif entity_type == "button":
-                processed_data["buttons"][prop] = entity
+                processed_data["buttons"][entity_id] = entity
             else:
-                processed_data["sensors"][prop] = entity
+                processed_data["sensors"][entity_id] = entity
 
         # Store entities list for new platforms
         processed_data["entities"] = entities_list

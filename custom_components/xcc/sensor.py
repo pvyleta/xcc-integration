@@ -108,7 +108,7 @@ async def async_setup_entry(
             else:
                 _LOGGER.info("Data[%s]: %s", key, type(value))
 
-    sensor_entities = coordinator.data.get("sensors", {})
+    sensor_entities = coordinator.get_entities_by_type("sensor")
     _LOGGER.info("Found %d sensor entities in coordinator.data['sensors']", len(sensor_entities))
 
     if not sensor_entities:
@@ -125,16 +125,16 @@ async def async_setup_entry(
                 sensor_count += 1
         _LOGGER.info("Found %d sensor-type entities in entities list", sensor_count)
 
-    for prop, entity_data in sensor_entities.items():
+    for entity_id, entity_data in sensor_entities.items():
         try:
-            _LOGGER.debug("Creating sensor for prop: %s", prop)
+            _LOGGER.debug("Creating sensor for entity_id: %s", entity_id)
             _LOGGER.debug("Entity data keys: %s", list(entity_data.keys()) if isinstance(entity_data, dict) else "Not a dict")
 
             sensor = XCCSensor(coordinator, entity_data)
             sensors.append(sensor)
-            _LOGGER.info("✅ Successfully created sensor: %s (%s)", getattr(sensor, 'name', 'unknown'), prop)
+            _LOGGER.info("✅ Successfully created sensor: %s (%s)", getattr(sensor, 'name', 'unknown'), entity_id)
         except Exception as err:
-            _LOGGER.error("❌ Failed to create sensor for %s: %s", prop, err)
+            _LOGGER.error("❌ Failed to create sensor for %s: %s", entity_id, err)
             import traceback
             _LOGGER.error("Full traceback: %s", traceback.format_exc())
 
