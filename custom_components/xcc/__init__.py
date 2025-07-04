@@ -13,7 +13,7 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     CONF_ENTITY_TYPE,
-    ENTITY_TYPE_MQTT,
+
     ENTITY_TYPE_INTEGRATION,
     DEFAULT_ENTITY_TYPE
 )
@@ -56,27 +56,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entity_type = entry.data.get(CONF_ENTITY_TYPE, DEFAULT_ENTITY_TYPE)
     _LOGGER.info("XCC integration configured for %s entities", entity_type)
 
-    if entity_type == ENTITY_TYPE_INTEGRATION:
-        # Set up integration platforms (sensors, binary_sensors, etc.)
-        _LOGGER.debug("Setting up integration entities")
-        _LOGGER.info("Setting up platforms: %s", [p.value for p in PLATFORMS_TO_SETUP])
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
-    elif entity_type == ENTITY_TYPE_MQTT:
-        # Set up MQTT device discovery only
-        _LOGGER.debug("Setting up MQTT entities")
-        try:
-            if "mqtt" in hass.config.components:
-                # Schedule MQTT setup as a background task to avoid blocking startup
-                hass.async_create_task(_setup_mqtt_discovery(hass, coordinator))
-            else:
-                _LOGGER.error("MQTT entity type selected but MQTT not configured in Home Assistant")
-                raise ConfigEntryNotReady("MQTT not available but required for selected entity type")
-        except Exception as err:
-            _LOGGER.error("MQTT discovery setup failed: %s", err)
-            raise ConfigEntryNotReady from err
-    else:
-        _LOGGER.error("Unknown entity type: %s", entity_type)
-        raise ConfigEntryNotReady(f"Unknown entity type: {entity_type}")
+    # Set up integration platforms (sensors, binary_sensors, etc.)
+    _LOGGER.debug("Setting up integration entities")
+    _LOGGER.info("Setting up platforms: %s", [p.value for p in PLATFORMS_TO_SETUP])
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
 
     return True
 
@@ -91,18 +74,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     unload_ok = True
 
-    if entity_type == ENTITY_TYPE_INTEGRATION:
-        # Unload integration platforms
-        _LOGGER.debug("Unloading integration entities")
-        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS_TO_SETUP)
-    elif entity_type == ENTITY_TYPE_MQTT:
-        # Clean up MQTT discovery
-        _LOGGER.debug("Cleaning up MQTT entities")
-        if hasattr(coordinator, 'mqtt_discovery') and coordinator.mqtt_discovery:
-            try:
-                await coordinator.mqtt_discovery.async_remove()
-            except Exception as err:
-                _LOGGER.error("Error cleaning up MQTT discovery: %s", err)
+    # Unload integration platforms
+    _LOGGER.debug("Unloading integration entities")
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS_TO_SETUP)
 
     # Clean up coordinator resources
     try:
@@ -117,36 +91,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def _setup_mqtt_discovery(hass: HomeAssistant, coordinator: XCCDataUpdateCoordinator) -> None:
-    """Set up MQTT device discovery for XCC entities."""
-    try:
-        # Check if MQTT component is loaded
-        if "mqtt" not in hass.config.components:
-            _LOGGER.debug("MQTT component not loaded, skipping MQTT discovery")
-            return
 
-        from .mqtt_discovery import XCCMQTTDiscovery
-        import asyncio
-
-        _LOGGER.debug("Setting up MQTT discovery for XCC controller")
-
-        # Create and setup MQTT discovery with timeout
-        mqtt_discovery = XCCMQTTDiscovery(hass, coordinator)
-        success = await asyncio.wait_for(mqtt_discovery.async_setup(), timeout=30.0)
-
-        if success:
-            # Store discovery instance for cleanup
-            coordinator.mqtt_discovery = mqtt_discovery
-            _LOGGER.info("MQTT discovery setup successful for XCC controller %s", coordinator.ip_address)
-        else:
-            _LOGGER.warning("MQTT discovery setup failed for XCC controller %s", coordinator.ip_address)
-
-    except asyncio.TimeoutError:
-        _LOGGER.warning("MQTT discovery setup timed out after 30 seconds, continuing without MQTT")
-    except ImportError as err:
-        _LOGGER.debug("MQTT component not available, skipping MQTT discovery: %s", err)
-    except Exception as err:
-        _LOGGER.warning("Error setting up MQTT discovery, continuing without MQTT: %s", err)
 
 
 

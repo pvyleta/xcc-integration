@@ -23,8 +23,7 @@ DEFAULT_TIMEOUT: Final = 10  # seconds
 
 # Entity type options
 ENTITY_TYPE_INTEGRATION: Final = "integration"
-ENTITY_TYPE_MQTT: Final = "mqtt"
-DEFAULT_ENTITY_TYPE: Final = ENTITY_TYPE_MQTT
+DEFAULT_ENTITY_TYPE: Final = ENTITY_TYPE_INTEGRATION
 
 # Device information
 MANUFACTURER: Final = "XCC"
@@ -34,9 +33,7 @@ MODEL: Final = "Heat Pump Controller"
 ENTITY_CATEGORY_CONFIG: Final = "config"
 ENTITY_CATEGORY_DIAGNOSTIC: Final = "diagnostic"
 
-# MQTT constants
-MQTT_DISCOVERY_PREFIX: Final = "homeassistant"
-MQTT_DEVICE_PREFIX: Final = "xcc"
+
 
 # Update intervals
 UPDATE_INTERVAL_FAST: Final = 30  # seconds - for frequently changing values

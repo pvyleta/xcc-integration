@@ -25,7 +25,7 @@ from .const import (
     DEFAULT_USERNAME,
     DOMAIN,
     ENTITY_TYPE_INTEGRATION,
-    ENTITY_TYPE_MQTT,
+
     DEFAULT_ENTITY_TYPE,
 )
 
@@ -39,15 +39,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=10, max=3600)
         ),
-        vol.Optional(CONF_ENTITY_TYPE, default=DEFAULT_ENTITY_TYPE): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[
-                    selector.SelectOptionDict(value=ENTITY_TYPE_MQTT, label="MQTT Entities"),
-                    selector.SelectOptionDict(value=ENTITY_TYPE_INTEGRATION, label="Integration Entities"),
-                ],
-                mode=selector.SelectSelectorMode.DROPDOWN,
-            )
-        ),
+        # Entity type is now fixed to integration entities only
+        # vol.Optional(CONF_ENTITY_TYPE, default=DEFAULT_ENTITY_TYPE): removed MQTT option
     }
 )
 
@@ -122,7 +115,10 @@ class XCCConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(user_input[CONF_IP_ADDRESS])
                 self._abort_if_unique_id_configured()
 
-                return self.async_create_entry(title=info["title"], data=user_input)
+                # Force entity type to integration (MQTT option removed)
+                config_data = user_input.copy()
+                config_data[CONF_ENTITY_TYPE] = ENTITY_TYPE_INTEGRATION
+                return self.async_create_entry(title=info["title"], data=config_data)
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
