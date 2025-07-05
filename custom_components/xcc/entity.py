@@ -129,11 +129,22 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
         # Update entity data from coordinator
         self._entity_data = self.coordinator.get_entity_data(self.entity_id_suffix)
         if self._entity_data:
             self._xcc_data = self._entity_data["data"]
             self._attributes = self._xcc_data.get("attributes", {})
+
+            # Log coordinator update for debugging (occasionally to avoid spam)
+            import random
+            if random.random() < 0.05:  # Log ~5% of updates
+                current_value = self._get_current_value()
+                _LOGGER.debug("🔄 COORDINATOR UPDATE: %s = %s", self.entity_id, current_value)
+        else:
+            _LOGGER.warning("No entity data found for %s during coordinator update", self.entity_id_suffix)
 
         super()._handle_coordinator_update()
 
@@ -150,9 +161,13 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         # Debug coordinator data structure
         if hasattr(self.coordinator, 'data') and self.coordinator.data:
             _LOGGER.debug("Coordinator data keys: %s", list(self.coordinator.data.keys()))
-            if entity_type in self.coordinator.data:
-                type_data = self.coordinator.data[entity_type]
-                _LOGGER.debug("Entity type '%s' data keys: %s", entity_type, list(type_data.keys()) if isinstance(type_data, dict) else type(type_data))
+
+            # Handle plural entity type names (sensors, switches, etc.)
+            entity_type_plural = f"{entity_type}s" if not entity_type.endswith('s') else entity_type
+
+            if entity_type_plural in self.coordinator.data:
+                type_data = self.coordinator.data[entity_type_plural]
+                _LOGGER.debug("Entity type '%s' data keys: %s", entity_type_plural, list(type_data.keys()) if isinstance(type_data, dict) else type(type_data))
 
                 entity_data = type_data.get(self.entity_id_suffix) if isinstance(type_data, dict) else None
                 if entity_data:
@@ -162,9 +177,13 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                     return state_value
                 else:
                     _LOGGER.warning("No entity data found for suffix '%s' in type '%s'",
-                                  self.entity_id_suffix, entity_type)
+                                  self.entity_id_suffix, entity_type_plural)
+                    # Debug: show available keys
+                    if isinstance(type_data, dict) and type_data:
+                        _LOGGER.debug("Available entity keys in %s: %s", entity_type_plural, list(type_data.keys())[:10])
             else:
-                _LOGGER.warning("Entity type '%s' not found in coordinator data", entity_type)
+                _LOGGER.warning("Entity type '%s' not found in coordinator data", entity_type_plural)
+                _LOGGER.debug("Available coordinator data keys: %s", list(self.coordinator.data.keys()))
         else:
             _LOGGER.warning("No coordinator data available")
 

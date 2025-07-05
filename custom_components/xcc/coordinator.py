@@ -204,18 +204,36 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "prop": prop,  # Keep prop for reference
             }
 
-            # Count by entity type for logging (use entity_id as key for proper lookup)
+            # Create state data structure that entities can use to retrieve values
+            # This is the key fix - store data in the format that _get_current_value expects
+            state_value = entity["attributes"].get("value", "")
+            state_data = {
+                "state": state_value,
+                "attributes": entity["attributes"],
+                "entity_id": entity_data["entity_id"],
+                "prop": prop,
+                "name": entity_data["name"],
+                "unit": entity["attributes"].get("unit", ""),
+                "page": entity["attributes"].get("page", "unknown"),
+            }
+
+            # Log state values for debugging (only for first few entities to avoid spam)
+            if len(entities_list) <= 10:
+                _LOGGER.info("📊 COORDINATOR STORING: %s = %s (type: %s)",
+                           entity_id, state_value, entity_type)
+
+            # Store in processed_data with the correct structure for entity value retrieval
             entity_id = entity_data["entity_id"]
             if entity_type == "switch":
-                processed_data["switches"][entity_id] = entity
+                processed_data["switches"][entity_id] = state_data
             elif entity_type == "number":
-                processed_data["numbers"][entity_id] = entity
+                processed_data["numbers"][entity_id] = state_data
             elif entity_type == "select":
-                processed_data["selects"][entity_id] = entity
+                processed_data["selects"][entity_id] = state_data
             elif entity_type == "button":
-                processed_data["buttons"][entity_id] = entity
+                processed_data["buttons"][entity_id] = state_data
             else:
-                processed_data["sensors"][entity_id] = entity
+                processed_data["sensors"][entity_id] = state_data
 
         # Store entities list for new platforms
         processed_data["entities"] = entities_list

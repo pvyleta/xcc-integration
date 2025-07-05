@@ -109,9 +109,13 @@ async def async_setup_entry(
                 _LOGGER.info("Data[%s]: %s", key, type(value))
 
     sensor_entities = coordinator.get_entities_by_type("sensor")
-    _LOGGER.info("Found %d sensor entities in coordinator.data['sensors']", len(sensor_entities))
+    _LOGGER.info("Found %d sensor entities in coordinator.get_entities_by_type('sensor')", len(sensor_entities))
 
-    if not sensor_entities:
+    # Also check the coordinator data structure directly
+    sensors_in_data = coordinator.data.get("sensors", {})
+    _LOGGER.info("Found %d sensors in coordinator.data['sensors']", len(sensors_in_data))
+
+    if not sensor_entities and not sensors_in_data:
         _LOGGER.warning("No sensor entities found! Checking alternative data structures...")
         # Check if entities are stored differently
         entities_list = coordinator.data.get("entities", [])
@@ -124,6 +128,15 @@ async def async_setup_entry(
             if entity_type == "sensor":
                 sensor_count += 1
         _LOGGER.info("Found %d sensor-type entities in entities list", sensor_count)
+
+    # Use sensors from coordinator.data if available, otherwise use get_entities_by_type
+    if sensors_in_data and not sensor_entities:
+        _LOGGER.info("Using sensors from coordinator.data['sensors'] instead of get_entities_by_type")
+        # Convert the data structure to match what the sensor creation expects
+        sensor_entities = {}
+        for entity_id, state_data in sensors_in_data.items():
+            sensor_entities[entity_id] = state_data
+        _LOGGER.info("Converted %d sensors from coordinator data", len(sensor_entities))
 
     for entity_id, entity_data in sensor_entities.items():
         try:
@@ -230,7 +243,15 @@ class XCCSensor(XCCEntity, SensorEntity):
     def native_value(self) -> Any:
         """Return the native value of the sensor."""
         raw_value = self._get_current_value()
-        return self._convert_value_for_ha(raw_value)
+        converted_value = self._convert_value_for_ha(raw_value)
+
+        # Log value retrieval for debugging (only occasionally to avoid spam)
+        import random
+        if random.random() < 0.01:  # Log ~1% of value retrievals
+            _LOGGER.debug("🔍 SENSOR VALUE RETRIEVAL: %s = %s (raw: %s)",
+                         self.entity_id, converted_value, raw_value)
+
+        return converted_value
 
     @property
     def native_unit_of_measurement(self) -> str | None:
