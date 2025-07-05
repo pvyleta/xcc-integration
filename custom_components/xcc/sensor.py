@@ -143,6 +143,13 @@ async def async_setup_entry(
             _LOGGER.debug("Creating sensor for entity_id: %s", entity_id)
             _LOGGER.debug("Entity data keys: %s", list(entity_data.keys()) if isinstance(entity_data, dict) else "Not a dict")
 
+            # IMPORTANT: Ensure entity_data has entity_id key for sensor initialization
+            # The entity_id comes from the dictionary key, but the sensor expects it in the data
+            if isinstance(entity_data, dict) and "entity_id" not in entity_data:
+                entity_data = dict(entity_data)  # Make a copy to avoid modifying original
+                entity_data["entity_id"] = entity_id
+                _LOGGER.debug("Added missing entity_id to entity_data for %s", entity_id)
+
             sensor = XCCSensor(coordinator, entity_data)
             sensors.append(sensor)
             _LOGGER.info("✅ Successfully created sensor: %s (%s)", getattr(sensor, 'name', 'unknown'), entity_id)
@@ -168,7 +175,17 @@ class XCCSensor(XCCEntity, SensorEntity):
     def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]) -> None:
         """Initialize the XCC sensor."""
         try:
+            # IMPORTANT: entity_id must not be empty - this prevents "Entity data not found for " errors
             entity_id = entity_data.get("entity_id", "")
+            if not entity_id:
+                # Try to extract from other fields if entity_id is missing
+                prop = entity_data.get("prop", "")
+                if prop:
+                    entity_id = f"xcc_{prop.lower()}"
+                    _LOGGER.warning("Missing entity_id in entity_data, generated from prop: %s", entity_id)
+                else:
+                    raise ValueError(f"No entity_id found in entity_data and no prop to generate from. Data keys: {list(entity_data.keys())}")
+
             _LOGGER.debug("Initializing XCCSensor for entity_id: %s", entity_id)
 
             # Create entity description

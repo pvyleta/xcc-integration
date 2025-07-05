@@ -84,51 +84,65 @@ def test_basic_imports():
     return errors
 
 def test_undefined_variables():
-    """Test for common undefined variable patterns."""
+    """Test for common undefined variable patterns - STRICT VERSION."""
     _LOGGER.info("Testing for undefined variable patterns...")
-    
+
     errors = []
     python_files = []
-    
+
     # Find all Python files in custom_components/xcc
     for root, dirs, files in os.walk("custom_components/xcc"):
         for file in files:
             if file.endswith(".py"):
                 python_files.append(os.path.join(root, file))
-    
+
     for file_path in python_files:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-            
-            # Look for common undefined variable patterns
+
+            # Look for critical undefined variable patterns that cause runtime errors
             for line_num, line in enumerate(lines, 1):
-                line = line.strip()
-                
+                line_stripped = line.strip()
+
                 # Skip comments and empty lines
-                if not line or line.startswith('#'):
+                if not line_stripped or line_stripped.startswith('#'):
                     continue
-                
-                # Check for variables used in f-strings or format strings before definition
-                if 'entity_id' in line and ('_LOGGER' in line or 'format' in line or 'f"' in line):
-                    # Look backwards to see if entity_id was defined
-                    defined = False
-                    for prev_line_num in range(line_num - 1, max(0, line_num - 20), -1):
-                        prev_line = lines[prev_line_num - 1].strip()
-                        if 'entity_id =' in prev_line:
-                            defined = True
+
+                # CRITICAL: Check for entity_id used in logging before definition
+                # This is the exact pattern that caused the v1.7.5 regression
+                if ('_LOGGER' in line_stripped and 'entity_id' in line_stripped and
+                    ('info' in line_stripped or 'error' in line_stripped or 'warning' in line_stripped or 'debug' in line_stripped)):
+
+                    # Look backwards in the same function to see if entity_id was defined
+                    defined_in_function = False
+                    function_start = line_num
+
+                    # Find the start of the current function
+                    for search_line_num in range(line_num - 1, max(0, line_num - 50), -1):
+                        search_line = lines[search_line_num - 1].strip()
+                        if search_line.startswith('def ') or search_line.startswith('class '):
+                            function_start = search_line_num
                             break
-                    
-                    if not defined and 'entity_id' in line:
-                        error_msg = f"❌ Potential undefined variable 'entity_id' in {file_path}:{line_num}: {line}"
-                        _LOGGER.warning(error_msg)
-                        # Don't add to errors for now, just warn
-            
+
+                    # Check if entity_id is defined between function start and current line
+                    for check_line_num in range(function_start, line_num):
+                        check_line = lines[check_line_num - 1].strip()
+                        if ('entity_id =' in check_line or 'entity_id=' in check_line) and not check_line.startswith('#'):
+                            defined_in_function = True
+                            break
+
+                    if not defined_in_function:
+                        # This is a critical error that will cause runtime failures
+                        error_msg = f"❌ CRITICAL: entity_id used in logging before definition in {file_path}:{line_num}: {line_stripped}"
+                        _LOGGER.error(error_msg)
+                        errors.append(error_msg)
+
         except Exception as e:
             error_msg = f"❌ Error checking {file_path}: {e}"
             _LOGGER.error(error_msg)
             errors.append(error_msg)
-    
+
     return errors
 
 def main():

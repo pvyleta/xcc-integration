@@ -29,10 +29,17 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         super().__init__(coordinator)
 
         self.entity_id_suffix = entity_id
+
+        # IMPORTANT: Check for empty entity_id to provide better error messages
+        if not entity_id or entity_id.strip() == "":
+            raise ValueError(f"Entity ID cannot be empty. Received: '{entity_id}'")
+
         self._entity_data = coordinator.get_entity_data(entity_id)
 
         if not self._entity_data:
-            raise ValueError(f"Entity data not found for {entity_id}")
+            # Provide more detailed error information for debugging
+            available_entities = list(coordinator.entities.keys())[:10]  # Show first 10
+            raise ValueError(f"Entity data not found for '{entity_id}'. Available entities (first 10): {available_entities}")
 
         _LOGGER.debug("Entity %s data structure: %s", entity_id,
                      {k: type(v).__name__ for k, v in self._entity_data.items()})
