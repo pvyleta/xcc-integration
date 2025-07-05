@@ -60,8 +60,11 @@ class XCCClient:
         # Try to reuse existing session
         if self.cookie_file and os.path.exists(self.cookie_file):
             try:
-                with open(self.cookie_file, "r") as f:
-                    saved = json.load(f)
+                # Use async file operations to avoid blocking
+                import aiofiles
+                async with aiofiles.open(self.cookie_file, "r") as f:
+                    content = await f.read()
+                    saved = json.loads(content)
                     session_cookie = saved.get("SoftPLC")
                     if session_cookie:
                         cookie_jar.update_cookies(
@@ -209,9 +212,9 @@ class XCCClient:
         # Save session cookie
         if self.cookie_file:
             _LOGGER.debug("Saving session cookie to %s", self.cookie_file)
-            self._save_session()
+            await self._save_session()
 
-    def _save_session(self):
+    async def _save_session(self):
         """Save session cookie to file."""
         try:
             os.makedirs(os.path.dirname(self.cookie_file), exist_ok=True)
@@ -221,8 +224,10 @@ class XCCClient:
                     session_data["SoftPLC"] = cookie.value
                     break
 
-            with open(self.cookie_file, "w") as f:
-                json.dump(session_data, f)
+            # Use async file operations to avoid blocking
+            import aiofiles
+            async with aiofiles.open(self.cookie_file, "w") as f:
+                await f.write(json.dumps(session_data))
         except Exception:
             pass  # Non-critical
 

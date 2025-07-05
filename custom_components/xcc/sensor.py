@@ -233,13 +233,28 @@ class XCCSensor(XCCEntity, SensorEntity):
             elif "pressure" in field_name_lower or "tlak" in field_name_lower:
                 device_class = SensorDeviceClass.PRESSURE
 
-        # Determine state class
+        # Determine state class based on value type and device class
         state_class = None
-        if device_class in STATE_CLASS_MAPPING:
+
+        # Check if the current value is numeric to determine if we should set a state class
+        current_value = entity_data.get("state", "")
+        is_numeric = False
+
+        if current_value is not None:
+            try:
+                # Try to convert to float to check if it's numeric
+                float(str(current_value))
+                is_numeric = True
+            except (ValueError, TypeError):
+                is_numeric = False
+
+        # Only set state class for numeric values
+        if is_numeric and device_class in STATE_CLASS_MAPPING:
             state_class = STATE_CLASS_MAPPING[device_class]
-        else:
-            # Default to measurement for numeric values
+        elif is_numeric and device_class is None:
+            # Default to measurement for numeric values without device class
             state_class = SensorStateClass.MEASUREMENT
+        # For non-numeric values (strings, etc.), leave state_class as None
 
         # Get entity name from descriptor or entity data
         friendly_name = entity_config.get('friendly_name_en') or entity_config.get('friendly_name')

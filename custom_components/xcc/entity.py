@@ -174,7 +174,24 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
 
             if entity_type_plural in self.coordinator.data:
                 type_data = self.coordinator.data[entity_type_plural]
-                _LOGGER.debug("Entity type '%s' data keys: %s", entity_type_plural, list(type_data.keys()) if isinstance(type_data, dict) else type(type_data))
+                # IMPORTANT: Only log this once per coordinator update to avoid log spam
+                # Use a class variable to track if we've already logged this update cycle
+                if not hasattr(self.__class__, '_logged_data_keys_for_update'):
+                    self.__class__._logged_data_keys_for_update = set()
+
+                update_id = id(self.coordinator.data)  # Use data object ID as update identifier
+                log_key = f"{entity_type_plural}_{update_id}"
+
+                if log_key not in self.__class__._logged_data_keys_for_update:
+                    _LOGGER.debug("Entity type '%s' data keys: %s", entity_type_plural, list(type_data.keys()) if isinstance(type_data, dict) else type(type_data))
+                    self.__class__._logged_data_keys_for_update.add(log_key)
+
+                    # Clean up old entries to prevent memory leak (keep only last 5 updates)
+                    if len(self.__class__._logged_data_keys_for_update) > 10:
+                        # Remove oldest entries
+                        old_entries = list(self.__class__._logged_data_keys_for_update)[:5]
+                        for old_entry in old_entries:
+                            self.__class__._logged_data_keys_for_update.discard(old_entry)
 
                 entity_data = type_data.get(self.entity_id_suffix) if isinstance(type_data, dict) else None
                 if entity_data:

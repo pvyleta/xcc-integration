@@ -60,8 +60,10 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         self._entity_config = coordinator.get_entity_config(self._prop)
 
         # Generate entity ID and unique ID
-        self._attr_unique_id = f"{coordinator.ip_address}_{entity_data['entity_id']}"
-        self.entity_id = f"switch.{entity_data['entity_id']}"
+        # Normalize entity_id to avoid duplicates (replace hyphens with underscores)
+        normalized_entity_id = entity_data['entity_id'].replace('-', '_')
+        self._attr_unique_id = f"{coordinator.ip_address}_{normalized_entity_id}"
+        self.entity_id = f"switch.{normalized_entity_id}"
 
         # Set friendly name from descriptor or fallback to entity data
         friendly_name = self._entity_config.get('friendly_name_en') or self._entity_config.get('friendly_name')
