@@ -207,10 +207,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Create state data structure that entities can use to retrieve values
             # This is the key fix - store data in the format that _get_current_value expects
             state_value = entity["attributes"].get("value", "")
+
+            # IMPORTANT: Define entity_id BEFORE using it in logging to avoid UnboundLocalError
+            entity_id = entity_data["entity_id"]
+
             state_data = {
                 "state": state_value,
                 "attributes": entity["attributes"],
-                "entity_id": entity_data["entity_id"],
+                "entity_id": entity_id,
                 "prop": prop,
                 "name": entity_data["name"],
                 "unit": entity["attributes"].get("unit", ""),
@@ -223,7 +227,6 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                            entity_id, state_value, entity_type)
 
             # Store in processed_data with the correct structure for entity value retrieval
-            entity_id = entity_data["entity_id"]
             if entity_type == "switch":
                 processed_data["switches"][entity_id] = state_data
             elif entity_type == "number":
