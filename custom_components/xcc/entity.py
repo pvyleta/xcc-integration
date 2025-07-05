@@ -179,8 +179,13 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 entity_data = type_data.get(self.entity_id_suffix) if isinstance(type_data, dict) else None
                 if entity_data:
                     state_value = entity_data.get("state")
-                    _LOGGER.info("📊 ENTITY VALUE UPDATE: %s = %s (from coordinator data)",
-                               self.entity_id, state_value)
+                    # Log value updates more frequently to verify regular updates
+                    import random
+                    if random.random() < 0.1:  # Log ~10% of value retrievals
+                        import time
+                        timestamp = time.strftime("%H:%M:%S")
+                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (from coordinator data)",
+                                   timestamp, self.entity_id, state_value)
                     return state_value
                 else:
                     _LOGGER.warning("No entity data found for suffix '%s' in type '%s'",

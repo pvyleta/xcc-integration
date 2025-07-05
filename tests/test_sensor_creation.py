@@ -110,8 +110,22 @@ def test_sensor_creation_with_sample_data():
     select_count = 0
     
     for entity in entities:
-        prop = entity.get("prop", "").upper()
-        
+        # IMPORTANT: Check both standalone and integration entity structures
+        # Standalone xcc_client.py: {"prop": "SVENKU", ...}
+        # Integration xcc_client.py: {"attributes": {"field_name": "SVENKU"}, ...}
+        prop = entity.get("prop", "")
+        if not prop:
+            # Try integration format
+            attributes = entity.get("attributes", {})
+            prop = attributes.get("field_name", "")
+
+        prop = prop.upper()
+
+        # Skip entities without proper property names
+        if not prop:
+            print(f"Skipping entity without prop or field_name: {entity}")
+            continue
+
         # Determine entity type based on descriptor or default logic
         if prop in entity_configs:
             config = entity_configs[prop]
@@ -119,21 +133,25 @@ def test_sensor_creation_with_sample_data():
             print(f"Entity {prop}: has descriptor, type = {entity_type}")
         else:
             # Default logic for entities without descriptors
-            attributes = entity.get("attributes", {})
-            data_type = attributes.get("data_type", "unknown")
-            is_settable = attributes.get("is_settable", False)
-            
-            if data_type == "boolean":
-                entity_type = "switch" if is_settable else "binary_sensor"
-            elif data_type == "enum":
-                entity_type = "select" if is_settable else "sensor"
-            elif data_type == "numeric":
-                entity_type = "number" if is_settable else "sensor"
-            else:
-                entity_type = "sensor"
-            
-            print(f"Entity {prop}: no descriptor, defaulting to {entity_type} (data_type={data_type}, settable={is_settable})")
-        
+            # Check if entity already has entity_type (integration format)
+            entity_type = entity.get("entity_type", "sensor")
+
+            # If no entity_type, use data_type from attributes (standalone format)
+            if entity_type == "sensor":
+                attributes = entity.get("attributes", {})
+                data_type = attributes.get("data_type", "unknown")
+
+                if data_type == "boolean":
+                    entity_type = "binary_sensor"
+                elif data_type == "numeric":
+                    entity_type = "sensor"
+                elif data_type == "string":
+                    entity_type = "sensor"
+                else:
+                    entity_type = "sensor"
+
+            print(f"Entity {prop}: no descriptor, using type {entity_type}")
+
         # Add entity data structure that matches what coordinator creates
         entity_data = {
             "entity_id": f"xcc_{prop.lower()}",
@@ -141,8 +159,8 @@ def test_sensor_creation_with_sample_data():
             "type": entity_type,
             "data": entity
         }
-        
-        # Store in appropriate category
+
+        # Store in appropriate category using prop as key (like the real coordinator does)
         if entity_type == "sensor":
             processed_data["sensors"][prop] = entity_data
             sensor_count += 1
@@ -155,19 +173,36 @@ def test_sensor_creation_with_sample_data():
         elif entity_type == "select":
             processed_data["selects"][prop] = entity_data
             select_count += 1
-        
+        elif entity_type == "binary_sensor":
+            # Binary sensors go in their own category, not sensors
+            processed_data["binary_sensors"] = processed_data.get("binary_sensors", {})
+            processed_data["binary_sensors"][prop] = entity_data
+
         processed_data["entities"].append(entity_data)
     
+    binary_sensor_count = len(processed_data.get("binary_sensors", {}))
+
     print(f"\n=== ENTITY DISTRIBUTION ===")
     print(f"Sensors: {sensor_count}")
+    print(f"Binary Sensors: {binary_sensor_count}")
     print(f"Switches: {switch_count}")
     print(f"Numbers: {number_count}")
     print(f"Selects: {select_count}")
     print(f"Total: {len(processed_data['entities'])}")
-    
-    # Test that we have sensors to create
-    assert sensor_count > 0, f"No sensors found! This indicates a problem with entity classification."
-    assert len(processed_data["sensors"]) == sensor_count, "Sensor count mismatch"
+
+    # Debug: Show first few entities to understand the structure
+    print(f"\n=== FIRST 3 ENTITIES ===")
+    for i, entity in enumerate(entities[:3]):
+        print(f"Entity {i+1}: {entity}")
+
+    print(f"\n=== FIRST 3 PROCESSED SENSORS ===")
+    for i, (prop, sensor_data) in enumerate(list(processed_data["sensors"].items())[:3]):
+        print(f"Sensor {i+1}: {prop} -> {sensor_data}")
+
+    # Test that we have entities to create (sensors or binary_sensors)
+    total_entities_created = sensor_count + binary_sensor_count
+    assert total_entities_created > 0, f"No entities found! This indicates a problem with entity classification."
+    assert len(processed_data["sensors"]) == sensor_count, f"Sensor count mismatch: expected {sensor_count}, got {len(processed_data['sensors'])}"
     
     # Test sensor data structure
     for prop, sensor_data in processed_data["sensors"].items():

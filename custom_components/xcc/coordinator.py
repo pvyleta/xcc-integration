@@ -206,7 +206,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Create state data structure that entities can use to retrieve values
             # This is the key fix - store data in the format that _get_current_value expects
-            state_value = entity["attributes"].get("value", "")
+            # IMPORTANT: Extract state from the correct field - entities have "state", not "value" in attributes
+            state_value = entity.get("state", "")
 
             # IMPORTANT: Define entity_id BEFORE using it in logging to avoid UnboundLocalError
             entity_id = entity_data["entity_id"]
@@ -223,8 +224,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Log state values for debugging (only for first few entities to avoid spam)
             if len(entities_list) <= 10:
-                _LOGGER.info("📊 COORDINATOR STORING: %s = %s (type: %s)",
-                           entity_id, state_value, entity_type)
+                _LOGGER.info("📊 COORDINATOR STORING: %s = %s (type: %s, prop: %s)",
+                           entity_id, state_value, entity_type, prop)
 
             # Store in processed_data with the correct structure for entity value retrieval
             if entity_type == "switch":
@@ -253,18 +254,87 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.info("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
         _LOGGER.info("Final entity distribution: %s", entity_counts)
 
-        # Log some example sensors for debugging
-        if processed_data["sensors"]:
-            _LOGGER.info("Example sensors created:")
-            for i, (prop, entity_data) in enumerate(list(processed_data["sensors"].items())[:5]):
-                _LOGGER.info("  %d. %s -> %s", i+1, prop, entity_data.get("entity_id", "unknown"))
-        else:
-            _LOGGER.error("❌ NO SENSORS IN PROCESSED DATA - This is the root problem!")
+        # Print current values for all entity types
+        self._print_entity_values(processed_data)
 
         # Log data structure that will be returned
         _LOGGER.info("Returning processed_data with keys: %s", list(processed_data.keys()))
 
         return processed_data
+
+    def _print_entity_values(self, processed_data: dict[str, Any]) -> None:
+        """Print current values for all entity types in an organized way."""
+        _LOGGER.info("=== CURRENT ENTITY VALUES ===")
+
+        # Define the order and display names for entity types
+        entity_type_info = {
+            "sensors": ("📊 SENSORS", "°C", "W", "kWh", "V", "A", "bar"),
+            "binary_sensors": ("🔘 BINARY SENSORS", "ON", "OFF"),
+            "switches": ("🔄 SWITCHES", "ON", "OFF"),
+            "numbers": ("🔢 NUMBERS", ""),
+            "selects": ("📋 SELECTS", ""),
+            "buttons": ("🔲 BUTTONS", ""),
+            "climates": ("🌡️ CLIMATES", "°C")
+        }
+
+        total_entities = 0
+
+        for entity_type, (display_name, *unit_examples) in entity_type_info.items():
+            entities = processed_data.get(entity_type, {})
+            if not entities:
+                continue
+
+            total_entities += len(entities)
+            _LOGGER.info("%s (%d entities):", display_name, len(entities))
+
+            # Sort entities by name for consistent output
+            sorted_entities = sorted(entities.items(), key=lambda x: x[0])
+
+            # Print first 10 entities of each type to avoid log spam
+            for i, (entity_id, entity_data) in enumerate(sorted_entities[:10]):
+                state = entity_data.get("state", "unknown")
+                unit = entity_data.get("unit", "")
+                prop = entity_data.get("prop", entity_id)
+                page = entity_data.get("page", "unknown")
+
+                # Format the value display
+                if unit:
+                    value_display = f"{state} {unit}"
+                else:
+                    value_display = str(state)
+
+                # Special formatting for boolean values
+                if entity_type in ["binary_sensors", "switches"]:
+                    if str(state).lower() in ["1", "true", "on"]:
+                        value_display = "🟢 ON"
+                    elif str(state).lower() in ["0", "false", "off"]:
+                        value_display = "🔴 OFF"
+                    else:
+                        value_display = f"❓ {state}"
+
+                # Add timestamp to show this is fresh data
+                import time
+                timestamp = time.strftime("%H:%M:%S")
+                _LOGGER.info("  %2d. %-25s = %-15s [%s] (%s)", i+1, prop, value_display, timestamp, page)
+
+            # Show count if there are more entities
+            if len(sorted_entities) > 10:
+                _LOGGER.info("  ... and %d more %s", len(sorted_entities) - 10, entity_type)
+
+            _LOGGER.info("")  # Empty line for readability
+
+        if total_entities == 0:
+            _LOGGER.warning("❌ NO ENTITIES FOUND - This indicates a problem with entity processing!")
+        else:
+            _LOGGER.info("✅ Total entities processed: %d", total_entities)
+
+        _LOGGER.info("=== END ENTITY VALUES ===")
+
+    async def async_force_update(self) -> None:
+        """Force an immediate update of all entity values."""
+        _LOGGER.info("🔄 FORCING IMMEDIATE COORDINATOR UPDATE")
+        self._update_source = "force_update"
+        await self.async_request_refresh()
 
     def _determine_entity_type(self, entity: dict[str, Any]) -> str:
         """Determine the appropriate Home Assistant entity type for an XCC entity."""

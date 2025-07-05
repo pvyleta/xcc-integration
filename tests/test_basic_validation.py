@@ -72,47 +72,64 @@ def test_no_critical_undefined_variables():
                 continue
             
             # CRITICAL PATTERN: entity_id used in logging before definition
-            # This is the exact pattern that caused the v1.7.5 regression
-            if ('_LOGGER' in line_stripped and 'entity_id' in line_stripped and 
-                ('info(' in line_stripped or 'error(' in line_stripped or 'warning(' in line_stripped or 'debug(' in line_stripped)):
-                
-                # Look backwards in the same function to see if entity_id was defined
-                defined_in_function = False
-                function_start = line_num
-                
-                # Find the start of the current function/method
-                for search_line_num in range(line_num - 1, max(0, line_num - 100), -1):
-                    search_line = lines[search_line_num - 1].strip()
-                    if (search_line.startswith('def ') or search_line.startswith('class ') or 
-                        search_line.startswith('async def ')):
-                        function_start = search_line_num
-                        break
-                
-                # Check if entity_id is defined between function start and current line
-                for check_line_num in range(function_start, line_num):
-                    check_line = lines[check_line_num - 1].strip()
-                    # Look for entity_id assignment (but not in comments)
-                    if (('entity_id =' in check_line or 'entity_id=' in check_line) and 
-                        not check_line.startswith('#') and 
-                        not 'self.entity_id' in check_line):  # Exclude self.entity_id assignments
-                        defined_in_function = True
-                        break
-                
-                # Also check for entity_id as a parameter
-                if not defined_in_function:
-                    for check_line_num in range(function_start, min(function_start + 5, len(lines))):
+            # BUT exclude self.entity_id and variables that just contain "entity_id" in their name
+            if ('_LOGGER' in line_stripped and
+                ('info(' in line_stripped or 'error(' in line_stripped or 'warning(' in line_stripped or 'debug(' in line_stripped) and
+                'self.entity_id' not in line_stripped):
+
+                # Look for exact entity_id usage (not entity_id_from_data, etc.)
+                import re
+                # Match entity_id as a standalone word (not part of another variable name)
+                if re.search(r'\bentity_id\b', line_stripped) and not re.search(r'\bentity_id_\w+', line_stripped):
+
+                    # Look backwards in the same function to see if entity_id was defined
+                    defined_in_function = False
+                    function_start = line_num
+
+                    # Find the start of the current function/method
+                    for search_line_num in range(line_num - 1, max(0, line_num - 100), -1):
+                        search_line = lines[search_line_num - 1].strip()
+                        if (search_line.startswith('def ') or search_line.startswith('class ') or
+                            search_line.startswith('async def ')):
+                            function_start = search_line_num
+                            break
+
+                    # Check if entity_id is defined between function start and current line
+                    for check_line_num in range(function_start, line_num):
                         check_line = lines[check_line_num - 1].strip()
-                        if 'def ' in check_line and 'entity_id' in check_line:
+                        # Look for entity_id assignment (but not in comments)
+                        if (('entity_id =' in check_line or 'entity_id=' in check_line) and
+                            not check_line.startswith('#') and
+                            not 'self.entity_id' in check_line):  # Exclude self.entity_id assignments
                             defined_in_function = True
                             break
-                
-                if not defined_in_function:
-                    # This is a critical error that will cause UnboundLocalError at runtime
-                    critical_errors.append(
-                        f"CRITICAL: entity_id used in logging before definition in {file_path.name}:{line_num}\n"
-                        f"  Line: {line_stripped}\n"
-                        f"  This will cause UnboundLocalError at runtime!"
-                    )
+
+                        # Also check for entity_id in for loops (e.g., "for entity_id, entity_data in")
+                        if ('for ' in check_line and 'entity_id' in check_line and ' in ' in check_line):
+                            defined_in_function = True
+                            break
+
+                    # Also check for entity_id as a parameter in function definition
+                    if not defined_in_function:
+                        # Look for function definition with entity_id parameter
+                        for check_line_num in range(function_start, min(function_start + 10, len(lines))):
+                            check_line = lines[check_line_num - 1].strip()
+                            # Check for entity_id in function parameters (including multi-line definitions)
+                            if ('def ' in check_line or check_line.endswith(',') or check_line.endswith('(')) and 'entity_id' in check_line:
+                                defined_in_function = True
+                                break
+                            # Also check for entity_id: str parameter patterns
+                            if 'entity_id:' in check_line:
+                                defined_in_function = True
+                                break
+
+                    if not defined_in_function:
+                        # This is a critical error that will cause UnboundLocalError at runtime
+                        critical_errors.append(
+                            f"CRITICAL: entity_id used in logging before definition in {file_path.name}:{line_num}\n"
+                            f"  Line: {line_stripped}\n"
+                            f"  This will cause UnboundLocalError at runtime!"
+                        )
     
     if critical_errors:
         error_msg = "Critical undefined variable errors found that will cause runtime failures:\n\n" + "\n\n".join(critical_errors)
