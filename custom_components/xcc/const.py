@@ -6,7 +6,7 @@ from typing import Final
 
 # Integration domain
 DOMAIN: Final = "xcc"
-VERSION: Final = "1.7.1"  # Integration version for debugging
+VERSION: Final = "1.7.2"  # Integration version for debugging
 
 # Configuration constants
 CONF_IP_ADDRESS: Final = "ip_address"
