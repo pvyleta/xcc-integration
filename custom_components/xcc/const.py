@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import json
+import os
 from typing import Final
 
 # Integration domain
 DOMAIN: Final = "xcc"
-VERSION: Final = "1.7.2"  # Integration version for debugging
+
+def get_version() -> str:
+    """Get version from manifest.json."""
+    try:
+        manifest_path = os.path.join(os.path.dirname(__file__), "manifest.json")
+        with open(manifest_path, "r") as f:
+            manifest = json.load(f)
+            return manifest.get("version", "unknown")
+    except Exception:
+        return "unknown"
+
+# Get version from manifest.json automatically
+VERSION: Final = get_version()
 
 # Configuration constants
 CONF_IP_ADDRESS: Final = "ip_address"
