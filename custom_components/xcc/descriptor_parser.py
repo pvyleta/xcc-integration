@@ -84,8 +84,12 @@ class XCCDescriptorParser:
         text = row.get('text', '')
         text_en = row.get('text_en', text)
 
-        # Get unit from element
-        unit = element.get('unit', '')
+        # Get unit from element (try both unit and unit_en)
+        unit = element.get('unit_en') or element.get('unit', '')
+
+        # If no unit on element, try to infer from context or prop name
+        if not unit:
+            unit = self._infer_unit_from_context(prop, row, element)
 
         # Determine device class from unit
         device_class = self._determine_device_class_from_unit(unit)
@@ -162,6 +166,68 @@ class XCCDescriptorParser:
 
         return unit_to_device_class.get(unit)
 
+    def _infer_unit_from_context(self, prop: str, row: ET.Element, element: ET.Element) -> str:
+        """Infer unit from context when not explicitly specified."""
+
+        # Check row context first for temperature-related text
+        if row is not None:
+            row_text = (row.get('text_en', '') or row.get('text', '')).lower()
+            # Temperature indicators in row text
+            if any(temp_word in row_text for temp_word in ['temperature', 'teplota', 'temp.', 'temp ']):
+                return '°C'
+            # Power indicators
+            elif any(power_word in row_text for power_word in ['power', 'výkon', 'watt']):
+                return 'W'
+            # Price indicators
+            elif any(price_word in row_text for price_word in ['price', 'cena', 'cost']):
+                return '€/MWh'
+
+        # Common temperature entities by prop name
+        if any(temp_word in prop.upper() for temp_word in ['TEMP', 'TEPLOTA', 'TEPL']):
+            return '°C'
+
+        # TUV entities are typically temperature-related
+        if prop.startswith('TUV') and any(temp_hint in prop.upper() for temp_hint in ['POZADOVANA', 'MINIMALNI', 'UTLUM']):
+            return '°C'
+
+        # Power entities
+        if any(power_word in prop.upper() for power_word in ['POWER', 'VYKON', 'PREBYTEK']):
+            return 'W'
+
+        # Price entities
+        if any(price_word in prop.upper() for price_word in ['PRICE', 'CENA', 'COST']):
+            return '€/MWh'
+
+        # Time entities
+        if any(time_word in prop.upper() for time_word in ['CAS', 'TIME', 'HODIN', 'HOURS']):
+            return 'h'
+
+        # Day entities
+        if any(day_word in prop.upper() for day_word in ['DNI', 'DAYS', 'INTERVAL']):
+            return 'days'
+
+        # Percentage entities
+        if any(pct_word in prop.upper() for pct_word in ['SOC', 'PERCENT']):
+            return '%'
+
+        # Pressure entities
+        if any(press_word in prop.upper() for press_word in ['PRESSURE', 'TLAK']):
+            return 'bar'
+
+        # Check if there's a label with unit information nearby
+        if row is not None:
+            # Look for labels in the same row that might indicate units
+            for label in row.findall('.//label'):
+                label_text = label.get('text_en', '') or label.get('text', '')
+                if any(unit_hint in label_text.lower() for unit_hint in ['°c', 'celsius', 'temperature']):
+                    return '°C'
+                elif any(unit_hint in label_text.lower() for unit_hint in ['watt', 'power', 'w']):
+                    return 'W'
+                elif any(unit_hint in label_text.lower() for unit_hint in ['hour', 'time']):
+                    return 'h'
+
+        return ''
+
     def _determine_entity_config(self, element: ET.Element, page_name: str) -> Optional[Dict[str, Any]]:
         """Determine the entity configuration from an XML element."""
         prop = element.get('prop')
@@ -205,6 +271,14 @@ class XCCDescriptorParser:
             })
 
         elif element.tag == 'number':
+            # Get unit with enhanced detection
+            unit = element.get('unit_en') or element.get('unit', '')
+            if not unit:
+                unit = self._infer_unit_from_context(prop, parent_row, element)
+
+            # Determine device class from unit
+            device_class = self._determine_device_class_from_unit(unit)
+
             entity_config.update({
                 'entity_type': 'number',
                 'data_type': 'real',
@@ -212,8 +286,9 @@ class XCCDescriptorParser:
                 'max': self._get_float_attr(element, 'max'),
                 'step': self._get_float_attr(element, 'step', 1.0),
                 'digits': self._get_int_attr(element, 'digits', 1),
-                'unit': element.get('unit', ''),
-                'unit_en': element.get('unit_en', element.get('unit', '')),
+                'unit': unit,
+                'unit_en': unit,
+                'device_class': device_class,
             })
 
         elif element.tag == 'choice':
