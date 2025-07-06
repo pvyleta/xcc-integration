@@ -179,9 +179,9 @@ def test_entity_value_logging_format():
     # Check for type-specific formatting
     assert "(sensor from coordinator data)" in entity_content, \
         "Entity should identify as sensor in logging"
-    assert "(number from coordinator data)" in number_content, \
+    assert "(number from coordinator numbers data)" in number_content, \
         "Number should identify as number in logging"
-    assert "(switch from coordinator data)" in switch_content, \
+    assert "(switch from coordinator switches data)" in switch_content, \
         "Switch should identify as switch in logging"
     
     # Check for visual indicators in switch

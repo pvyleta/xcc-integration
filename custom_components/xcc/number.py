@@ -92,22 +92,41 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
     @property
     def native_value(self) -> float | None:
         """Return the entity value."""
-        # Find current entity data in coordinator
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == self._entity_data["entity_id"]:
-                state = entity.get("state", "")
-                try:
-                    value = float(state)
-                    # Log value updates occasionally to verify regular updates
-                    import random
-                    if random.random() < 0.05:  # Log ~5% of value retrievals
-                        import time
-                        timestamp = time.strftime("%H:%M:%S")
-                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (number from coordinator data)",
-                                   timestamp, self.entity_id, value)
-                    return value
-                except (ValueError, TypeError):
-                    return None
+        # Get current entity data from coordinator's processed data structure
+        entity_id = self._entity_data["entity_id"]
+
+        # Look in the numbers dictionary where coordinator stores number entity data
+        numbers_data = self.coordinator.data.get("numbers", {})
+        entity_data = numbers_data.get(entity_id)
+
+        if entity_data:
+            state = entity_data.get("state", "")
+            try:
+                value = float(state)
+                # Log value updates occasionally to verify regular updates
+                import random
+                if random.random() < 0.05:  # Log ~5% of value retrievals
+                    import time
+                    timestamp = time.strftime("%H:%M:%S")
+                    _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (number from coordinator numbers data)",
+                               timestamp, self.entity_id, value)
+                return value
+            except (ValueError, TypeError):
+                _LOGGER.warning("Could not convert state '%s' to float for number entity %s", state, entity_id)
+                return None
+        else:
+            # Fallback: try the entities list (for backward compatibility)
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    state = entity.get("state", "")
+                    try:
+                        value = float(state)
+                        _LOGGER.debug("📊 FALLBACK: Found number value %s = %s in entities list", entity_id, value)
+                        return value
+                    except (ValueError, TypeError):
+                        return None
+
+        _LOGGER.warning("No data found for number entity %s in coordinator", entity_id)
         return None
 
     async def async_set_native_value(self, value: float) -> None:
@@ -153,10 +172,20 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         attributes["max_value"] = self._attr_native_max_value
         attributes["step"] = self._attr_native_step
 
-        # Add current raw state
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == self._entity_data["entity_id"]:
-                attributes["raw_state"] = entity.get("state", "Unknown")
-                break
+        # Add current raw state from numbers data
+        entity_id = self._entity_data["entity_id"]
+        numbers_data = self.coordinator.data.get("numbers", {})
+        entity_data = numbers_data.get(entity_id)
+
+        if entity_data:
+            attributes["raw_state"] = entity_data.get("state", "Unknown")
+        else:
+            # Fallback to entities list
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    attributes["raw_state"] = entity.get("state", "Unknown")
+                    break
+            else:
+                attributes["raw_state"] = "Unknown"
 
         return attributes

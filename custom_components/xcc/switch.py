@@ -78,35 +78,53 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
     @property
     def is_on(self) -> bool | None:
         """Return True if entity is on."""
-        # Find current entity data in coordinator
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == self._entity_data["entity_id"]:
-                state = entity.get("state", "").lower()
-                result = None
+        # Get current entity data from coordinator's processed data structure
+        entity_id = self._entity_data["entity_id"]
 
-                # Handle various boolean representations
-                if state in ["1", "true", "on", "yes", "enabled", "active"]:
-                    result = True
-                elif state in ["0", "false", "off", "no", "disabled", "inactive"]:
-                    result = False
-                else:
-                    # Try to parse as integer
+        # Look in the switches dictionary where coordinator stores switch entity data
+        switches_data = self.coordinator.data.get("switches", {})
+        entity_data = switches_data.get(entity_id)
+
+        if entity_data:
+            state = entity_data.get("state", "").lower()
+            result = None
+
+            # Handle various boolean representations
+            if state in ["1", "true", "on", "yes", "enabled", "active"]:
+                result = True
+            elif state in ["0", "false", "off", "no", "disabled", "inactive"]:
+                result = False
+            else:
+                # Try to parse as integer
+                try:
+                    result = int(float(state)) != 0
+                except (ValueError, TypeError):
+                    result = None
+
+            # Log value updates occasionally to verify regular updates
+            if result is not None:
+                import random
+                if random.random() < 0.05:  # Log ~5% of value retrievals
+                    import time
+                    timestamp = time.strftime("%H:%M:%S")
+                    status_icon = "🟢 ON" if result else "🔴 OFF"
+                    _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator switches data)",
+                               timestamp, self.entity_id, status_icon)
+
+            return result
+        else:
+            # Fallback: try the entities list (for backward compatibility)
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    state = entity.get("state", "").lower()
                     try:
-                        result = int(float(state)) != 0
+                        result = int(float(state)) != 0 if state not in ["true", "false"] else state == "true"
+                        _LOGGER.debug("📊 FALLBACK: Found switch value %s = %s in entities list", entity_id, result)
+                        return result
                     except (ValueError, TypeError):
-                        result = None
+                        return None
 
-                # Log value updates occasionally to verify regular updates
-                if result is not None:
-                    import random
-                    if random.random() < 0.05:  # Log ~5% of value retrievals
-                        import time
-                        timestamp = time.strftime("%H:%M:%S")
-                        status_icon = "🟢 ON" if result else "🔴 OFF"
-                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator data)",
-                                   timestamp, self.entity_id, status_icon)
-
-                return result
+        _LOGGER.warning("No data found for switch entity %s in coordinator", entity_id)
         return None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -155,10 +173,20 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         attributes["prop"] = self._prop
         attributes["page"] = self._entity_config.get("page", "Unknown")
 
-        # Add current raw state
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == self._entity_data["entity_id"]:
-                attributes["raw_state"] = entity.get("state", "Unknown")
-                break
+        # Add current raw state from switches data
+        entity_id = self._entity_data["entity_id"]
+        switches_data = self.coordinator.data.get("switches", {})
+        entity_data = switches_data.get(entity_id)
+
+        if entity_data:
+            attributes["raw_state"] = entity_data.get("state", "Unknown")
+        else:
+            # Fallback to entities list
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    attributes["raw_state"] = entity.get("state", "Unknown")
+                    break
+            else:
+                attributes["raw_state"] = "Unknown"
 
         return attributes

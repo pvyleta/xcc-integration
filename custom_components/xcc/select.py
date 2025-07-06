@@ -95,12 +95,25 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the selected entity option."""
-        # Find current entity data in coordinator
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == self._entity_data["entity_id"]:
-                state = entity.get("state", "")
-                # Convert XCC value to display option
-                return self._value_to_option.get(state, state)
+        # Get current entity data from coordinator's processed data structure
+        entity_id = self._entity_data["entity_id"]
+
+        # Look in the selects dictionary where coordinator stores select entity data
+        selects_data = self.coordinator.data.get("selects", {})
+        entity_data = selects_data.get(entity_id)
+
+        if entity_data:
+            state = entity_data.get("state", "")
+            # Convert XCC value to display option
+            return self._value_to_option.get(state, state)
+        else:
+            # Fallback: try the entities list (for backward compatibility)
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    state = entity.get("state", "")
+                    return self._value_to_option.get(state, state)
+
+        _LOGGER.warning("No data found for select entity %s in coordinator", entity_id)
         return None
 
     async def async_select_option(self, option: str) -> None:
@@ -144,10 +157,20 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
         # Add options information
         attributes["available_options"] = self._attr_options
 
-        # Add current raw state
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == self._entity_data["entity_id"]:
-                attributes["raw_state"] = entity.get("state", "Unknown")
-                break
+        # Add current raw state from selects data
+        entity_id = self._entity_data["entity_id"]
+        selects_data = self.coordinator.data.get("selects", {})
+        entity_data = selects_data.get(entity_id)
+
+        if entity_data:
+            attributes["raw_state"] = entity_data.get("state", "Unknown")
+        else:
+            # Fallback to entities list
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    attributes["raw_state"] = entity.get("state", "Unknown")
+                    break
+            else:
+                attributes["raw_state"] = "Unknown"
 
         return attributes
