@@ -167,29 +167,59 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "climates": {},
         }
 
+        # Filter out descriptor-only entities (descriptors without data)
+        data_props = {entity["attributes"]["field_name"] for entity in entities}
+        self.filter_descriptor_only_entities(data_props)
+
         # Create entities list for the new platform approach
         entities_list = []
+
+        # Track filtering statistics
+        total_data_entities = len(entities)
+        filtered_entities = []
 
         for entity in entities:
             prop = entity["attributes"]["field_name"]
             entity_type = self.get_entity_type(prop)
+            descriptor_config = self.entity_configs.get(prop, {})
+
+            # FILTERING: Only create entities that have BOTH descriptor AND data
+            # Skip entities that only have data but no descriptor definition
+            if not descriptor_config:
+                # Only log missing descriptors once per entity to avoid spam
+                if not hasattr(self, '_logged_missing_descriptors'):
+                    self._logged_missing_descriptors = set()
+
+                if prop not in self._logged_missing_descriptors:
+                    _LOGGER.debug("🚫 FILTERED OUT: %s (data only, no descriptor)", prop)
+                    self._logged_missing_descriptors.add(prop)
+                continue
+
+            # Skip entities that have descriptor but are classified as sensors
+            # (unless they're explicitly read-only sensors)
+            if entity_type == "sensor" and descriptor_config.get('writable', False):
+                _LOGGER.debug("🚫 FILTERED OUT: %s (writable but no proper entity type)", prop)
+                continue
+
+            # Entity passed filtering - include it
+            filtered_entities.append(entity)
 
             # Debug logging for entity type detection
             if entity_type != "sensor":
-                _LOGGER.debug("Entity %s: classified as %s (has descriptor)", prop, entity_type)
+                _LOGGER.debug("✅ INCLUDED: %s classified as %s (has descriptor + data)", prop, entity_type)
             else:
-                if prop in self.entity_configs:
-                    _LOGGER.debug("Entity %s: has descriptor but classified as sensor", prop)
-                else:
-                    # Only log missing descriptors once per entity to avoid spam
-                    if not hasattr(self, '_logged_missing_descriptors'):
-                        self._logged_missing_descriptors = set()
+                _LOGGER.debug("✅ INCLUDED: %s as sensor (read-only with descriptor)", prop)
 
-                    if prop not in self._logged_missing_descriptors:
-                        _LOGGER.debug("Entity %s: no descriptor found, defaulting to sensor", prop)
-                        self._logged_missing_descriptors.add(prop)
+        # Log filtering results
+        filtered_count = len(filtered_entities)
+        _LOGGER.info("🔍 ENTITY FILTERING: %d/%d entities passed filtering (%.1f%%)",
+                    filtered_count, total_data_entities,
+                    (filtered_count / total_data_entities * 100) if total_data_entities > 0 else 0)
 
-            # Get descriptor information for this entity
+        # Process only the filtered entities
+        for entity in filtered_entities:
+            prop = entity["attributes"]["field_name"]
+            entity_type = self.get_entity_type(prop)
             descriptor_config = self.entity_configs.get(prop, {})
 
             # Use descriptor friendly name if available, otherwise fall back to prop
@@ -468,6 +498,31 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Failed to load descriptors: %s", err)
             self._descriptors_loaded = True  # Don't retry on every update
+
+    def filter_descriptor_only_entities(self, data_props: set) -> None:
+        """Filter out descriptor entities that have no corresponding data values."""
+        if not self.entity_configs:
+            return
+
+        original_count = len(self.entity_configs)
+        filtered_configs = {}
+        descriptor_only_count = 0
+
+        for prop, config in self.entity_configs.items():
+            if prop in data_props:
+                # Entity has both descriptor and data - keep it
+                filtered_configs[prop] = config
+            else:
+                # Entity has descriptor but no data - filter it out
+                descriptor_only_count += 1
+                _LOGGER.debug("🚫 FILTERED OUT: %s (descriptor only, no data)", prop)
+
+        self.entity_configs = filtered_configs
+
+        _LOGGER.info("🔍 DESCRIPTOR FILTERING: %d/%d descriptors have data (%.1f%%), filtered out %d descriptor-only entities",
+                    len(filtered_configs), original_count,
+                    (len(filtered_configs) / original_count * 100) if original_count > 0 else 0,
+                    descriptor_only_count)
 
     def get_entity_type(self, prop: str) -> str:
         """Get the entity type for a given property with smart matching."""
