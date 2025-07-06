@@ -269,10 +269,16 @@ class XCCSensor(XCCEntity, SensorEntity):
             # Check the 'name' attribute which often contains type information
             xml_name = entity_data.get("attributes", {}).get("name", "")
 
+            # Check descriptor information for data type
+            descriptor_data_type = entity_config.get('data_type', '')
+
             # Look for clear indicators of string types
             is_clearly_string = (
                 "STRING" in xml_name.upper() or
+                "TIME" in xml_name.upper() or  # Time values like "03:00"
                 "_s" in xml_name or  # String suffix
+                "Thh:mm" in xml_name or  # Time format indicator
+                descriptor_data_type == 'time' or  # From descriptor parser
                 prop in ["SNAZEV1", "SNAZEV2", "DEVICE_NAME", "LOCATION"]  # Known string fields
             )
 

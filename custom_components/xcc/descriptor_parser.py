@@ -52,7 +52,7 @@ class XCCDescriptorParser:
 
         # Find all elements that can provide entity information (including readonly sensors)
         for element in root.iter():
-            if element.tag in ['number', 'switch', 'choice', 'option', 'button']:
+            if element.tag in ['number', 'switch', 'choice', 'option', 'button', 'time']:
                 prop = element.get('prop')
                 if not prop:
                     continue
@@ -304,6 +304,17 @@ class XCCDescriptorParser:
             entity_config.update({
                 'entity_type': 'button',
                 'data_type': 'action',
+            })
+
+        elif element.tag == 'time':
+            # Time elements should be treated as sensors with time values
+            # They typically have format like "03:00" and should not be numeric
+            entity_config.update({
+                'entity_type': 'sensor',
+                'data_type': 'time',
+                'unit': '',  # No unit for time strings
+                'device_class': None,  # No device class for time strings
+                'state_class': None,  # No state class for time strings (not numeric)
             })
 
         else:
