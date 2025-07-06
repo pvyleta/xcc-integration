@@ -233,28 +233,52 @@ class XCCSensor(XCCEntity, SensorEntity):
             elif "pressure" in field_name_lower or "tlak" in field_name_lower:
                 device_class = SensorDeviceClass.PRESSURE
 
-        # Determine state class based on value type and device class
+        # Determine state class based on device class and data type hints
         state_class = None
 
-        # Check if the current value is numeric to determine if we should set a state class
-        current_value = entity_data.get("state", "")
-        is_numeric = False
-
-        if current_value is not None:
-            try:
-                # Try to convert to float to check if it's numeric
-                float(str(current_value))
-                is_numeric = True
-            except (ValueError, TypeError):
-                is_numeric = False
-
-        # Only set state class for numeric values
-        if is_numeric and device_class in STATE_CLASS_MAPPING:
+        # First, check if we have a device class mapping
+        if device_class in STATE_CLASS_MAPPING:
             state_class = STATE_CLASS_MAPPING[device_class]
-        elif is_numeric and device_class is None:
-            # Default to measurement for numeric values without device class
-            state_class = SensorStateClass.MEASUREMENT
-        # For non-numeric values (strings, etc.), leave state_class as None
+        else:
+            # Use data type hints from XML to determine if this should be numeric
+            # Check the 'name' attribute which often contains type information
+            xml_name = entity_data.get("attributes", {}).get("name", "")
+
+            # Look for clear indicators of string types
+            is_clearly_string = (
+                "STRING" in xml_name.upper() or
+                "_s" in xml_name or  # String suffix
+                prop in ["SNAZEV1", "SNAZEV2", "DEVICE_NAME", "LOCATION"]  # Known string fields
+            )
+
+            # Look for clear indicators of numeric types
+            is_clearly_numeric = (
+                "REAL" in xml_name.upper() or
+                "INT" in xml_name.upper() or
+                "FLOAT" in xml_name.upper() or
+                "_f" in xml_name or  # Float suffix
+                "_i" in xml_name or  # Integer suffix
+                ".1f" in xml_name or  # Float format
+                prop in ["SVENKU", "TEMPERATURE", "TEMP", "PRESSURE", "POWER"]  # Known numeric fields
+            )
+
+            if is_clearly_string:
+                # Definitely a string sensor - no state class
+                state_class = None
+            elif is_clearly_numeric or device_class is not None:
+                # Likely numeric or has device class - default to measurement
+                state_class = SensorStateClass.MEASUREMENT
+            else:
+                # Unknown type - check current value as fallback
+                current_value = entity_data.get("state", "")
+                if current_value is not None:
+                    try:
+                        float(str(current_value))
+                        # Current value is numeric - probably should have state class
+                        state_class = SensorStateClass.MEASUREMENT
+                    except (ValueError, TypeError):
+                        # Current value is not numeric - no state class
+                        state_class = None
 
         # Get entity name from descriptor or entity data
         friendly_name = entity_config.get('friendly_name_en') or entity_config.get('friendly_name')

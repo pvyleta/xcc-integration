@@ -200,15 +200,20 @@ def test_state_class_fix_for_string_sensors():
 
     sensor_content = sensor_file.read_text()
 
-    # Check for numeric value detection
-    assert "is_numeric" in sensor_content, "Should have numeric value detection"
-    assert "float(str(current_value))" in sensor_content, "Should try to convert to float"
+    # Check for improved state class logic
+    assert "is_clearly_string" in sensor_content, "Should have string type detection"
+    assert "is_clearly_numeric" in sensor_content, "Should have numeric type detection"
+    assert "STRING" in sensor_content, "Should check for STRING type indicators"
+    assert "REAL" in sensor_content, "Should check for REAL type indicators"
 
     # Check for conditional state class assignment
-    assert "if is_numeric" in sensor_content, "Should conditionally assign state class"
+    assert "if is_clearly_string:" in sensor_content, "Should conditionally assign state class based on type"
 
-    # Check that non-numeric values get no state class
-    assert "state_class = None" in sensor_content, "Should set state_class to None for non-numeric"
+    # Check that string values get no state class
+    assert "state_class = None" in sensor_content, "Should set state_class to None for strings"
+
+    # Check that numeric values get measurement state class
+    assert "SensorStateClass.MEASUREMENT" in sensor_content, "Should set MEASUREMENT for numeric values"
 
 
 if __name__ == "__main__":
