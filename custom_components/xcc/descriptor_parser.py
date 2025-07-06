@@ -67,6 +67,11 @@ class XCCDescriptorParser:
             for element in row.iter():
                 prop = element.get('prop')
                 if prop and prop not in entity_configs:
+                    # Skip elements that should be handled by direct element processing
+                    # (time, number, switch, choice, button elements are handled in first pass)
+                    if element.tag in ['time', 'number', 'switch', 'choice', 'button']:
+                        continue
+
                     # Extract sensor information from row context
                     sensor_config = self._extract_sensor_info_from_row(row, element, page_name)
                     if sensor_config:
@@ -234,10 +239,11 @@ class XCCDescriptorParser:
         if not prop:
             return None
 
-        # Check if element is readonly
+        # Check if element is readonly - only skip readonly choice elements
+        # All other elements (number, switch, time) should be processed and handled appropriately
         config_attr = element.get('config', '')
-        if 'readonly' in config_attr:
-            return None  # Skip readonly elements
+        if 'readonly' in config_attr and element.tag in ['choice']:
+            return None  # Skip readonly choice elements (but allow readonly numbers, switches, and time elements)
 
         # Get friendly names
         text = element.get('text', '')
@@ -256,19 +262,29 @@ class XCCDescriptorParser:
             friendly_name = text_en or text or prop
 
         # Determine entity type and configuration
+        # Check if element is writable (not readonly)
+        is_writable = 'readonly' not in config_attr
+
         entity_config = {
             'prop': prop,
             'friendly_name': friendly_name,
             'friendly_name_en': text_en or friendly_name,
             'page': page_name,
-            'writable': True,
+            'writable': is_writable,
         }
 
         if element.tag == 'switch':
-            entity_config.update({
-                'entity_type': 'switch',
-                'data_type': 'bool',
-            })
+            # Readonly switches become sensors
+            if is_writable:
+                entity_config.update({
+                    'entity_type': 'switch',
+                    'data_type': 'bool',
+                })
+            else:
+                entity_config.update({
+                    'entity_type': 'sensor',
+                    'data_type': 'bool',
+                })
 
         elif element.tag == 'number':
             # Get unit with enhanced detection
@@ -279,17 +295,27 @@ class XCCDescriptorParser:
             # Determine device class from unit
             device_class = self._determine_device_class_from_unit(unit)
 
-            entity_config.update({
-                'entity_type': 'number',
-                'data_type': 'real',
-                'min': self._get_float_attr(element, 'min'),
-                'max': self._get_float_attr(element, 'max'),
-                'step': self._get_float_attr(element, 'step', 1.0),
-                'digits': self._get_int_attr(element, 'digits', 1),
-                'unit': unit,
-                'unit_en': unit,
-                'device_class': device_class,
-            })
+            # Readonly numbers become sensors
+            if is_writable:
+                entity_config.update({
+                    'entity_type': 'number',
+                    'data_type': 'real',
+                    'min': self._get_float_attr(element, 'min'),
+                    'max': self._get_float_attr(element, 'max'),
+                    'step': self._get_float_attr(element, 'step', 1.0),
+                    'digits': self._get_int_attr(element, 'digits', 1),
+                    'unit': unit,
+                    'unit_en': unit,
+                    'device_class': device_class,
+                })
+            else:
+                entity_config.update({
+                    'entity_type': 'sensor',
+                    'data_type': 'real',
+                    'unit': unit,
+                    'unit_en': unit,
+                    'device_class': device_class,
+                })
 
         elif element.tag == 'choice':
             # Get available options
