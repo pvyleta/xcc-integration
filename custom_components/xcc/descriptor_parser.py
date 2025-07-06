@@ -42,6 +42,8 @@ class XCCDescriptorParser:
         """Parse a single descriptor XML file."""
         try:
             root = ET.fromstring(xml_content)
+            # Store root for parent row lookup
+            self._current_root = root
         except ET.ParseError as err:
             _LOGGER.error("Failed to parse XML for %s: %s", page_name, err)
             return {}
@@ -236,8 +238,16 @@ class XCCDescriptorParser:
 
     def _find_parent_row(self, element: ET.Element) -> Optional[ET.Element]:
         """Find the parent row element for context."""
-        # This is a simplified approach since we're working with parsed XML
-        # In a real implementation, we'd need to traverse the tree properly
+        # Since ElementTree doesn't have getparent(), we need to search differently
+        # We'll store the element reference and search for it in the tree
+        if not hasattr(self, '_current_root'):
+            return None
+
+        # Find the element in the tree and get its parent row
+        for row in self._current_root.iter('row'):
+            for child in row.iter():
+                if child is element:
+                    return row
         return None
 
     def _get_float_attr(self, element: ET.Element, attr: str, default: Optional[float] = None) -> Optional[float]:
