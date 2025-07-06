@@ -78,20 +78,12 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         )
 
     def _get_entity_name(self) -> str:
-        """Get the entity name based on language preference."""
-        # Try to get localized name based on Home Assistant language
-        hass_language = self.hass.config.language if self.hass else "en"
-
-        if hass_language.startswith("cs") or hass_language.startswith("cz"):
-            # Czech language preference
+        """Get the entity name - always prefer English strings."""
+        # Always prefer English friendly name first
+        name = self._attributes.get("friendly_name_en", "")
+        if not name:
+            # Fall back to Czech name if English not available
             name = self._attributes.get("friendly_name", "")
-            if not name:
-                name = self._attributes.get("friendly_name_en", self.entity_id_suffix)
-        else:
-            # English language preference (default)
-            name = self._attributes.get("friendly_name_en", "")
-            if not name:
-                name = self._attributes.get("friendly_name", self.entity_id_suffix)
 
         return name or self.entity_id_suffix
 

@@ -193,7 +193,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             descriptor_config = self.entity_configs.get(prop, {})
 
             # Use descriptor friendly name if available, otherwise fall back to prop
+            # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
             friendly_name = descriptor_config.get("friendly_name_en") or descriptor_config.get("friendly_name") or prop
+
+            # Debug logging for language preference
+            if descriptor_config.get("friendly_name_en") and descriptor_config.get("friendly_name"):
+                if descriptor_config.get("friendly_name_en") != descriptor_config.get("friendly_name"):
+                    _LOGGER.debug("Entity %s: Using English name '%s' instead of Czech '%s'",
+                                prop, descriptor_config.get("friendly_name_en"), descriptor_config.get("friendly_name"))
             unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
 
             # Create entity data structure for new platforms

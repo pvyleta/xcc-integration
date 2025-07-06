@@ -312,9 +312,18 @@ class XCCSensor(XCCEntity, SensorEntity):
                         state_class = None
 
         # Get entity name from descriptor or entity data
-        friendly_name = entity_config.get('friendly_name_en') or entity_config.get('friendly_name')
-        if friendly_name:
-            entity_name = friendly_name
+        # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
+        friendly_name_en = entity_config.get('friendly_name_en')
+        friendly_name_cs = entity_config.get('friendly_name')
+
+        if friendly_name_en:
+            entity_name = friendly_name_en
+            # Debug logging for language preference
+            if friendly_name_cs and friendly_name_en != friendly_name_cs:
+                _LOGGER.debug("Sensor %s: Using English name '%s' instead of Czech '%s'",
+                            prop, friendly_name_en, friendly_name_cs)
+        elif friendly_name_cs:
+            entity_name = friendly_name_cs
         else:
             entity_name = entity_data.get("friendly_name", entity_data.get("name", prop))
 
@@ -377,12 +386,8 @@ class XCCSensor(XCCEntity, SensorEntity):
             current_value = str(self.native_value)
             for option in self._attributes.get("options", []):
                 if option["value"] == current_value:
-                    # Add localized option text
-                    hass_language = self.hass.config.language if self.hass else "en"
-                    if hass_language.startswith("cs") or hass_language.startswith("cz"):
-                        option_text = option.get("text", option.get("text_en", ""))
-                    else:
-                        option_text = option.get("text_en", option.get("text", ""))
+                    # Always prefer English option text
+                    option_text = option.get("text_en", option.get("text", ""))
 
                     if option_text:
                         attrs["option_text"] = option_text
