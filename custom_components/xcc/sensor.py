@@ -213,12 +213,33 @@ class XCCSensor(XCCEntity, SensorEntity):
         xcc_unit = entity_config.get("unit") or entity_data.get("unit", "")
         ha_unit = UNIT_MAPPING.get(xcc_unit, xcc_unit) if xcc_unit else None
 
-        # Determine device class
+        # Determine device class - prioritize descriptor information
         device_class = None
-        if ha_unit in DEVICE_CLASS_MAPPING:
+
+        # First, check if descriptor provides device class
+        descriptor_device_class = entity_config.get('device_class')
+        if descriptor_device_class:
+            # Map string device class to HA device class enum
+            device_class_mapping = {
+                'temperature': SensorDeviceClass.TEMPERATURE,
+                'power': SensorDeviceClass.POWER,
+                'energy': SensorDeviceClass.ENERGY,
+                'voltage': SensorDeviceClass.VOLTAGE,
+                'current': SensorDeviceClass.CURRENT,
+                'frequency': SensorDeviceClass.FREQUENCY,
+                'pressure': SensorDeviceClass.PRESSURE,
+            }
+            device_class = device_class_mapping.get(descriptor_device_class)
+            _LOGGER.debug("Using device class from descriptor for %s: %s -> %s",
+                         prop, descriptor_device_class, device_class)
+
+        # Second, try unit-based device class
+        elif ha_unit in DEVICE_CLASS_MAPPING:
             device_class = DEVICE_CLASS_MAPPING[ha_unit]
+            _LOGGER.debug("Using device class from unit for %s: %s -> %s",
+                         prop, ha_unit, device_class)
         else:
-            # Try to determine device class from field name patterns
+            # Fallback: Try to determine device class from field name patterns
             field_name_lower = entity_id.lower()
             if "temp" in field_name_lower or "teplota" in field_name_lower:
                 device_class = SensorDeviceClass.TEMPERATURE
@@ -232,6 +253,10 @@ class XCCSensor(XCCEntity, SensorEntity):
                 device_class = SensorDeviceClass.CURRENT
             elif "pressure" in field_name_lower or "tlak" in field_name_lower:
                 device_class = SensorDeviceClass.PRESSURE
+
+            if device_class:
+                _LOGGER.debug("Using device class from field name pattern for %s: %s",
+                             prop, device_class)
 
         # Determine state class based on device class and data type hints
         state_class = None

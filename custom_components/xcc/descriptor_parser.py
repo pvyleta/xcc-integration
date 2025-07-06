@@ -48,7 +48,7 @@ class XCCDescriptorParser:
 
         entity_configs = {}
 
-        # Find all interactive elements that can be changed
+        # Find all elements that can provide entity information (including readonly sensors)
         for element in root.iter():
             if element.tag in ['number', 'switch', 'choice', 'option', 'button']:
                 prop = element.get('prop')
@@ -59,7 +59,106 @@ class XCCDescriptorParser:
                 if config:
                     entity_configs[prop] = config
 
+        # Also find row elements that might contain sensor descriptions
+        for row in root.iter('row'):
+            # Look for elements with prop attributes in this row
+            for element in row.iter():
+                prop = element.get('prop')
+                if prop and prop not in entity_configs:
+                    # Extract sensor information from row context
+                    sensor_config = self._extract_sensor_info_from_row(row, element, page_name)
+                    if sensor_config:
+                        entity_configs[prop] = sensor_config
+
         return entity_configs
+
+    def _extract_sensor_info_from_row(self, row: ET.Element, element: ET.Element, page_name: str) -> Optional[Dict[str, Any]]:
+        """Extract sensor information from row context for readonly sensors."""
+        prop = element.get('prop')
+        if not prop:
+            return None
+
+        # Get friendly names from row
+        text = row.get('text', '')
+        text_en = row.get('text_en', text)
+
+        # Get unit from element
+        unit = element.get('unit', '')
+
+        # Determine device class from unit
+        device_class = self._determine_device_class_from_unit(unit)
+
+        # Create sensor configuration
+        sensor_config = {
+            'prop': prop,
+            'friendly_name': text_en or text or prop,
+            'friendly_name_en': text_en or text or prop,
+            'unit': unit,
+            'device_class': device_class,
+            'page': page_name,
+            'writable': False,  # These are readonly sensors
+            'entity_type': 'sensor'
+        }
+
+        _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
+        return sensor_config
+
+    def _determine_device_class_from_unit(self, unit: str) -> Optional[str]:
+        """Determine Home Assistant device class from unit."""
+        if not unit:
+            return None
+
+        # Map units to device classes
+        unit_to_device_class = {
+            # Temperature
+            '°C': 'temperature',
+            'K': 'temperature',
+            '°F': 'temperature',
+
+            # Power
+            'W': 'power',
+            'kW': 'power',
+            'MW': 'power',
+
+            # Energy
+            'Wh': 'energy',
+            'kWh': 'energy',
+            'MWh': 'energy',
+            'J': 'energy',
+            'kJ': 'energy',
+
+            # Pressure
+            'Pa': 'pressure',
+            'kPa': 'pressure',
+            'MPa': 'pressure',
+            'bar': 'pressure',
+            'mbar': 'pressure',
+            'psi': 'pressure',
+
+            # Voltage
+            'V': 'voltage',
+            'mV': 'voltage',
+            'kV': 'voltage',
+
+            # Current
+            'A': 'current',
+            'mA': 'current',
+
+            # Frequency
+            'Hz': 'frequency',
+            'kHz': 'frequency',
+            'MHz': 'frequency',
+
+            # Percentage
+            '%': None,  # No specific device class for percentage
+
+            # Time
+            's': 'duration',
+            'min': 'duration',
+            'h': 'duration',
+        }
+
+        return unit_to_device_class.get(unit)
 
     def _determine_entity_config(self, element: ET.Element, page_name: str) -> Optional[Dict[str, Any]]:
         """Determine the entity configuration from an XML element."""
