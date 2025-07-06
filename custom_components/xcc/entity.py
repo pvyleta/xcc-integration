@@ -165,9 +165,22 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         _LOGGER.debug("Getting current value for entity %s (type: %s, suffix: %s)",
                      self.entity_id, entity_type, self.entity_id_suffix)
 
-        # Debug coordinator data structure
+        # Debug coordinator data structure (only log once per update cycle to avoid spam)
         if hasattr(self.coordinator, 'data') and self.coordinator.data:
-            _LOGGER.debug("Coordinator data keys: %s", list(self.coordinator.data.keys()))
+            # Only log coordinator data keys once per update cycle
+            if not hasattr(self.__class__, '_logged_coordinator_keys_for_update'):
+                self.__class__._logged_coordinator_keys_for_update = set()
+
+            update_id = id(self.coordinator.data)
+            if update_id not in self.__class__._logged_coordinator_keys_for_update:
+                _LOGGER.debug("Coordinator data keys: %s", list(self.coordinator.data.keys()))
+                self.__class__._logged_coordinator_keys_for_update.add(update_id)
+
+                # Clean up old entries to prevent memory leak
+                if len(self.__class__._logged_coordinator_keys_for_update) > 5:
+                    old_entries = list(self.__class__._logged_coordinator_keys_for_update)[:2]
+                    for old_entry in old_entries:
+                        self.__class__._logged_coordinator_keys_for_update.discard(old_entry)
 
             # Handle plural entity type names (sensors, switches, etc.)
             entity_type_plural = f"{entity_type}s" if not entity_type.endswith('s') else entity_type
@@ -196,13 +209,16 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 entity_data = type_data.get(self.entity_id_suffix) if isinstance(type_data, dict) else None
                 if entity_data:
                     state_value = entity_data.get("state")
-                    # Log value updates more frequently to verify regular updates
+                    # Log value updates occasionally to verify regular updates
                     import random
-                    if random.random() < 0.1:  # Log ~10% of value retrievals
+                    if random.random() < 0.05:  # Log ~5% of value retrievals (consistent with numbers/switches)
                         import time
                         timestamp = time.strftime("%H:%M:%S")
-                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (from coordinator data)",
-                                   timestamp, self.entity_id, state_value)
+                        # Format value with unit if available
+                        unit = entity_data.get("attributes", {}).get("unit", "")
+                        value_display = f"{state_value} {unit}".strip() if unit else str(state_value)
+                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (sensor from coordinator data)",
+                                   timestamp, self.entity_id, value_display)
                     return state_value
                 else:
                     _LOGGER.warning("No entity data found for suffix '%s' in type '%s'",

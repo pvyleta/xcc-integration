@@ -349,8 +349,15 @@ def parse_xml_entities(xml_content: str, page_name: str,
             prop = elem.get("P")
             value = elem.get("VALUE")
 
-            if i < 3:  # Log first 3 elements for debugging
+            # Only log first 3 elements once per function call to avoid spam (they're always the same)
+            # Use a global variable since this is a standalone function
+            if not hasattr(parse_xml_entities, '_logged_input_elements'):
+                parse_xml_entities._logged_input_elements = False
+
+            if i < 3 and not parse_xml_entities._logged_input_elements:
                 _LOGGER.debug("INPUT element %d: P='%s' VALUE='%s'", i, prop, value)
+                if i == 2:  # After logging the 3rd element, mark as logged
+                    parse_xml_entities._logged_input_elements = True
 
             if not prop:
                 _LOGGER.debug("Skipping element %d: no P attribute", i)

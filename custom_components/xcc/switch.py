@@ -82,17 +82,31 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         for entity in self.coordinator.data.get("entities", []):
             if entity.get("entity_id") == self._entity_data["entity_id"]:
                 state = entity.get("state", "").lower()
+                result = None
+
                 # Handle various boolean representations
                 if state in ["1", "true", "on", "yes", "enabled", "active"]:
-                    return True
+                    result = True
                 elif state in ["0", "false", "off", "no", "disabled", "inactive"]:
-                    return False
+                    result = False
                 else:
                     # Try to parse as integer
                     try:
-                        return int(float(state)) != 0
+                        result = int(float(state)) != 0
                     except (ValueError, TypeError):
-                        return None
+                        result = None
+
+                # Log value updates occasionally to verify regular updates
+                if result is not None:
+                    import random
+                    if random.random() < 0.05:  # Log ~5% of value retrievals
+                        import time
+                        timestamp = time.strftime("%H:%M:%S")
+                        status_icon = "🟢 ON" if result else "🔴 OFF"
+                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator data)",
+                                   timestamp, self.entity_id, status_icon)
+
+                return result
         return None
 
     async def async_turn_on(self, **kwargs: Any) -> None:

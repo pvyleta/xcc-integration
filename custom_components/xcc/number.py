@@ -97,7 +97,15 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             if entity.get("entity_id") == self._entity_data["entity_id"]:
                 state = entity.get("state", "")
                 try:
-                    return float(state)
+                    value = float(state)
+                    # Log value updates occasionally to verify regular updates
+                    import random
+                    if random.random() < 0.05:  # Log ~5% of value retrievals
+                        import time
+                        timestamp = time.strftime("%H:%M:%S")
+                        _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (number from coordinator data)",
+                                   timestamp, self.entity_id, value)
+                    return value
                 except (ValueError, TypeError):
                     return None
         return None

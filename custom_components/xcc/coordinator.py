@@ -181,7 +181,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 if prop in self.entity_configs:
                     _LOGGER.debug("Entity %s: has descriptor but classified as sensor", prop)
                 else:
-                    _LOGGER.debug("Entity %s: no descriptor found, defaulting to sensor", prop)
+                    # Only log missing descriptors once per entity to avoid spam
+                    if not hasattr(self, '_logged_missing_descriptors'):
+                        self._logged_missing_descriptors = set()
+
+                    if prop not in self._logged_missing_descriptors:
+                        _LOGGER.debug("Entity %s: no descriptor found, defaulting to sensor", prop)
+                        self._logged_missing_descriptors.add(prop)
 
             # Create entity data structure for new platforms
             entity_data = {
