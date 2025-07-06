@@ -285,6 +285,62 @@ class XCCClient:
                 results[page] = f"Error: {e}"
         return results
 
+    async def set_value(self, prop: str, value: str) -> bool:
+        """Set a value on the XCC controller."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+
+        try:
+            _LOGGER.debug("Setting XCC property %s to value %s", prop, value)
+
+            # XCC devices typically use RPC endpoints for setting values
+            # Common patterns include:
+            # - /RPC/MP_DATA_MANAGER/mp_data_manager.asp
+            # - /RPC/WEBSES/set.asp
+            # - Direct property setting via POST
+
+            # Try the most common XCC set value endpoint
+            set_url = f"http://{self.ip}/RPC/MP_DATA_MANAGER/mp_data_manager.asp"
+            set_data = {
+                "PROP": prop,
+                "VALUE": value,
+                "ACTION": "SET"
+            }
+
+            _LOGGER.debug("Attempting to set value via %s with data: %s", set_url, set_data)
+
+            async with self.session.post(set_url, data=set_data) as resp:
+                response_text = await resp.text()
+                _LOGGER.debug("Set value response: status=%d, content=%s", resp.status, response_text[:200])
+
+                # Check if the request was successful
+                if resp.status == 200 and "ERROR" not in response_text.upper():
+                    _LOGGER.info("Successfully set XCC property %s to %s", prop, value)
+                    return True
+                else:
+                    _LOGGER.warning("Set value may have failed: status=%d, content=%s", resp.status, response_text[:200])
+
+                    # Try alternative endpoint if the first one fails
+                    alt_url = f"http://{self.ip}/RPC/WEBSES/set.asp"
+                    alt_data = {prop: value}
+
+                    _LOGGER.debug("Trying alternative endpoint %s with data: %s", alt_url, alt_data)
+
+                    async with self.session.post(alt_url, data=alt_data) as alt_resp:
+                        alt_response_text = await alt_resp.text()
+                        _LOGGER.debug("Alternative set response: status=%d, content=%s", alt_resp.status, alt_response_text[:200])
+
+                        if alt_resp.status == 200 and "ERROR" not in alt_response_text.upper():
+                            _LOGGER.info("Successfully set XCC property %s to %s via alternative endpoint", prop, value)
+                            return True
+                        else:
+                            _LOGGER.error("Failed to set XCC property %s to %s on both endpoints", prop, value)
+                            return False
+
+        except Exception as err:
+            _LOGGER.error("Error setting XCC property %s to %s: %s", prop, value, err)
+            return False
+
     async def close(self):
         """Close the session."""
         if self.session:

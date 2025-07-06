@@ -390,10 +390,60 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_set_value(self, entity_id: str, value: Any) -> bool:
         """Set a value on the XCC controller."""
+        return await self.async_set_entity_value(entity_id, value)
+
+    async def async_set_entity_value(self, entity_id: str, value: Any) -> bool:
+        """Set a value on the XCC controller (method name expected by entities)."""
         try:
+            _LOGGER.debug("Setting entity %s to value %s", entity_id, value)
+
+            # Find the entity configuration to get the property name
+            prop = None
+
+            # First, try to find the property in the coordinator's entity data
+            for entity_type in ["numbers", "switches", "selects"]:
+                entities_data = self.data.get(entity_type, {})
+                if entity_id in entities_data:
+                    entity_data = entities_data[entity_id]
+                    # Look for prop in the attributes
+                    prop = entity_data.get("attributes", {}).get("prop")
+                    if prop:
+                        break
+
+            # If not found in type-specific data, try the general entities list
+            if not prop:
+                for entity in self.data.get("entities", []):
+                    if entity.get("entity_id") == entity_id:
+                        prop = entity.get("prop", "").upper()
+                        if prop:
+                            break
+
+            # If still not found, try to derive from entity_id
+            if not prop:
+                # Remove common prefixes and convert to uppercase
+                prop = entity_id.replace("number.xcc_", "").replace("switch.xcc_", "").replace("select.xcc_", "")
+                prop = prop.replace("number.", "").replace("switch.", "").replace("select.", "")
+                prop = prop.upper()
+                _LOGGER.debug("Derived property name %s from entity_id %s", prop, entity_id)
+
+            if not prop:
+                _LOGGER.error("Could not determine property name for entity %s", entity_id)
+                return False
+
+            _LOGGER.debug("Setting XCC property %s to value %s for entity %s", prop, value, entity_id)
+
             # Use the persistent client if available, otherwise create a temporary one
             if self._client is not None:
                 client = self._client
+                success = await client.set_value(prop, value)
+                if success:
+                    _LOGGER.info("Successfully set XCC property %s to %s", prop, value)
+                    # Request immediate data refresh to update state
+                    await self.async_request_refresh()
+                    return True
+                else:
+                    _LOGGER.error("Failed to set XCC property %s to %s", prop, value)
+                    return False
             else:
                 from .xcc_client import XCCClient
                 # Use same cookie file for temporary clients
@@ -404,15 +454,15 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     password=self.password,
                     cookie_file=cookie_file,
                 ) as client:
-                    # TODO: Implement value setting logic
-                    # This would require extending the XCC client to support setting values
-                    _LOGGER.warning("Setting values not yet implemented for entity %s", entity_id)
-                    return False
-
-            # TODO: Implement value setting logic using persistent client
-            # This would require extending the XCC client to support setting values
-            _LOGGER.warning("Setting values not yet implemented for entity %s", entity_id)
-            return False
+                    success = await client.set_value(prop, value)
+                    if success:
+                        _LOGGER.info("Successfully set XCC property %s to %s", prop, value)
+                        # Request immediate data refresh to update state
+                        await self.async_request_refresh()
+                        return True
+                    else:
+                        _LOGGER.error("Failed to set XCC property %s to %s", prop, value)
+                        return False
 
         except Exception as err:
             _LOGGER.error("Error setting value for entity %s: %s", entity_id, err)
