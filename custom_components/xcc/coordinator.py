@@ -189,14 +189,21 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug("Entity %s: no descriptor found, defaulting to sensor", prop)
                         self._logged_missing_descriptors.add(prop)
 
+            # Get descriptor information for this entity
+            descriptor_config = self.entity_configs.get(prop, {})
+
+            # Use descriptor friendly name if available, otherwise fall back to prop
+            friendly_name = descriptor_config.get("friendly_name_en") or descriptor_config.get("friendly_name") or prop
+            unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
+
             # Create entity data structure for new platforms
             entity_data = {
                 "entity_id": f"xcc_{prop.lower()}",
                 "prop": prop,
-                "name": entity["attributes"].get("friendly_name", prop),
-                "friendly_name": entity["attributes"].get("friendly_name", prop),
+                "name": friendly_name,
+                "friendly_name": friendly_name,
                 "state": entity["attributes"].get("value", ""),
-                "unit": entity["attributes"].get("unit", ""),
+                "unit": unit,
                 "page": entity["attributes"].get("page", "unknown"),
             }
 
@@ -208,6 +215,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "data": entity,
                 "page": entity["attributes"].get("page", "unknown"),
                 "prop": prop,  # Keep prop for reference
+                "descriptor_config": descriptor_config,  # Include descriptor config for platforms
             }
 
             # Create state data structure that entities can use to retrieve values
@@ -223,8 +231,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "attributes": entity["attributes"],
                 "entity_id": entity_id,
                 "prop": prop,
-                "name": entity_data["name"],
-                "unit": entity["attributes"].get("unit", ""),
+                "name": friendly_name,  # Use enhanced friendly name
+                "unit": unit,  # Use enhanced unit from descriptor
                 "page": entity["attributes"].get("page", "unknown"),
             }
 
