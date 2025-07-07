@@ -345,12 +345,18 @@ class XCCClient:
             # If we have the internal NAME, try using it first
             if internal_name:
                 endpoints_to_try.extend([
-                    # Method 1: Using internal NAME via POST (most likely to work)
+                    # Method 1: Using internal NAME via POST with proper headers (confirmed working)
                     {
                         "method": "POST",
                         "url": f"http://{self.ip}/{page_to_fetch}",
                         "data": {internal_name: value},
-                        "description": f"Internal NAME POST to {page_to_fetch}"
+                        "headers": {
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/xml, text/xml, */*; q=0.01",
+                            "Referer": f"http://{self.ip}/{page_to_fetch.lower().replace('.xml', '1.xml')}?tab=1"
+                        },
+                        "description": f"Internal NAME POST to {page_to_fetch} (confirmed format)"
                     },
                     # Method 2: Using internal NAME via GET
                     {
@@ -397,7 +403,13 @@ class XCCClient:
                                 _LOGGER.info("✅ Successfully set XCC property %s to %s via GET", prop, value)
                                 return True
                     else:
-                        async with self.session.post(endpoint["url"], data=endpoint.get("data", {})) as resp:
+                        # Use custom headers if provided
+                        headers = endpoint.get("headers", {})
+                        async with self.session.post(
+                            endpoint["url"],
+                            data=endpoint.get("data", {}),
+                            headers=headers
+                        ) as resp:
                             response_text = await resp.text()
                             _LOGGER.info("📡 POST response: status=%d", resp.status)
 
