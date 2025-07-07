@@ -285,6 +285,21 @@ class XCCClient:
                 results[page] = f"Error: {e}"
         return results
 
+    def _extract_name_mapping_from_xml(self, xml_content: str) -> Dict[str, str]:
+        """Extract the mapping of property names to internal NAME attributes from XML."""
+        import re
+        name_mapping = {}
+
+        # Find all INPUT elements with P and NAME attributes
+        # Pattern: <INPUT P="PROP_NAME" NAME="INTERNAL_NAME" VALUE="..."/>
+        pattern = r'<INPUT\s+P="([^"]+)"\s+NAME="([^"]+)"\s+VALUE="[^"]*"'
+        matches = re.findall(pattern, xml_content)
+
+        for prop, internal_name in matches:
+            name_mapping[prop] = internal_name
+
+        return name_mapping
+
     async def set_value(self, prop: str, value: str) -> bool:
         """Set a value on the XCC controller."""
         import logging
@@ -293,38 +308,81 @@ class XCCClient:
         try:
             _LOGGER.info("🔧 Setting XCC property %s to value %s", prop, value)
 
+            # First, try to get the internal NAME for this property by fetching the current page
+            internal_name = None
+            page_to_fetch = None
+
+            # Determine which page this property might be on based on common patterns
+            if any(tuv_word in prop.upper() for tuv_word in ['TUV', 'DHW']):
+                page_to_fetch = 'TUV11.XML'
+            elif any(fve_word in prop.upper() for fve_word in ['FVE', 'SOLAR', 'PV']):
+                page_to_fetch = 'FVE4.XML'
+            elif any(okruh_word in prop.upper() for okruh_word in ['OKRUH', 'CIRCUIT']):
+                page_to_fetch = 'OKRUH10.XML'
+            elif any(biv_word in prop.upper() for biv_word in ['BIV', 'BIVALENCE']):
+                page_to_fetch = 'BIV1.XML'
+            else:
+                page_to_fetch = 'STAVJED1.XML'  # Default page
+
+            # Try to fetch the page and extract NAME mapping
+            try:
+                _LOGGER.info("🔍 Fetching %s to find internal NAME for property %s", page_to_fetch, prop)
+                page_content = await self.fetch_page(page_to_fetch)
+                name_mapping = self._extract_name_mapping_from_xml(page_content)
+                internal_name = name_mapping.get(prop)
+                if internal_name:
+                    _LOGGER.info("✅ Found internal NAME: %s for property %s", internal_name, prop)
+                else:
+                    _LOGGER.warning("⚠️ Could not find internal NAME for property %s in %s", prop, page_to_fetch)
+            except Exception as fetch_err:
+                _LOGGER.warning("⚠️ Could not fetch page %s: %s", page_to_fetch, fetch_err)
+
             # XCC devices use different API patterns depending on the model and firmware
             # Let's try multiple approaches in order of likelihood
 
-            endpoints_to_try = [
-                # Method 1: Direct property setting via GET (most common for XCC)
+            endpoints_to_try = []
+
+            # If we have the internal NAME, try using it first
+            if internal_name:
+                endpoints_to_try.extend([
+                    # Method 1: Using internal NAME via POST (most likely to work)
+                    {
+                        "method": "POST",
+                        "url": f"http://{self.ip}/{page_to_fetch}",
+                        "data": {internal_name: value},
+                        "description": f"Internal NAME POST to {page_to_fetch}"
+                    },
+                    # Method 2: Using internal NAME via GET
+                    {
+                        "method": "GET",
+                        "url": f"http://{self.ip}/{page_to_fetch}?{internal_name}={value}",
+                        "description": f"Internal NAME GET to {page_to_fetch}"
+                    }
+                ])
+
+            # Add fallback methods using property name
+            endpoints_to_try.extend([
+                # Method 3: Direct property setting via GET
                 {
                     "method": "GET",
-                    "url": f"http://{self.ip}/WEBSES/{prop}.XML?{prop}={value}",
-                    "description": "Direct property GET"
+                    "url": f"http://{self.ip}/{page_to_fetch}?{prop}={value}",
+                    "description": "Property name GET"
                 },
-                # Method 2: Property setting via POST to property page
+                # Method 4: Property setting via POST to property page
                 {
                     "method": "POST",
-                    "url": f"http://{self.ip}/WEBSES/{prop}.XML",
+                    "url": f"http://{self.ip}/{page_to_fetch}",
                     "data": {prop: value},
-                    "description": "Property page POST"
+                    "description": "Property name POST"
                 },
-                # Method 3: Generic RPC endpoint
+                # Method 5: Generic RPC endpoint
                 {
                     "method": "POST",
                     "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
                     "data": {prop: value},
                     "description": "Generic RPC POST"
-                },
-                # Method 4: Session-based setting
-                {
-                    "method": "POST",
-                    "url": f"http://{self.ip}/WEBSES/set.asp",
-                    "data": {prop: value},
-                    "description": "Session-based POST"
                 }
-            ]
+            ])
 
             for i, endpoint in enumerate(endpoints_to_try, 1):
                 try:
