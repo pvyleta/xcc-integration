@@ -141,7 +141,7 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
             # Convert boolean to appropriate value for XCC
             value = "1" if state else "0"
 
-            _LOGGER.debug("Setting switch %s (%s) to %s", self.name, self._prop, value)
+            _LOGGER.info("🔘 Setting switch %s (%s) to %s", self.name, self._prop, value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(

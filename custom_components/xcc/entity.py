@@ -154,8 +154,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
 
         entity_type = self._entity_data["type"]
 
-        _LOGGER.debug("Getting current value for entity %s (type: %s, suffix: %s)",
-                     self.entity_id, entity_type, self.entity_id_suffix)
+        # Removed excessive debug logging for entity value retrieval
 
         # Debug coordinator data structure (only log once per update cycle to avoid spam)
         if hasattr(self.coordinator, 'data') and self.coordinator.data:

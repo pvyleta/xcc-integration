@@ -122,7 +122,7 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
             # Convert display option to XCC value
             value = self._option_to_value.get(option, option)
 
-            _LOGGER.debug("Setting select %s (%s) to %s (value: %s)", self.name, self._prop, option, value)
+            _LOGGER.info("📋 Setting select %s (%s) to %s (value: %s)", self.name, self._prop, option, value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(

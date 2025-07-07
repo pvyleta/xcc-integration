@@ -135,7 +135,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             # Convert float to string for XCC
             str_value = str(value)
 
-            _LOGGER.debug("Setting number %s (%s) to %s", self.name, self._prop, str_value)
+            _LOGGER.info("🔢 Setting number %s (%s) to %s", self.name, self._prop, str_value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(

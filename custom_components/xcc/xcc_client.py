@@ -291,54 +291,71 @@ class XCCClient:
         _LOGGER = logging.getLogger(__name__)
 
         try:
-            _LOGGER.debug("Setting XCC property %s to value %s", prop, value)
+            _LOGGER.info("🔧 Setting XCC property %s to value %s", prop, value)
 
-            # XCC devices typically use RPC endpoints for setting values
-            # Common patterns include:
-            # - /RPC/MP_DATA_MANAGER/mp_data_manager.asp
-            # - /RPC/WEBSES/set.asp
-            # - Direct property setting via POST
+            # XCC devices use different API patterns depending on the model and firmware
+            # Let's try multiple approaches in order of likelihood
 
-            # Try the most common XCC set value endpoint
-            set_url = f"http://{self.ip}/RPC/MP_DATA_MANAGER/mp_data_manager.asp"
-            set_data = {
-                "PROP": prop,
-                "VALUE": value,
-                "ACTION": "SET"
-            }
+            endpoints_to_try = [
+                # Method 1: Direct property setting via GET (most common for XCC)
+                {
+                    "method": "GET",
+                    "url": f"http://{self.ip}/WEBSES/{prop}.XML?{prop}={value}",
+                    "description": "Direct property GET"
+                },
+                # Method 2: Property setting via POST to property page
+                {
+                    "method": "POST",
+                    "url": f"http://{self.ip}/WEBSES/{prop}.XML",
+                    "data": {prop: value},
+                    "description": "Property page POST"
+                },
+                # Method 3: Generic RPC endpoint
+                {
+                    "method": "POST",
+                    "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
+                    "data": {prop: value},
+                    "description": "Generic RPC POST"
+                },
+                # Method 4: Session-based setting
+                {
+                    "method": "POST",
+                    "url": f"http://{self.ip}/WEBSES/set.asp",
+                    "data": {prop: value},
+                    "description": "Session-based POST"
+                }
+            ]
 
-            _LOGGER.debug("Attempting to set value via %s with data: %s", set_url, set_data)
+            for i, endpoint in enumerate(endpoints_to_try, 1):
+                try:
+                    _LOGGER.info("🔄 Attempt %d/%d: %s", i, len(endpoints_to_try), endpoint["description"])
 
-            async with self.session.post(set_url, data=set_data) as resp:
-                response_text = await resp.text()
-                _LOGGER.debug("Set value response: status=%d, content=%s", resp.status, response_text[:200])
+                    if endpoint["method"] == "GET":
+                        async with self.session.get(endpoint["url"]) as resp:
+                            response_text = await resp.text()
+                            _LOGGER.info("📡 GET response: status=%d", resp.status)
 
-                # Check if the request was successful
-                if resp.status == 200 and "ERROR" not in response_text.upper():
-                    _LOGGER.info("Successfully set XCC property %s to %s", prop, value)
-                    return True
-                else:
-                    _LOGGER.warning("Set value may have failed: status=%d, content=%s", resp.status, response_text[:200])
+                            if resp.status == 200:
+                                _LOGGER.info("✅ Successfully set XCC property %s to %s via GET", prop, value)
+                                return True
+                    else:
+                        async with self.session.post(endpoint["url"], data=endpoint.get("data", {})) as resp:
+                            response_text = await resp.text()
+                            _LOGGER.info("📡 POST response: status=%d", resp.status)
 
-                    # Try alternative endpoint if the first one fails
-                    alt_url = f"http://{self.ip}/RPC/WEBSES/set.asp"
-                    alt_data = {prop: value}
+                            if resp.status == 200 and "ERROR" not in response_text.upper():
+                                _LOGGER.info("✅ Successfully set XCC property %s to %s via POST", prop, value)
+                                return True
 
-                    _LOGGER.debug("Trying alternative endpoint %s with data: %s", alt_url, alt_data)
+                except Exception as endpoint_err:
+                    _LOGGER.warning("⚠️ Endpoint %d failed: %s", i, endpoint_err)
+                    continue
 
-                    async with self.session.post(alt_url, data=alt_data) as alt_resp:
-                        alt_response_text = await alt_resp.text()
-                        _LOGGER.debug("Alternative set response: status=%d, content=%s", alt_resp.status, alt_response_text[:200])
-
-                        if alt_resp.status == 200 and "ERROR" not in alt_response_text.upper():
-                            _LOGGER.info("Successfully set XCC property %s to %s via alternative endpoint", prop, value)
-                            return True
-                        else:
-                            _LOGGER.error("Failed to set XCC property %s to %s on both endpoints", prop, value)
-                            return False
+            _LOGGER.error("❌ All endpoints failed for setting XCC property %s to %s", prop, value)
+            return False
 
         except Exception as err:
-            _LOGGER.error("Error setting XCC property %s to %s: %s", prop, value, err)
+            _LOGGER.error("❌ Error setting XCC property %s to %s: %s", prop, value, err)
             return False
 
     async def close(self):

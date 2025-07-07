@@ -179,7 +179,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Entity %s: classified as %s (has descriptor)", prop, entity_type)
             else:
                 if prop in self.entity_configs:
-                    _LOGGER.debug("Entity %s: has descriptor but classified as sensor", prop)
+                    # Removed excessive debug logging for sensor classification
                 else:
                     # Only log missing descriptors once per entity to avoid spam
                     if not hasattr(self, '_logged_missing_descriptors'):
@@ -395,7 +395,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_entity_value(self, entity_id: str, value: Any) -> bool:
         """Set a value on the XCC controller (method name expected by entities)."""
         try:
-            _LOGGER.debug("Setting entity %s to value %s", entity_id, value)
+            _LOGGER.info("🎛️ Setting entity %s to value %s", entity_id, value)
 
             # Find the entity configuration to get the property name
             prop = None
@@ -424,13 +424,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 prop = entity_id.replace("number.xcc_", "").replace("switch.xcc_", "").replace("select.xcc_", "")
                 prop = prop.replace("number.", "").replace("switch.", "").replace("select.", "")
                 prop = prop.upper()
-                _LOGGER.debug("Derived property name %s from entity_id %s", prop, entity_id)
+                _LOGGER.info("🔍 Derived property name %s from entity_id %s", prop, entity_id)
 
             if not prop:
                 _LOGGER.error("Could not determine property name for entity %s", entity_id)
                 return False
 
-            _LOGGER.debug("Setting XCC property %s to value %s for entity %s", prop, value, entity_id)
+            _LOGGER.info("🔧 Setting XCC property %s to value %s for entity %s", prop, value, entity_id)
 
             # Use the persistent client if available, otherwise create a temporary one
             if self._client is not None:
