@@ -183,7 +183,9 @@ async def async_setup_entry(
                 entity_id,
             )
         except Exception as err:
-            _LOGGER.error("❌ Failed to create sensor for %s: %s", entity_id, err)
+            # Use locals().get() to safely access entity_id in case it's not defined
+            entity_id_safe = locals().get('entity_id', 'unknown')
+            _LOGGER.error("❌ Failed to create sensor for %s: %s", entity_id_safe, err)
             import traceback
 
             _LOGGER.error("Full traceback: %s", traceback.format_exc())

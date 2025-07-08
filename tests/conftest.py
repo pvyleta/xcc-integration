@@ -25,8 +25,10 @@ homeassistant.helpers = create_mock_module('homeassistant.helpers')
 homeassistant.helpers.update_coordinator = create_mock_module('homeassistant.helpers.update_coordinator')
 homeassistant.helpers.entity = create_mock_module('homeassistant.helpers.entity')
 homeassistant.helpers.entity_platform = create_mock_module('homeassistant.helpers.entity_platform')
+homeassistant.helpers.device_registry = create_mock_module('homeassistant.helpers.device_registry')
 homeassistant.components = create_mock_module('homeassistant.components')
 homeassistant.components.sensor = create_mock_module('homeassistant.components.sensor')
+homeassistant.components.binary_sensor = create_mock_module('homeassistant.components.binary_sensor')
 homeassistant.components.number = create_mock_module('homeassistant.components.number')
 homeassistant.components.switch = create_mock_module('homeassistant.components.switch')
 homeassistant.components.select = create_mock_module('homeassistant.components.select')
@@ -35,12 +37,21 @@ homeassistant.const = create_mock_module('homeassistant.const')
 
 # Mock classes and constants
 homeassistant.core.HomeAssistant = MagicMock
+homeassistant.core.callback = lambda func: func  # Mock callback decorator
 homeassistant.config_entries.ConfigEntry = MagicMock
 homeassistant.exceptions.ConfigEntryNotReady = Exception
 homeassistant.exceptions.ConfigEntryAuthFailed = Exception
 homeassistant.helpers.update_coordinator.DataUpdateCoordinator = MagicMock
+homeassistant.helpers.update_coordinator.UpdateFailed = Exception
 homeassistant.helpers.entity.Entity = MagicMock
+homeassistant.helpers.entity.EntityDescription = MagicMock
+homeassistant.helpers.entity_platform.AddEntitiesCallback = MagicMock
+homeassistant.helpers.device_registry.DeviceInfo = dict  # DeviceInfo is a TypedDict
 homeassistant.components.sensor.SensorEntity = MagicMock
+homeassistant.components.sensor.SensorDeviceClass = MagicMock
+homeassistant.components.sensor.SensorStateClass = MagicMock
+homeassistant.components.sensor.SensorEntityDescription = MagicMock
+homeassistant.components.binary_sensor.BinarySensorEntity = MagicMock
 homeassistant.components.number.NumberEntity = MagicMock
 homeassistant.components.switch.SwitchEntity = MagicMock
 homeassistant.components.select.SelectEntity = MagicMock
@@ -54,6 +65,7 @@ homeassistant.const.CONF_PASSWORD = "password"
 # Mock Platform enum
 class MockPlatform:
     SENSOR = "sensor"
+    BINARY_SENSOR = "binary_sensor"
     NUMBER = "number"
     SWITCH = "switch"
     SELECT = "select"
@@ -64,6 +76,33 @@ homeassistant.const.Platform = MockPlatform
 # Mock other constants that might be needed
 homeassistant.const.STATE_ON = "on"
 homeassistant.const.STATE_OFF = "off"
+homeassistant.const.PERCENTAGE = "%"
+
+# Mock unit classes
+class MockUnit:
+    CELSIUS = "°C"
+    FAHRENHEIT = "°F"
+    KELVIN = "K"
+    WATT = "W"
+    KILOWATT = "kW"
+    KILOWATT_HOUR = "kWh"
+    VOLT = "V"
+    AMPERE = "A"
+    HERTZ = "Hz"
+    PASCAL = "Pa"
+    BAR = "bar"
+    SECOND = "s"
+    MINUTE = "min"
+    HOUR = "h"
+
+homeassistant.const.UnitOfTemperature = MockUnit
+homeassistant.const.UnitOfPower = MockUnit
+homeassistant.const.UnitOfEnergy = MockUnit
+homeassistant.const.UnitOfElectricPotential = MockUnit
+homeassistant.const.UnitOfElectricCurrent = MockUnit
+homeassistant.const.UnitOfFrequency = MockUnit
+homeassistant.const.UnitOfPressure = MockUnit
+homeassistant.const.UnitOfTime = MockUnit
 
 
 @pytest.fixture
