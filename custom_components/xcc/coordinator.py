@@ -179,7 +179,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Entity %s: classified as %s (has descriptor)", prop, entity_type)
             else:
                 if prop in self.entity_configs:
-                    # Removed excessive debug logging for sensor classification
+                    # Entity has descriptor but classified as sensor - this is normal
+                    pass
                 else:
                     # Only log missing descriptors once per entity to avoid spam
                     if not hasattr(self, '_logged_missing_descriptors'):

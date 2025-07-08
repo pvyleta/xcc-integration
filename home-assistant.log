@@ -1,50 +1,482 @@
-2025-07-07 22:57:43.844 ERROR (MainThread) [homeassistant] Error doing job: Task exception was never retrieved (None)
+2025-07-08 15:03:02.555 ERROR (ImportExecutor_0) [homeassistant.loader] Unexpected exception importing platform custom_components.xcc.application_credentials
 Traceback (most recent call last):
-  File "/usr/src/homeassistant/homeassistant/components/sensor/__init__.py", line 666, in state
-    numerical_value = float(value)  # type:ignore[arg-type]
-ValueError: could not convert string to float: '07.07.2025'
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1255, in _load_platform
+    cache[full_name] = self._import_platform(platform_name)
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1287, in _import_platform
+    return importlib.import_module(f"{self.pkg_path}.{platform_name}")
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+2025-07-08 15:03:02.592 WARNING (MainThread) [homeassistant.util.loop] Detected blocking call to import_module with args ('custom_components.xcc.application_credentials',) inside the event loop by integration 'application_credentials' at homeassistant/components/application_credentials/__init__.py, line 294: platform = await integration.async_get_platform("application_credentials") (offender: /usr/src/homeassistant/homeassistant/loader.py, line 1287: return importlib.import_module(f"{self.pkg_path}.{platform_name}")), please create a bug report at https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+application_credentials%22
+For developers, please see https://developers.home-assistant.io/docs/asyncio_blocking_operations/#import_module
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/src/homeassistant/homeassistant/__main__.py", line 223, in <module>
+    sys.exit(main())
+  File "/usr/src/homeassistant/homeassistant/__main__.py", line 209, in main
+    exit_code = runner.run(runtime_conf)
+  File "/usr/src/homeassistant/homeassistant/runner.py", line 154, in run
+    return loop.run_until_complete(setup_and_run_hass(runtime_config))
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 2034, in _run_once
+    handle._run()
+  File "/usr/local/lib/python3.13/asyncio/events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "/usr/src/homeassistant/homeassistant/components/websocket_api/decorators.py", line 28, in _handle_async_response
+    await func(hass, connection, msg)
+  File "/usr/src/homeassistant/homeassistant/components/application_credentials/__init__.py", line 359, in handle_config_entry
+    if application_credentials_id := await _async_config_entry_app_credentials(
+  File "/usr/src/homeassistant/homeassistant/components/application_credentials/__init__.py", line 244, in _async_config_entry_app_credentials
+    if not await _get_platform(hass, config_entry.domain) or not (
+  File "/usr/src/homeassistant/homeassistant/components/application_credentials/__init__.py", line 294, in _get_platform
+    platform = await integration.async_get_platform("application_credentials")
+
+2025-07-08 15:03:02.615 ERROR (MainThread) [homeassistant.loader] Unexpected exception importing platform custom_components.xcc.application_credentials
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1255, in _load_platform
+    cache[full_name] = self._import_platform(platform_name)
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1287, in _import_platform
+    return importlib.import_module(f"{self.pkg_path}.{platform_name}")
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+2025-07-08 15:03:04.173 ERROR (ImportExecutor_0) [homeassistant.loader] Unexpected exception importing component custom_components.xcc
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1058, in _get_component
+    ComponentProtocol, importlib.import_module(self.pkg_path)
+                       ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+2025-07-08 15:03:04.226 WARNING (MainThread) [homeassistant.util.loop] Detected blocking call to import_module with args ('custom_components.xcc',) inside the event loop by integration 'config' at homeassistant/components/config/config_entries.py, line 106: result = await hass.config_entries.async_remove(entry_id) (offender: /usr/src/homeassistant/homeassistant/loader.py, line 1058: ComponentProtocol, importlib.import_module(self.pkg_path)), please create a bug report at https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+config%22
+For developers, please see https://developers.home-assistant.io/docs/asyncio_blocking_operations/#import_module
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/src/homeassistant/homeassistant/__main__.py", line 223, in <module>
+    sys.exit(main())
+  File "/usr/src/homeassistant/homeassistant/__main__.py", line 209, in main
+    exit_code = runner.run(runtime_conf)
+  File "/usr/src/homeassistant/homeassistant/runner.py", line 154, in run
+    return loop.run_until_complete(setup_and_run_hass(runtime_config))
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 2034, in _run_once
+    handle._run()
+  File "/usr/local/lib/python3.13/asyncio/events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_app.py", line 569, in _handle
+    return await handler(request)
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_middlewares.py", line 117, in impl
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/security_filter.py", line 92, in security_filter_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/forwarded.py", line 77, in forwarded_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/request_context.py", line 26, in request_context_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/ban.py", line 86, in ban_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/auth.py", line 242, in auth_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/headers.py", line 41, in headers_middleware
+    response = await handler(request)
+  File "/usr/src/homeassistant/homeassistant/helpers/http.py", line 73, in handle
+    result = await handler(request, **request.match_info)
+  File "/usr/src/homeassistant/homeassistant/components/config/config_entries.py", line 106, in delete
+    result = await hass.config_entries.async_remove(entry_id)
+
+2025-07-08 15:03:04.250 ERROR (MainThread) [homeassistant.loader] Unexpected exception importing component custom_components.xcc
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1058, in _get_component
+    ComponentProtocol, importlib.import_module(self.pkg_path)
+                       ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
 
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/usr/src/homeassistant/homeassistant/helpers/update_coordinator.py", line 270, in _handle_refresh_interval
-    await self._async_refresh(log_failures=True, scheduled=True)
-  File "/usr/src/homeassistant/homeassistant/helpers/update_coordinator.py", line 481, in _async_refresh
-    self.async_update_listeners()
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/usr/src/homeassistant/homeassistant/helpers/update_coordinator.py", line 180, in async_update_listeners
-    update_callback()
-    ~~~~~~~~~~~~~~~^^
-  File "/config/custom_components/xcc/entity.py", line 148, in _handle_coordinator_update
-    super()._handle_coordinator_update()
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/usr/src/homeassistant/homeassistant/helpers/update_coordinator.py", line 561, in _handle_coordinator_update
-    self.async_write_ha_state()
-    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/usr/src/homeassistant/homeassistant/helpers/entity.py", line 1018, in async_write_ha_state
-    self._async_write_ha_state()
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/usr/src/homeassistant/homeassistant/helpers/entity.py", line 1140, in _async_write_ha_state
-    self.__async_calculate_state()
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/usr/src/homeassistant/homeassistant/helpers/entity.py", line 1080, in __async_calculate_state
-    state = self._stringify_state(available)
-  File "/usr/src/homeassistant/homeassistant/helpers/entity.py", line 1024, in _stringify_state
-    if (state := self.state) is None:
-                 ^^^^^^^^^^
-  File "/usr/src/homeassistant/homeassistant/components/sensor/__init__.py", line 668, in state
-    raise ValueError(
-    ...<5 lines>...
-    ) from err
-ValueError: Sensor sensor.spotovecenystats_data0_timestamp has device class 'None', state class 'None' unit 'date' and suggested precision 'None' thus indicating it has a numeric value; however, it has the non-numeric value: '07.07.2025' (<class 'str'>)
-2025-07-07 22:58:07.481 DEBUG (MainThread) [custom_components.xcc.number] Setting number Prefer profit on price higher than (FVE-PREFERPROFITPRICE) to 260.0
-2025-07-07 22:58:07.481 DEBUG (MainThread) [custom_components.xcc.coordinator] Setting entity xcc_fve-preferprofitprice to value 260.0
-2025-07-07 22:58:07.482 DEBUG (MainThread) [custom_components.xcc.coordinator] Setting XCC property FVE-PREFERPROFITPRICE to value 260.0 for entity xcc_fve-preferprofitprice
-2025-07-07 22:58:07.482 DEBUG (MainThread) [custom_components.xcc.xcc_client] Setting XCC property FVE-PREFERPROFITPRICE to value 260.0
-2025-07-07 22:58:07.482 DEBUG (MainThread) [custom_components.xcc.xcc_client] Attempting to set value via http://192.168.0.50/RPC/MP_DATA_MANAGER/mp_data_manager.asp with data: {'PROP': 'FVE-PREFERPROFITPRICE', 'VALUE': '260.0', 'ACTION': 'SET'}
-2025-07-07 22:58:07.607 DEBUG (MainThread) [custom_components.xcc.xcc_client] Set value response: status=404, content=<HTML><HEAD><TITLE>TECO Web Server (v2.5.069)</TITLE></HEAD><BODY><h2>TECO Web Server (v2.5.069) - HTTP Error 404</h2><h3>Requested page [ /RPC/MP_DATA_MANAGER/mp_data_manager.asp ] not found.</h3><h4
-2025-07-07 22:58:07.608 WARNING (MainThread) [custom_components.xcc.xcc_client] Set value may have failed: status=404, content=<HTML><HEAD><TITLE>TECO Web Server (v2.5.069)</TITLE></HEAD><BODY><h2>TECO Web Server (v2.5.069) - HTTP Error 404</h2><h3>Requested page [ /RPC/MP_DATA_MANAGER/mp_data_manager.asp ] not found.</h3><h4
-2025-07-07 22:58:07.608 DEBUG (MainThread) [custom_components.xcc.xcc_client] Trying alternative endpoint http://192.168.0.50/RPC/WEBSES/set.asp with data: {'FVE-PREFERPROFITPRICE': '260.0'}
-2025-07-07 22:58:07.612 ERROR (MainThread) [custom_components.xcc.xcc_client] Error setting XCC property FVE-PREFERPROFITPRICE to 260.0: Server disconnected
-2025-07-07 22:58:07.613 ERROR (MainThread) [custom_components.xcc.coordinator] Failed to set XCC property FVE-PREFERPROFITPRICE to 260.0
-2025-07-07 22:58:07.614 ERROR (MainThread) [custom_components.xcc.number] Failed to set number Prefer profit on price higher than to 260.0
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 998, in async_get_component
+    comp = await self.hass.async_add_import_executor_job(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self._get_component, True
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1069, in _get_component
+    raise ImportError(f"Exception importing {self.pkg_path}") from err
+ImportError: Exception importing custom_components.xcc
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1058, in _get_component
+    ComponentProtocol, importlib.import_module(self.pkg_path)
+                       ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+2025-07-08 15:03:04.265 ERROR (MainThread) [aiohttp.server] Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1058, in _get_component
+    ComponentProtocol, importlib.import_module(self.pkg_path)
+                       ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 998, in async_get_component
+    comp = await self.hass.async_add_import_executor_job(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self._get_component, True
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1069, in _get_component
+    raise ImportError(f"Exception importing {self.pkg_path}") from err
+ImportError: Exception importing custom_components.xcc
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1058, in _get_component
+    ComponentProtocol, importlib.import_module(self.pkg_path)
+                       ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_middlewares.py", line 117, in impl
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/http/security_filter.py", line 92, in security_filter_middleware
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/http/forwarded.py", line 77, in forwarded_middleware
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/http/request_context.py", line 26, in request_context_middleware
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/http/ban.py", line 86, in ban_middleware
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/http/auth.py", line 242, in auth_middleware
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/http/headers.py", line 41, in headers_middleware
+    response = await handler(request)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/helpers/http.py", line 73, in handle
+    result = await handler(request, **request.match_info)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/components/config/config_entries.py", line 106, in delete
+    result = await hass.config_entries.async_remove(entry_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/config_entries.py", line 2087, in async_remove
+    unload_success, entry = await self._async_remove(entry_id)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/config_entries.py", line 2110, in _async_remove
+    await entry.async_remove(self.hass)
+  File "/usr/src/homeassistant/homeassistant/config_entries.py", line 1018, in async_remove
+    component = await integration.async_get_component()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1018, in async_get_component
+    self._component_future.result()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1010, in async_get_component
+    comp = self._get_component()
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1069, in _get_component
+    raise ImportError(f"Exception importing {self.pkg_path}") from err
+ImportError: Exception importing custom_components.xcc
+2025-07-08 15:03:16.368 INFO (SyncWorker_5) [homeassistant.loader] Loaded local_calendar from homeassistant.components.local_calendar
+2025-07-08 15:03:16.381 INFO (SyncWorker_5) [homeassistant.loader] Loaded demo from homeassistant.components.demo
+2025-07-08 15:03:16.389 INFO (SyncWorker_5) [homeassistant.loader] Loaded zodiac from homeassistant.components.zodiac
+2025-07-08 15:03:16.394 INFO (SyncWorker_5) [homeassistant.loader] Loaded local_ip from homeassistant.components.local_ip
+2025-07-08 15:03:16.402 INFO (SyncWorker_5) [homeassistant.loader] Loaded history_stats from homeassistant.components.history_stats
+2025-07-08 15:03:16.410 INFO (SyncWorker_5) [homeassistant.loader] Loaded growatt_server from homeassistant.components.growatt_server
+2025-07-08 15:03:16.420 INFO (SyncWorker_5) [homeassistant.loader] Loaded nmap_tracker from homeassistant.components.nmap_tracker
+2025-07-08 15:03:16.433 INFO (SyncWorker_5) [homeassistant.loader] Loaded uptime from homeassistant.components.uptime
+2025-07-08 15:03:16.437 INFO (SyncWorker_5) [homeassistant.loader] Loaded moehlenhoff_alpha2 from homeassistant.components.moehlenhoff_alpha2
+2025-07-08 15:03:16.443 INFO (SyncWorker_5) [homeassistant.loader] Loaded workday from homeassistant.components.workday
+2025-07-08 15:03:16.452 INFO (SyncWorker_5) [homeassistant.loader] Loaded filter from homeassistant.components.filter
+2025-07-08 15:03:16.457 INFO (SyncWorker_5) [homeassistant.loader] Loaded shopping_list from homeassistant.components.shopping_list
+2025-07-08 15:03:16.461 INFO (SyncWorker_5) [homeassistant.loader] Loaded time_date from homeassistant.components.time_date
+2025-07-08 15:03:16.470 INFO (SyncWorker_5) [homeassistant.loader] Loaded alert from homeassistant.components.alert
+2025-07-08 15:03:16.478 INFO (SyncWorker_5) [homeassistant.loader] Loaded filesize from homeassistant.components.filesize
+2025-07-08 15:03:16.487 INFO (SyncWorker_5) [homeassistant.loader] Loaded google_travel_time from homeassistant.components.google_travel_time
+2025-07-08 15:03:16.498 INFO (SyncWorker_5) [homeassistant.loader] Loaded proximity from homeassistant.components.proximity
+2025-07-08 15:03:16.503 INFO (SyncWorker_5) [homeassistant.loader] Loaded rpi_power from homeassistant.components.rpi_power
+2025-07-08 15:03:16.512 INFO (SyncWorker_5) [homeassistant.loader] Loaded waze_travel_time from homeassistant.components.waze_travel_time
+2025-07-08 15:03:16.523 INFO (SyncWorker_5) [homeassistant.loader] Loaded garages_amsterdam from homeassistant.components.garages_amsterdam
+2025-07-08 15:03:16.528 INFO (SyncWorker_5) [homeassistant.loader] Loaded season from homeassistant.components.season
+2025-07-08 15:03:16.535 INFO (SyncWorker_5) [homeassistant.loader] Loaded cert_expiry from homeassistant.components.cert_expiry
+2025-07-08 15:03:16.539 INFO (SyncWorker_5) [homeassistant.loader] Loaded holiday from homeassistant.components.holiday
+2025-07-08 15:03:16.545 INFO (SyncWorker_5) [homeassistant.loader] Loaded local_todo from homeassistant.components.local_todo
+2025-07-08 15:03:16.550 INFO (SyncWorker_5) [homeassistant.loader] Loaded homekit_controller from homeassistant.components.homekit_controller
+2025-07-08 15:03:16.554 INFO (SyncWorker_5) [homeassistant.loader] Loaded derivative from homeassistant.components.derivative
+2025-07-08 15:03:16.560 INFO (SyncWorker_5) [homeassistant.loader] Loaded cpuspeed from homeassistant.components.cpuspeed
+2025-07-08 15:03:16.564 INFO (SyncWorker_5) [homeassistant.loader] Loaded generic_thermostat from homeassistant.components.generic_thermostat
+2025-07-08 15:03:16.569 INFO (SyncWorker_5) [homeassistant.loader] Loaded tod from homeassistant.components.tod
+2025-07-08 15:03:16.573 INFO (SyncWorker_5) [homeassistant.loader] Loaded emulated_roku from homeassistant.components.emulated_roku
+2025-07-08 15:03:16.578 INFO (SyncWorker_5) [homeassistant.loader] Loaded generic from homeassistant.components.generic
+2025-07-08 15:03:16.586 INFO (SyncWorker_5) [homeassistant.loader] Loaded nextbus from homeassistant.components.nextbus
+2025-07-08 15:03:16.591 INFO (SyncWorker_5) [homeassistant.loader] Loaded version from homeassistant.components.version
+2025-07-08 15:03:16.601 INFO (SyncWorker_5) [homeassistant.loader] Loaded aurora from homeassistant.components.aurora
+2025-07-08 15:03:16.609 INFO (SyncWorker_5) [homeassistant.loader] Loaded min_max from homeassistant.components.min_max
+2025-07-08 15:03:16.614 INFO (SyncWorker_5) [homeassistant.loader] Loaded random from homeassistant.components.random
+2025-07-08 15:03:16.621 INFO (SyncWorker_5) [homeassistant.loader] Loaded moon from homeassistant.components.moon
+2025-07-08 15:03:16.631 INFO (SyncWorker_5) [homeassistant.loader] Loaded islamic_prayer_times from homeassistant.components.islamic_prayer_times
+2025-07-08 15:03:16.644 INFO (SyncWorker_5) [homeassistant.loader] Loaded remote_calendar from homeassistant.components.remote_calendar
+2025-07-08 15:03:16.650 INFO (SyncWorker_5) [homeassistant.loader] Loaded integration from homeassistant.components.integration
+2025-07-08 15:03:16.655 INFO (SyncWorker_5) [homeassistant.loader] Loaded vegehub from homeassistant.components.vegehub
+2025-07-08 15:03:16.662 INFO (SyncWorker_5) [homeassistant.loader] Loaded trend from homeassistant.components.trend
+2025-07-08 15:03:16.668 INFO (SyncWorker_5) [homeassistant.loader] Loaded threshold from homeassistant.components.threshold
+2025-07-08 15:03:16.675 INFO (SyncWorker_5) [homeassistant.loader] Loaded plant from homeassistant.components.plant
+2025-07-08 15:03:16.680 INFO (SyncWorker_5) [homeassistant.loader] Loaded energenie_power_sockets from homeassistant.components.energenie_power_sockets
+2025-07-08 15:03:16.685 INFO (SyncWorker_5) [homeassistant.loader] Loaded generic_hygrostat from homeassistant.components.generic_hygrostat
+2025-07-08 15:03:16.696 INFO (SyncWorker_5) [homeassistant.loader] Loaded statistics from homeassistant.components.statistics
+2025-07-08 15:03:16.706 INFO (SyncWorker_5) [homeassistant.loader] Loaded mold_indicator from homeassistant.components.mold_indicator
+2025-07-08 15:03:19.884 ERROR (ImportExecutor_0) [homeassistant.loader] Unexpected exception importing platform custom_components.xcc.config_flow
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1255, in _load_platform
+    cache[full_name] = self._import_platform(platform_name)
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1287, in _import_platform
+    return importlib.import_module(f"{self.pkg_path}.{platform_name}")
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+2025-07-08 15:03:19.935 WARNING (MainThread) [homeassistant.util.loop] Detected blocking call to import_module with args ('custom_components.xcc.config_flow',) inside the event loop by integration 'config' at homeassistant/components/config/config_entries.py, line 188: return await super()._post_impl(request, data) (offender: /usr/src/homeassistant/homeassistant/loader.py, line 1287: return importlib.import_module(f"{self.pkg_path}.{platform_name}")), please create a bug report at https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+config%22
+For developers, please see https://developers.home-assistant.io/docs/asyncio_blocking_operations/#import_module
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/src/homeassistant/homeassistant/__main__.py", line 223, in <module>
+    sys.exit(main())
+  File "/usr/src/homeassistant/homeassistant/__main__.py", line 209, in main
+    exit_code = runner.run(runtime_conf)
+  File "/usr/src/homeassistant/homeassistant/runner.py", line 154, in run
+    return loop.run_until_complete(setup_and_run_hass(runtime_config))
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 677, in run_forever
+    self._run_once()
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 2034, in _run_once
+    handle._run()
+  File "/usr/local/lib/python3.13/asyncio/events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_app.py", line 569, in _handle
+    return await handler(request)
+  File "/usr/local/lib/python3.13/site-packages/aiohttp/web_middlewares.py", line 117, in impl
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/security_filter.py", line 92, in security_filter_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/forwarded.py", line 77, in forwarded_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/request_context.py", line 26, in request_context_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/ban.py", line 86, in ban_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/auth.py", line 242, in auth_middleware
+    return await handler(request)
+  File "/usr/src/homeassistant/homeassistant/components/http/headers.py", line 41, in headers_middleware
+    response = await handler(request)
+  File "/usr/src/homeassistant/homeassistant/helpers/http.py", line 73, in handle
+    result = await handler(request, **request.match_info)
+  File "/usr/src/homeassistant/homeassistant/components/http/decorators.py", line 83, in with_admin
+    return await func(self, request, *args, **kwargs)
+  File "/usr/src/homeassistant/homeassistant/components/http/data_validator.py", line 74, in wrapper
+    return await method(view, request, data, *args, **kwargs)
+  File "/usr/src/homeassistant/homeassistant/components/config/config_entries.py", line 181, in post
+    return await self._post_impl(request, data)
+  File "/usr/src/homeassistant/homeassistant/components/config/config_entries.py", line 188, in _post_impl
+    return await super()._post_impl(request, data)
+
+2025-07-08 15:03:19.958 ERROR (MainThread) [homeassistant.loader] Unexpected exception importing platform custom_components.xcc.config_flow
+Traceback (most recent call last):
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1255, in _load_platform
+    cache[full_name] = self._import_platform(platform_name)
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/loader.py", line 1287, in _import_platform
+    return importlib.import_module(f"{self.pkg_path}.{platform_name}")
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/src/homeassistant/homeassistant/util/loop.py", line 201, in protected_loop_func
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/custom_components/xcc/__init__.py", line 20, in <module>
+    from .coordinator import XCCDataUpdateCoordinator
+  File "/config/custom_components/xcc/coordinator.py", line 183
+    else:
+    ^^^^
+IndentationError: expected an indented block after 'if' statement on line 181
+2025-07-08 15:03:19.968 ERROR (MainThread) [homeassistant.config_entries] Error occurred loading flow for integration xcc: Exception importing custom_components.xcc.config_flow
