@@ -15,7 +15,7 @@ class XCCDescriptorParser:
         self.entity_configs = {}
 
     def parse_descriptor_files(
-        self, descriptor_data: dict[str, str]
+        self, descriptor_data: dict[str, str],
     ) -> dict[str, dict[str, Any]]:
         """Parse descriptor XML files to determine entity types and configurations.
 
@@ -33,7 +33,7 @@ class XCCDescriptorParser:
                 page_configs = self._parse_single_descriptor(xml_content, page_name)
                 entity_configs.update(page_configs)
                 _LOGGER.debug(
-                    "Found %d entity configurations in %s", len(page_configs), page_name
+                    "Found %d entity configurations in %s", len(page_configs), page_name,
                 )
             except Exception as err:
                 _LOGGER.error("Error parsing descriptor %s: %s", page_name, err)
@@ -45,7 +45,7 @@ class XCCDescriptorParser:
         return entity_configs
 
     def _parse_single_descriptor(
-        self, xml_content: str, page_name: str
+        self, xml_content: str, page_name: str,
     ) -> dict[str, dict[str, Any]]:
         """Parse a single descriptor XML file."""
         try:
@@ -89,7 +89,7 @@ class XCCDescriptorParser:
 
                     # Extract sensor information from row context
                     sensor_config = self._extract_sensor_info_from_row(
-                        row, element, page_name
+                        row, element, page_name,
                     )
                     if sensor_config:
                         entity_configs[prop] = sensor_config
@@ -97,7 +97,7 @@ class XCCDescriptorParser:
         return entity_configs
 
     def _extract_sensor_info_from_row(
-        self, row: ET.Element, element: ET.Element, page_name: str
+        self, row: ET.Element, element: ET.Element, page_name: str,
     ) -> dict[str, Any] | None:
         """Extract sensor information from row context for readonly sensors."""
         prop = element.get("prop")
@@ -183,7 +183,7 @@ class XCCDescriptorParser:
         return unit_to_device_class.get(unit)
 
     def _infer_unit_from_context(
-        self, prop: str, row: ET.Element, element: ET.Element
+        self, prop: str, row: ET.Element, element: ET.Element,
     ) -> str:
         """Infer unit from context when not explicitly specified."""
         # Check row context first for temperature-related text
@@ -264,7 +264,7 @@ class XCCDescriptorParser:
         return ""
 
     def _determine_entity_config(
-        self, element: ET.Element, page_name: str
+        self, element: ET.Element, page_name: str,
     ) -> dict[str, Any] | None:
         """Determine the entity configuration from an XML element."""
         prop = element.get("prop")
@@ -314,14 +314,14 @@ class XCCDescriptorParser:
                     {
                         "entity_type": "switch",
                         "data_type": "bool",
-                    }
+                    },
                 )
             else:
                 entity_config.update(
                     {
                         "entity_type": "sensor",
                         "data_type": "bool",
-                    }
+                    },
                 )
 
         elif element.tag == "number":
@@ -346,7 +346,7 @@ class XCCDescriptorParser:
                         "unit": unit,
                         "unit_en": unit,
                         "device_class": device_class,
-                    }
+                    },
                 )
             else:
                 entity_config.update(
@@ -356,7 +356,7 @@ class XCCDescriptorParser:
                         "unit": unit,
                         "unit_en": unit,
                         "device_class": device_class,
-                    }
+                    },
                 )
 
         elif element.tag == "choice":
@@ -367,7 +367,7 @@ class XCCDescriptorParser:
                     "entity_type": "select",
                     "data_type": "enum",
                     "options": options,
-                }
+                },
             )
 
         elif element.tag == "button":
@@ -375,7 +375,7 @@ class XCCDescriptorParser:
                 {
                     "entity_type": "button",
                     "data_type": "action",
-                }
+                },
             )
 
         elif element.tag == "time":
@@ -388,7 +388,20 @@ class XCCDescriptorParser:
                     "unit": "",  # No unit for time strings
                     "device_class": None,  # No device class for time strings
                     "state_class": None,  # No state class for time strings (not numeric)
-                }
+                },
+            )
+
+        elif element.tag == "date":
+            # Date elements should be treated as sensors with date/timestamp values
+            # They contain string values like "08.07.2025" and should not have numeric units
+            entity_config.update(
+                {
+                    "entity_type": "sensor",
+                    "data_type": "string",
+                    "unit": None,  # Remove unit for date strings - they are not numeric
+                    "device_class": "timestamp" if "timestamp" in prop.lower() else "date",
+                    "state_class": None,  # No state class for date strings (not numeric)
+                },
             )
 
         else:
@@ -411,7 +424,7 @@ class XCCDescriptorParser:
         return None
 
     def _get_float_attr(
-        self, element: ET.Element, attr: str, default: float | None = None
+        self, element: ET.Element, attr: str, default: float | None = None,
     ) -> float | None:
         """Get a float attribute from an element."""
         value = element.get(attr)
@@ -423,7 +436,7 @@ class XCCDescriptorParser:
             return default
 
     def _get_int_attr(
-        self, element: ET.Element, attr: str, default: int | None = None
+        self, element: ET.Element, attr: str, default: int | None = None,
     ) -> int | None:
         """Get an integer attribute from an element."""
         value = element.get(attr)
