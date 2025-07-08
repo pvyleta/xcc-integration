@@ -20,6 +20,7 @@ def create_mock_module(name):
 homeassistant = create_mock_module('homeassistant')
 homeassistant.core = create_mock_module('homeassistant.core')
 homeassistant.config_entries = create_mock_module('homeassistant.config_entries')
+homeassistant.exceptions = create_mock_module('homeassistant.exceptions')
 homeassistant.helpers = create_mock_module('homeassistant.helpers')
 homeassistant.helpers.update_coordinator = create_mock_module('homeassistant.helpers.update_coordinator')
 homeassistant.helpers.entity = create_mock_module('homeassistant.helpers.entity')
@@ -35,6 +36,8 @@ homeassistant.const = create_mock_module('homeassistant.const')
 # Mock classes and constants
 homeassistant.core.HomeAssistant = MagicMock
 homeassistant.config_entries.ConfigEntry = MagicMock
+homeassistant.exceptions.ConfigEntryNotReady = Exception
+homeassistant.exceptions.ConfigEntryAuthFailed = Exception
 homeassistant.helpers.update_coordinator.DataUpdateCoordinator = MagicMock
 homeassistant.helpers.entity.Entity = MagicMock
 homeassistant.components.sensor.SensorEntity = MagicMock

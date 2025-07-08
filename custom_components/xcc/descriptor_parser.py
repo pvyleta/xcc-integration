@@ -67,6 +67,7 @@ class XCCDescriptorParser:
                 "option",
                 "button",
                 "time",
+                "date",  # Add date elements to be processed by _determine_entity_config
             ]:
                 prop = element.get("prop")
                 if not prop:
@@ -83,8 +84,8 @@ class XCCDescriptorParser:
                 prop = element.get("prop")
                 if prop and prop not in entity_configs:
                     # Skip elements that should be handled by direct element processing
-                    # (time, number, switch, choice, button elements are handled in first pass)
-                    if element.tag in ["time", "number", "switch", "choice", "button"]:
+                    # (time, date, number, switch, choice, button elements are handled in first pass)
+                    if element.tag in ["time", "date", "number", "switch", "choice", "button"]:
                         continue
 
                     # Extract sensor information from row context
@@ -394,11 +395,12 @@ class XCCDescriptorParser:
         elif element.tag == "date":
             # Date elements should be treated as sensors with date/timestamp values
             # They contain string values like "08.07.2025" and should not have numeric units
+            # CRITICAL: Override the unit that was extracted from XML to prevent ValueError
             entity_config.update(
                 {
                     "entity_type": "sensor",
                     "data_type": "string",
-                    "unit": None,  # Remove unit for date strings - they are not numeric
+                    "unit": None,  # CRITICAL: Override unit to None for date strings - prevents ValueError
                     "device_class": "timestamp" if "timestamp" in prop.lower() else "date",
                     "state_class": None,  # No state class for date strings (not numeric)
                 },
