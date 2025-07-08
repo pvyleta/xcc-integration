@@ -25,7 +25,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
@@ -91,7 +90,10 @@ async def async_setup_entry(
     # Wait for first data update to ensure descriptors are loaded
     _LOGGER.debug("Waiting for coordinator first refresh")
     await coordinator.async_config_entry_first_refresh()
-    _LOGGER.debug("Coordinator data keys: %s", list(coordinator.data.keys()) if coordinator.data else "No data")
+    _LOGGER.debug(
+        "Coordinator data keys: %s",
+        list(coordinator.data.keys()) if coordinator.data else "No data",
+    )
 
     # Create sensor entities from the sensors data structure
     sensors = []
@@ -99,7 +101,10 @@ async def async_setup_entry(
     # Detailed logging of coordinator data structure
     _LOGGER.info("=== SENSOR PLATFORM SETUP DEBUG ===")
     _LOGGER.info("Coordinator data type: %s", type(coordinator.data))
-    _LOGGER.info("Coordinator data keys: %s", list(coordinator.data.keys()) if coordinator.data else "No data")
+    _LOGGER.info(
+        "Coordinator data keys: %s",
+        list(coordinator.data.keys()) if coordinator.data else "No data",
+    )
 
     if coordinator.data:
         for key, value in coordinator.data.items():
@@ -109,17 +114,26 @@ async def async_setup_entry(
                 _LOGGER.info("Data[%s]: %s", key, type(value))
 
     sensor_entities = coordinator.get_entities_by_type("sensor")
-    _LOGGER.info("Found %d sensor entities in coordinator.get_entities_by_type('sensor')", len(sensor_entities))
+    _LOGGER.info(
+        "Found %d sensor entities in coordinator.get_entities_by_type('sensor')",
+        len(sensor_entities),
+    )
 
     # Also check the coordinator data structure directly
     sensors_in_data = coordinator.data.get("sensors", {})
-    _LOGGER.info("Found %d sensors in coordinator.data['sensors']", len(sensors_in_data))
+    _LOGGER.info(
+        "Found %d sensors in coordinator.data['sensors']", len(sensors_in_data)
+    )
 
     if not sensor_entities and not sensors_in_data:
-        _LOGGER.warning("No sensor entities found! Checking alternative data structures...")
+        _LOGGER.warning(
+            "No sensor entities found! Checking alternative data structures..."
+        )
         # Check if entities are stored differently
         entities_list = coordinator.data.get("entities", [])
-        _LOGGER.info("Found %d entities in coordinator.data['entities']", len(entities_list))
+        _LOGGER.info(
+            "Found %d entities in coordinator.data['entities']", len(entities_list)
+        )
 
         # Try to find sensors in the entities list
         sensor_count = 0
@@ -131,7 +145,9 @@ async def async_setup_entry(
 
     # Use sensors from coordinator.data if available, otherwise use get_entities_by_type
     if sensors_in_data and not sensor_entities:
-        _LOGGER.info("Using sensors from coordinator.data['sensors'] instead of get_entities_by_type")
+        _LOGGER.info(
+            "Using sensors from coordinator.data['sensors'] instead of get_entities_by_type"
+        )
         # Convert the data structure to match what the sensor creation expects
         sensor_entities = {}
         for entity_id, state_data in sensors_in_data.items():
@@ -141,21 +157,35 @@ async def async_setup_entry(
     for entity_id, entity_data in sensor_entities.items():
         try:
             _LOGGER.debug("Creating sensor for entity_id: %s", entity_id)
-            _LOGGER.debug("Entity data keys: %s", list(entity_data.keys()) if isinstance(entity_data, dict) else "Not a dict")
+            _LOGGER.debug(
+                "Entity data keys: %s",
+                list(entity_data.keys())
+                if isinstance(entity_data, dict)
+                else "Not a dict",
+            )
 
             # IMPORTANT: Ensure entity_data has entity_id key for sensor initialization
             # The entity_id comes from the dictionary key, but the sensor expects it in the data
             if isinstance(entity_data, dict) and "entity_id" not in entity_data:
-                entity_data = dict(entity_data)  # Make a copy to avoid modifying original
+                entity_data = dict(
+                    entity_data
+                )  # Make a copy to avoid modifying original
                 entity_data["entity_id"] = entity_id
-                _LOGGER.debug("Added missing entity_id to entity_data for %s", entity_id)
+                _LOGGER.debug(
+                    "Added missing entity_id to entity_data for %s", entity_id
+                )
 
             sensor = XCCSensor(coordinator, entity_data)
             sensors.append(sensor)
-            _LOGGER.info("✅ Successfully created sensor: %s (%s)", getattr(sensor, 'name', 'unknown'), entity_id)
+            _LOGGER.info(
+                "✅ Successfully created sensor: %s (%s)",
+                getattr(sensor, "name", "unknown"),
+                entity_id,
+            )
         except Exception as err:
             _LOGGER.error("❌ Failed to create sensor for %s: %s", entity_id, err)
             import traceback
+
             _LOGGER.error("Full traceback: %s", traceback.format_exc())
 
     _LOGGER.info("=== SENSOR CREATION SUMMARY ===")
@@ -172,7 +202,9 @@ async def async_setup_entry(
 class XCCSensor(XCCEntity, SensorEntity):
     """Representation of an XCC sensor."""
 
-    def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]) -> None:
+    def __init__(
+        self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]
+    ) -> None:
         """Initialize the XCC sensor."""
         try:
             # IMPORTANT: entity_id must not be empty - this prevents "Entity data not found for " errors
@@ -182,9 +214,14 @@ class XCCSensor(XCCEntity, SensorEntity):
                 prop = entity_data.get("prop", "")
                 if prop:
                     entity_id = f"xcc_{prop.lower()}"
-                    _LOGGER.warning("Missing entity_id in entity_data, generated from prop: %s", entity_id)
+                    _LOGGER.warning(
+                        "Missing entity_id in entity_data, generated from prop: %s",
+                        entity_id,
+                    )
                 else:
-                    raise ValueError(f"No entity_id found in entity_data and no prop to generate from. Data keys: {list(entity_data.keys())}")
+                    raise ValueError(
+                        f"No entity_id found in entity_data and no prop to generate from. Data keys: {list(entity_data.keys())}"
+                    )
 
             _LOGGER.debug("Initializing XCCSensor for entity_id: %s", entity_id)
 
@@ -196,11 +233,17 @@ class XCCSensor(XCCEntity, SensorEntity):
             _LOGGER.debug("Successfully initialized XCCSensor for %s", entity_id)
 
         except Exception as err:
-            _LOGGER.error("Error in XCCSensor.__init__ for %s: %s", entity_data.get("entity_id", "unknown"), err)
+            _LOGGER.error(
+                "Error in XCCSensor.__init__ for %s: %s",
+                entity_data.get("entity_id", "unknown"),
+                err,
+            )
             raise
 
     def _create_entity_description(
-        self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]
+        self,
+        coordinator: XCCDataUpdateCoordinator,
+        entity_data: dict[str, Any],
     ) -> SensorEntityDescription:
         """Create entity description for the sensor."""
         entity_id = entity_data.get("entity_id", "")
@@ -217,27 +260,35 @@ class XCCSensor(XCCEntity, SensorEntity):
         device_class = None
 
         # First, check if descriptor provides device class
-        descriptor_device_class = entity_config.get('device_class')
+        descriptor_device_class = entity_config.get("device_class")
         if descriptor_device_class:
             # Map string device class to HA device class enum
             device_class_mapping = {
-                'temperature': SensorDeviceClass.TEMPERATURE,
-                'power': SensorDeviceClass.POWER,
-                'energy': SensorDeviceClass.ENERGY,
-                'voltage': SensorDeviceClass.VOLTAGE,
-                'current': SensorDeviceClass.CURRENT,
-                'frequency': SensorDeviceClass.FREQUENCY,
-                'pressure': SensorDeviceClass.PRESSURE,
+                "temperature": SensorDeviceClass.TEMPERATURE,
+                "power": SensorDeviceClass.POWER,
+                "energy": SensorDeviceClass.ENERGY,
+                "voltage": SensorDeviceClass.VOLTAGE,
+                "current": SensorDeviceClass.CURRENT,
+                "frequency": SensorDeviceClass.FREQUENCY,
+                "pressure": SensorDeviceClass.PRESSURE,
             }
             device_class = device_class_mapping.get(descriptor_device_class)
-            _LOGGER.debug("Using device class from descriptor for %s: %s -> %s",
-                         prop, descriptor_device_class, device_class)
+            _LOGGER.debug(
+                "Using device class from descriptor for %s: %s -> %s",
+                prop,
+                descriptor_device_class,
+                device_class,
+            )
 
         # Second, try unit-based device class
         elif ha_unit in DEVICE_CLASS_MAPPING:
             device_class = DEVICE_CLASS_MAPPING[ha_unit]
-            _LOGGER.debug("Using device class from unit for %s: %s -> %s",
-                         prop, ha_unit, device_class)
+            _LOGGER.debug(
+                "Using device class from unit for %s: %s -> %s",
+                prop,
+                ha_unit,
+                device_class,
+            )
         else:
             # Fallback: Try to determine device class from field name patterns
             field_name_lower = entity_id.lower()
@@ -255,8 +306,11 @@ class XCCSensor(XCCEntity, SensorEntity):
                 device_class = SensorDeviceClass.PRESSURE
 
             if device_class:
-                _LOGGER.debug("Using device class from field name pattern for %s: %s",
-                             prop, device_class)
+                _LOGGER.debug(
+                    "Using device class from field name pattern for %s: %s",
+                    prop,
+                    device_class,
+                )
 
         # Determine state class based on device class and data type hints
         state_class = None
@@ -270,27 +324,40 @@ class XCCSensor(XCCEntity, SensorEntity):
             xml_name = entity_data.get("attributes", {}).get("name", "")
 
             # Check descriptor information for data type
-            descriptor_data_type = entity_config.get('data_type', '')
+            descriptor_data_type = entity_config.get("data_type", "")
 
             # Look for clear indicators of string types
             is_clearly_string = (
-                "STRING" in xml_name.upper() or
-                "TIME" in xml_name.upper() or  # Time values like "03:00"
-                "_s" in xml_name or  # String suffix
-                "Thh:mm" in xml_name or  # Time format indicator
-                descriptor_data_type == 'time' or  # From descriptor parser
-                prop in ["SNAZEV1", "SNAZEV2", "DEVICE_NAME", "LOCATION"]  # Known string fields
+                "STRING" in xml_name.upper()
+                or "TIME" in xml_name.upper()  # Time values like "03:00"
+                or "_s" in xml_name  # String suffix
+                or "Thh:mm" in xml_name  # Time format indicator
+                or descriptor_data_type == "time"  # From descriptor parser
+                or prop
+                in [
+                    "SNAZEV1",
+                    "SNAZEV2",
+                    "DEVICE_NAME",
+                    "LOCATION",
+                ]  # Known string fields
             )
 
             # Look for clear indicators of numeric types
             is_clearly_numeric = (
-                "REAL" in xml_name.upper() or
-                "INT" in xml_name.upper() or
-                "FLOAT" in xml_name.upper() or
-                "_f" in xml_name or  # Float suffix
-                "_i" in xml_name or  # Integer suffix
-                ".1f" in xml_name or  # Float format
-                prop in ["SVENKU", "TEMPERATURE", "TEMP", "PRESSURE", "POWER"]  # Known numeric fields
+                "REAL" in xml_name.upper()
+                or "INT" in xml_name.upper()
+                or "FLOAT" in xml_name.upper()
+                or "_f" in xml_name  # Float suffix
+                or "_i" in xml_name  # Integer suffix
+                or ".1f" in xml_name  # Float format
+                or prop
+                in [
+                    "SVENKU",
+                    "TEMPERATURE",
+                    "TEMP",
+                    "PRESSURE",
+                    "POWER",
+                ]  # Known numeric fields
             )
 
             if is_clearly_string:
@@ -313,19 +380,25 @@ class XCCSensor(XCCEntity, SensorEntity):
 
         # Get entity name from descriptor or entity data
         # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
-        friendly_name_en = entity_config.get('friendly_name_en')
-        friendly_name_cs = entity_config.get('friendly_name')
+        friendly_name_en = entity_config.get("friendly_name_en")
+        friendly_name_cs = entity_config.get("friendly_name")
 
         if friendly_name_en:
             entity_name = friendly_name_en
             # Debug logging for language preference
             if friendly_name_cs and friendly_name_en != friendly_name_cs:
-                _LOGGER.debug("Sensor %s: Using English name '%s' instead of Czech '%s'",
-                            prop, friendly_name_en, friendly_name_cs)
+                _LOGGER.debug(
+                    "Sensor %s: Using English name '%s' instead of Czech '%s'",
+                    prop,
+                    friendly_name_en,
+                    friendly_name_cs,
+                )
         elif friendly_name_cs:
             entity_name = friendly_name_cs
         else:
-            entity_name = entity_data.get("friendly_name", entity_data.get("name", prop))
+            entity_name = entity_data.get(
+                "friendly_name", entity_data.get("name", prop)
+            )
 
         return SensorEntityDescription(
             key=entity_id,
@@ -343,30 +416,35 @@ class XCCSensor(XCCEntity, SensorEntity):
 
         # Log value retrieval for debugging (only occasionally to avoid spam)
         import random
+
         if random.random() < 0.01:  # Log ~1% of value retrievals
-            _LOGGER.debug("🔍 SENSOR VALUE RETRIEVAL: %s = %s (raw: %s)",
-                         self.entity_id, converted_value, raw_value)
+            _LOGGER.debug(
+                "🔍 SENSOR VALUE RETRIEVAL: %s = %s (raw: %s)",
+                self.entity_id,
+                converted_value,
+                raw_value,
+            )
 
         return converted_value
 
     @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit of measurement."""
-        if hasattr(self.entity_description, 'native_unit_of_measurement'):
+        if hasattr(self.entity_description, "native_unit_of_measurement"):
             return self.entity_description.native_unit_of_measurement
         return self._get_unit_of_measurement()
 
     @property
     def state_class(self) -> SensorStateClass | None:
         """Return the state class."""
-        if hasattr(self.entity_description, 'state_class'):
+        if hasattr(self.entity_description, "state_class"):
             return self.entity_description.state_class
         return self._get_state_class()
 
     @property
     def device_class(self) -> SensorDeviceClass | None:
         """Return the device class."""
-        if hasattr(self.entity_description, 'device_class'):
+        if hasattr(self.entity_description, "device_class"):
             return self.entity_description.device_class
         return self._get_device_class()
 
@@ -376,9 +454,11 @@ class XCCSensor(XCCEntity, SensorEntity):
         attrs = super().extra_state_attributes or {}
 
         # Safety check for _attributes
-        if not hasattr(self, '_attributes') or not isinstance(self._attributes, dict):
-            _LOGGER.warning("XCCSensor %s missing or invalid _attributes, returning base attributes only",
-                          getattr(self, 'entity_id_suffix', 'unknown'))
+        if not hasattr(self, "_attributes") or not isinstance(self._attributes, dict):
+            _LOGGER.warning(
+                "XCCSensor %s missing or invalid _attributes, returning base attributes only",
+                getattr(self, "entity_id_suffix", "unknown"),
+            )
             return attrs
 
         # Add enum option text for enum sensors

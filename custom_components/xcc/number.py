@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription, NumberMode
+from homeassistant.components.number import (
+    NumberEntity,
+    NumberMode,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -64,19 +67,23 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         self.entity_id = f"number.{entity_data['entity_id']}"
 
         # Set friendly name from descriptor or fallback to entity data
-        friendly_name = self._entity_config.get('friendly_name_en') or self._entity_config.get('friendly_name')
+        friendly_name = self._entity_config.get(
+            "friendly_name_en"
+        ) or self._entity_config.get("friendly_name")
         if friendly_name:
             self._attr_name = friendly_name
         else:
-            self._attr_name = entity_data.get("friendly_name", entity_data.get("name", self._prop))
+            self._attr_name = entity_data.get(
+                "friendly_name", entity_data.get("name", self._prop)
+            )
 
         # Set number properties from descriptor
-        self._attr_native_min_value = self._entity_config.get('min', 0)
-        self._attr_native_max_value = self._entity_config.get('max', 100)
-        self._attr_native_step = self._entity_config.get('step', 1.0)
+        self._attr_native_min_value = self._entity_config.get("min", 0)
+        self._attr_native_max_value = self._entity_config.get("max", 100)
+        self._attr_native_step = self._entity_config.get("step", 1.0)
 
         # Set unit of measurement
-        unit = self._entity_config.get('unit_en') or self._entity_config.get('unit', '')
+        unit = self._entity_config.get("unit_en") or self._entity_config.get("unit", "")
         if unit:
             self._attr_native_unit_of_measurement = unit
 
@@ -105,14 +112,24 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
                 value = float(state)
                 # Log value updates occasionally to verify regular updates
                 import random
+
                 if random.random() < 0.05:  # Log ~5% of value retrievals
                     import time
+
                     timestamp = time.strftime("%H:%M:%S")
-                    _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (number from coordinator numbers data)",
-                               timestamp, self.entity_id, value)
+                    _LOGGER.info(
+                        "📊 ENTITY VALUE UPDATE [%s]: %s = %s (number from coordinator numbers data)",
+                        timestamp,
+                        self.entity_id,
+                        value,
+                    )
                 return value
             except (ValueError, TypeError):
-                _LOGGER.warning("Could not convert state '%s' to float for number entity %s", state, entity_id)
+                _LOGGER.warning(
+                    "Could not convert state '%s' to float for number entity %s",
+                    state,
+                    entity_id,
+                )
                 return None
         else:
             # Fallback: try the entities list (for backward compatibility)
@@ -121,7 +138,11 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
                     state = entity.get("state", "")
                     try:
                         value = float(state)
-                        _LOGGER.debug("📊 FALLBACK: Found number value %s = %s in entities list", entity_id, value)
+                        _LOGGER.debug(
+                            "📊 FALLBACK: Found number value %s = %s in entities list",
+                            entity_id,
+                            value,
+                        )
                         return value
                     except (ValueError, TypeError):
                         return None
@@ -135,12 +156,14 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             # Convert float to string for XCC
             str_value = str(value)
 
-            _LOGGER.info("🔢 Setting number %s (%s) to %s", self.name, self._prop, str_value)
+            _LOGGER.info(
+                "🔢 Setting number %s (%s) to %s", self.name, self._prop, str_value
+            )
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(
                 self._entity_data["entity_id"],
-                str_value
+                str_value,
             )
 
             if success:

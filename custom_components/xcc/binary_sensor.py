@@ -56,7 +56,9 @@ class XCCBinarySensor(CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorE
         super().__init__(coordinator, entity_id, description)
 
     def _create_entity_description(
-        self, coordinator: XCCDataUpdateCoordinator, entity_id: str
+        self,
+        coordinator: XCCDataUpdateCoordinator,
+        entity_id: str,
     ) -> BinarySensorEntityDescription:
         """Create entity description for the binary sensor."""
         entity_data = coordinator.get_entity_data(entity_id)
@@ -77,27 +79,40 @@ class XCCBinarySensor(CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorE
         field_name_lower = entity_id.lower()
 
         # Map common field patterns to device classes
-        if any(pattern in field_name_lower for pattern in ["alarm", "error", "chyba", "porucha"]):
+        if any(
+            pattern in field_name_lower
+            for pattern in ["alarm", "error", "chyba", "porucha"]
+        ):
             return BinarySensorDeviceClass.PROBLEM
-        elif any(pattern in field_name_lower for pattern in ["running", "bezi", "chod", "provoz"]):
+        if any(
+            pattern in field_name_lower
+            for pattern in ["running", "bezi", "chod", "provoz"]
+        ):
             return BinarySensorDeviceClass.RUNNING
-        elif any(pattern in field_name_lower for pattern in ["heat", "teplo", "ohrev"]):
+        if any(pattern in field_name_lower for pattern in ["heat", "teplo", "ohrev"]):
             return BinarySensorDeviceClass.HEAT
-        elif any(pattern in field_name_lower for pattern in ["cool", "chlad"]):
+        if any(pattern in field_name_lower for pattern in ["cool", "chlad"]):
             return BinarySensorDeviceClass.COLD
-        elif any(pattern in field_name_lower for pattern in ["power", "napajeni", "vykon"]):
+        if any(
+            pattern in field_name_lower for pattern in ["power", "napajeni", "vykon"]
+        ):
             return BinarySensorDeviceClass.POWER
-        elif any(pattern in field_name_lower for pattern in ["connect", "pripoj", "online"]):
+        if any(
+            pattern in field_name_lower for pattern in ["connect", "pripoj", "online"]
+        ):
             return BinarySensorDeviceClass.CONNECTIVITY
-        elif any(pattern in field_name_lower for pattern in ["door", "dvere", "cover", "kryt"]):
+        if any(
+            pattern in field_name_lower
+            for pattern in ["door", "dvere", "cover", "kryt"]
+        ):
             return BinarySensorDeviceClass.DOOR
-        elif any(pattern in field_name_lower for pattern in ["window", "okno"]):
+        if any(pattern in field_name_lower for pattern in ["window", "okno"]):
             return BinarySensorDeviceClass.WINDOW
-        elif any(pattern in field_name_lower for pattern in ["motion", "pohyb"]):
+        if any(pattern in field_name_lower for pattern in ["motion", "pohyb"]):
             return BinarySensorDeviceClass.MOTION
-        elif any(pattern in field_name_lower for pattern in ["occupancy", "pritomnost"]):
+        if any(pattern in field_name_lower for pattern in ["occupancy", "pritomnost"]):
             return BinarySensorDeviceClass.OCCUPANCY
-        elif any(pattern in field_name_lower for pattern in ["safety", "bezpecnost"]):
+        if any(pattern in field_name_lower for pattern in ["safety", "bezpecnost"]):
             return BinarySensorDeviceClass.SAFETY
 
         # Default to None (generic binary sensor)
@@ -112,7 +127,7 @@ class XCCBinarySensor(CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorE
     @property
     def device_class(self) -> BinarySensorDeviceClass | None:
         """Return the device class."""
-        if hasattr(self.entity_description, 'device_class'):
+        if hasattr(self.entity_description, "device_class"):
             return self.entity_description.device_class
         return self._get_device_class()
 

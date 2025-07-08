@@ -18,8 +18,8 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,
-    XCC_DESCRIPTOR_PAGES,
     XCC_DATA_PAGES,
+    XCC_DESCRIPTOR_PAGES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,11 +82,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             # Import XCC client here to avoid import issues
             from .xcc_client import XCCClient, parse_xml_entities
-            from .descriptor_parser import XCCDescriptorParser
 
             # Create or reuse persistent client for session management
             if self._client is None:
-                _LOGGER.debug("Creating new XCC client for %s with username %s", self.ip_address, self.username)
+                _LOGGER.debug(
+                    "Creating new XCC client for %s with username %s",
+                    self.ip_address,
+                    self.username,
+                )
 
                 # Use Home Assistant's config directory for cookie storage
                 cookie_file = f"{self.hass.config.config_dir}/.xcc_session_{self.ip_address.replace('.', '_')}.json"
@@ -108,25 +111,38 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 await self._load_descriptors(client)
 
             # Fetch only data pages (not descriptors)
-            _LOGGER.debug("Fetching %d XCC data pages: %s", len(XCC_DATA_PAGES), XCC_DATA_PAGES)
-            _LOGGER.debug("Update triggered by: %s", getattr(self, '_update_source', 'unknown'))
-            pages_data = await asyncio.wait_for(
-                client.fetch_pages(XCC_DATA_PAGES), timeout=DEFAULT_TIMEOUT
+            _LOGGER.debug(
+                "Fetching %d XCC data pages: %s", len(XCC_DATA_PAGES), XCC_DATA_PAGES
             )
-            _LOGGER.debug("Successfully fetched %d pages from XCC controller", len(pages_data))
+            _LOGGER.debug(
+                "Update triggered by: %s", getattr(self, "_update_source", "unknown")
+            )
+            pages_data = await asyncio.wait_for(
+                client.fetch_pages(XCC_DATA_PAGES),
+                timeout=DEFAULT_TIMEOUT,
+            )
+            _LOGGER.debug(
+                "Successfully fetched %d pages from XCC controller", len(pages_data)
+            )
 
             # Parse entities from all pages
             all_entities = []
             for page_name, xml_content in pages_data.items():
-                    if not xml_content.startswith("Error:"):
-                        entities = parse_xml_entities(xml_content, page_name)
-                        _LOGGER.debug("Parsed %d entities from page %s", len(entities), page_name)
-                        all_entities.extend(entities)
-                    else:
-                        _LOGGER.warning("Error fetching page %s: %s", page_name, xml_content)
+                if not xml_content.startswith("Error:"):
+                    entities = parse_xml_entities(xml_content, page_name)
+                    _LOGGER.debug(
+                        "Parsed %d entities from page %s", len(entities), page_name
+                    )
+                    all_entities.extend(entities)
+                else:
+                    _LOGGER.warning(
+                        "Error fetching page %s: %s", page_name, xml_content
+                    )
 
             # Process entities and organize data
-            _LOGGER.debug("Processing %d total entities from all pages", len(all_entities))
+            _LOGGER.debug(
+                "Processing %d total entities from all pages", len(all_entities)
+            )
             processed_data = self._process_entities(all_entities)
 
             # Log summary of processed data
@@ -146,14 +162,22 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             return processed_data
 
-        except asyncio.TimeoutError as err:
-            _LOGGER.error("Timeout communicating with XCC controller %s: %s", self.ip_address, err)
-            raise UpdateFailed(f"Timeout communicating with XCC controller: {err}") from err
+        except TimeoutError as err:
+            _LOGGER.error(
+                "Timeout communicating with XCC controller %s: %s", self.ip_address, err
+            )
+            raise UpdateFailed(
+                f"Timeout communicating with XCC controller: {err}"
+            ) from err
         except Exception as err:
-            _LOGGER.error("Error communicating with XCC controller %s: %s", self.ip_address, err)
+            _LOGGER.error(
+                "Error communicating with XCC controller %s: %s", self.ip_address, err
+            )
             if "authentication" in str(err).lower() or "login" in str(err).lower():
                 raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
-            raise UpdateFailed(f"Error communicating with XCC controller: {err}") from err
+            raise UpdateFailed(
+                f"Error communicating with XCC controller: {err}"
+            ) from err
 
     def _process_entities(self, entities: list[dict[str, Any]]) -> dict[str, Any]:
         """Process raw entities into organized data structure."""
@@ -176,32 +200,47 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Debug logging for entity type detection
             if entity_type != "sensor":
-                _LOGGER.debug("Entity %s: classified as %s (has descriptor)", prop, entity_type)
+                _LOGGER.debug(
+                    "Entity %s: classified as %s (has descriptor)", prop, entity_type
+                )
+            elif prop in self.entity_configs:
+                # Entity has descriptor but classified as sensor - this is normal
+                pass
             else:
-                if prop in self.entity_configs:
-                    # Entity has descriptor but classified as sensor - this is normal
-                    pass
-                else:
-                    # Only log missing descriptors once per entity to avoid spam
-                    if not hasattr(self, '_logged_missing_descriptors'):
-                        self._logged_missing_descriptors = set()
+                # Only log missing descriptors once per entity to avoid spam
+                if not hasattr(self, "_logged_missing_descriptors"):
+                    self._logged_missing_descriptors = set()
 
-                    if prop not in self._logged_missing_descriptors:
-                        _LOGGER.debug("Entity %s: no descriptor found, defaulting to sensor", prop)
-                        self._logged_missing_descriptors.add(prop)
+                if prop not in self._logged_missing_descriptors:
+                    _LOGGER.debug(
+                        "Entity %s: no descriptor found, defaulting to sensor", prop
+                    )
+                    self._logged_missing_descriptors.add(prop)
 
             # Get descriptor information for this entity
             descriptor_config = self.entity_configs.get(prop, {})
 
             # Use descriptor friendly name if available, otherwise fall back to prop
             # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
-            friendly_name = descriptor_config.get("friendly_name_en") or descriptor_config.get("friendly_name") or prop
+            friendly_name = (
+                descriptor_config.get("friendly_name_en")
+                or descriptor_config.get("friendly_name")
+                or prop
+            )
 
             # Debug logging for language preference
-            if descriptor_config.get("friendly_name_en") and descriptor_config.get("friendly_name"):
-                if descriptor_config.get("friendly_name_en") != descriptor_config.get("friendly_name"):
-                    _LOGGER.debug("Entity %s: Using English name '%s' instead of Czech '%s'",
-                                prop, descriptor_config.get("friendly_name_en"), descriptor_config.get("friendly_name"))
+            if descriptor_config.get("friendly_name_en") and descriptor_config.get(
+                "friendly_name"
+            ):
+                if descriptor_config.get("friendly_name_en") != descriptor_config.get(
+                    "friendly_name"
+                ):
+                    _LOGGER.debug(
+                        "Entity %s: Using English name '%s' instead of Czech '%s'",
+                        prop,
+                        descriptor_config.get("friendly_name_en"),
+                        descriptor_config.get("friendly_name"),
+                    )
             unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
 
             # Create entity data structure for new platforms
@@ -246,8 +285,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Log state values for debugging (only for first few entities to avoid spam)
             if len(entities_list) <= 10:
-                _LOGGER.info("📊 COORDINATOR STORING: %s = %s (type: %s, prop: %s)",
-                           entity_id, state_value, entity_type, prop)
+                _LOGGER.info(
+                    "📊 COORDINATOR STORING: %s = %s (type: %s, prop: %s)",
+                    entity_id,
+                    state_value,
+                    entity_type,
+                    prop,
+                )
 
             # Store in processed_data with the correct structure for entity value retrieval
             if entity_type == "switch":
@@ -271,7 +315,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "selects": len(processed_data["selects"]),
             "buttons": len(processed_data["buttons"]),
             "sensors": len(processed_data["sensors"]),
-            "total": len(entities_list)
+            "total": len(entities_list),
         }
         _LOGGER.info("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
         _LOGGER.info("Final entity distribution: %s", entity_counts)
@@ -280,7 +324,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self._print_entity_values(processed_data)
 
         # Log data structure that will be returned
-        _LOGGER.info("Returning processed_data with keys: %s", list(processed_data.keys()))
+        _LOGGER.info(
+            "Returning processed_data with keys: %s", list(processed_data.keys())
+        )
 
         return processed_data
 
@@ -296,7 +342,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "numbers": ("🔢 NUMBERS", ""),
             "selects": ("📋 SELECTS", ""),
             "buttons": ("🔲 BUTTONS", ""),
-            "climates": ("🌡️ CLIMATES", "°C")
+            "climates": ("🌡️ CLIMATES", "°C"),
         }
 
         total_entities = 0
@@ -336,17 +382,29 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Add timestamp to show this is fresh data
                 import time
+
                 timestamp = time.strftime("%H:%M:%S")
-                _LOGGER.info("  %2d. %-25s = %-15s [%s] (%s)", i+1, prop, value_display, timestamp, page)
+                _LOGGER.info(
+                    "  %2d. %-25s = %-15s [%s] (%s)",
+                    i + 1,
+                    prop,
+                    value_display,
+                    timestamp,
+                    page,
+                )
 
             # Show count if there are more entities
             if len(sorted_entities) > 10:
-                _LOGGER.info("  ... and %d more %s", len(sorted_entities) - 10, entity_type)
+                _LOGGER.info(
+                    "  ... and %d more %s", len(sorted_entities) - 10, entity_type
+                )
 
             _LOGGER.info("")  # Empty line for readability
 
         if total_entities == 0:
-            _LOGGER.warning("❌ NO ENTITIES FOUND - This indicates a problem with entity processing!")
+            _LOGGER.warning(
+                "❌ NO ENTITIES FOUND - This indicates a problem with entity processing!"
+            )
         else:
             _LOGGER.info("✅ Total entities processed: %d", total_entities)
 
@@ -368,14 +426,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Determine entity type based on XCC field characteristics
         if data_type == "boolean":
             return "switches" if is_settable else "binary_sensors"
-        elif data_type == "enum":
+        if data_type == "enum":
             return "selects" if is_settable else "sensors"
-        elif data_type == "numeric":
+        if data_type == "numeric":
             return "numbers" if is_settable else "sensors"
-        elif element_type in ["INPUT", "SELECT"]:
+        if element_type in ["INPUT", "SELECT"]:
             return "numbers" if data_type == "numeric" else "selects"
-        else:
-            return "sensors"
+        return "sensors"
 
     def get_entity_data(self, entity_id: str) -> dict[str, Any] | None:
         """Get entity data by ID."""
@@ -422,16 +479,33 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # If still not found, try to derive from entity_id
             if not prop:
                 # Remove common prefixes and convert to uppercase
-                prop = entity_id.replace("number.xcc_", "").replace("switch.xcc_", "").replace("select.xcc_", "")
-                prop = prop.replace("number.", "").replace("switch.", "").replace("select.", "")
+                prop = (
+                    entity_id.replace("number.xcc_", "")
+                    .replace("switch.xcc_", "")
+                    .replace("select.xcc_", "")
+                )
+                prop = (
+                    prop.replace("number.", "")
+                    .replace("switch.", "")
+                    .replace("select.", "")
+                )
                 prop = prop.upper()
-                _LOGGER.info("🔍 Derived property name %s from entity_id %s", prop, entity_id)
+                _LOGGER.info(
+                    "🔍 Derived property name %s from entity_id %s", prop, entity_id
+                )
 
             if not prop:
-                _LOGGER.error("Could not determine property name for entity %s", entity_id)
+                _LOGGER.error(
+                    "Could not determine property name for entity %s", entity_id
+                )
                 return False
 
-            _LOGGER.info("🔧 Setting XCC property %s to value %s for entity %s", prop, value, entity_id)
+            _LOGGER.info(
+                "🔧 Setting XCC property %s to value %s for entity %s",
+                prop,
+                value,
+                entity_id,
+            )
 
             # Use the persistent client if available, otherwise create a temporary one
             if self._client is not None:
@@ -442,28 +516,26 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     # Request immediate data refresh to update state
                     await self.async_request_refresh()
                     return True
-                else:
-                    _LOGGER.error("Failed to set XCC property %s to %s", prop, value)
-                    return False
-            else:
-                from .xcc_client import XCCClient
-                # Use same cookie file for temporary clients
-                cookie_file = f"{self.hass.config.config_dir}/.xcc_session_{self.ip_address.replace('.', '_')}.json"
-                async with XCCClient(
-                    ip=self.ip_address,
-                    username=self.username,
-                    password=self.password,
-                    cookie_file=cookie_file,
-                ) as client:
-                    success = await client.set_value(prop, value)
-                    if success:
-                        _LOGGER.info("Successfully set XCC property %s to %s", prop, value)
-                        # Request immediate data refresh to update state
-                        await self.async_request_refresh()
-                        return True
-                    else:
-                        _LOGGER.error("Failed to set XCC property %s to %s", prop, value)
-                        return False
+                _LOGGER.error("Failed to set XCC property %s to %s", prop, value)
+                return False
+            from .xcc_client import XCCClient
+
+            # Use same cookie file for temporary clients
+            cookie_file = f"{self.hass.config.config_dir}/.xcc_session_{self.ip_address.replace('.', '_')}.json"
+            async with XCCClient(
+                ip=self.ip_address,
+                username=self.username,
+                password=self.password,
+                cookie_file=cookie_file,
+            ) as client:
+                success = await client.set_value(prop, value)
+                if success:
+                    _LOGGER.info("Successfully set XCC property %s to %s", prop, value)
+                    # Request immediate data refresh to update state
+                    await self.async_request_refresh()
+                    return True
+                _LOGGER.error("Failed to set XCC property %s to %s", prop, value)
+                return False
 
         except Exception as err:
             _LOGGER.error("Error setting value for entity %s: %s", entity_id, err)
@@ -480,11 +552,12 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             finally:
                 self._client = None
 
-    async def _load_descriptors(self, client: 'XCCClient') -> None:
+    async def _load_descriptors(self, client: XCCClient) -> None:
         """Load descriptor files to determine entity types."""
         try:
-            from .descriptor_parser import XCCDescriptorParser
             import asyncio
+
+            from .descriptor_parser import XCCDescriptorParser
 
             _LOGGER.debug("Loading XCC descriptor files for entity type detection")
 
@@ -495,7 +568,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     data = await client.fetch_page(page)
                     if data:
                         descriptor_data[page] = data
-                        _LOGGER.debug("Loaded descriptor %s (%d bytes)", page, len(data))
+                        _LOGGER.debug(
+                            "Loaded descriptor %s (%d bytes)", page, len(data)
+                        )
                     else:
                         _LOGGER.warning("Failed to load descriptor %s", page)
 
@@ -508,15 +583,20 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Parse descriptors to determine entity types
             if descriptor_data:
                 self.descriptor_parser = XCCDescriptorParser()
-                self.entity_configs = self.descriptor_parser.parse_descriptor_files(descriptor_data)
+                self.entity_configs = self.descriptor_parser.parse_descriptor_files(
+                    descriptor_data
+                )
 
-                _LOGGER.info("Loaded %d entity configurations from %d descriptor files",
-                           len(self.entity_configs), len(descriptor_data))
+                _LOGGER.info(
+                    "Loaded %d entity configurations from %d descriptor files",
+                    len(self.entity_configs),
+                    len(descriptor_data),
+                )
 
                 # Log summary by entity type
                 by_type = {}
                 for config in self.entity_configs.values():
-                    entity_type = config.get('entity_type', 'unknown')
+                    entity_type = config.get("entity_type", "unknown")
                     by_type[entity_type] = by_type.get(entity_type, 0) + 1
 
                 _LOGGER.info("Entity types: %s", by_type)
@@ -530,22 +610,26 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
     def get_entity_type(self, prop: str) -> str:
         """Get the entity type for a given property with smart matching."""
         if not self.entity_configs:
-            return 'sensor'  # Default to sensor if no descriptors loaded
+            return "sensor"  # Default to sensor if no descriptors loaded
 
         # First try exact match
         config = self.entity_configs.get(prop)
         if config:
-            return config.get('entity_type', 'sensor')
+            return config.get("entity_type", "sensor")
 
         # Try normalized matching (handle different naming conventions)
         normalized_prop = self._normalize_property_name(prop)
         for config_prop, config in self.entity_configs.items():
             if self._normalize_property_name(config_prop) == normalized_prop:
-                _LOGGER.debug("Entity %s matched descriptor %s via normalization", prop, config_prop)
-                return config.get('entity_type', 'sensor')
+                _LOGGER.debug(
+                    "Entity %s matched descriptor %s via normalization",
+                    prop,
+                    config_prop,
+                )
+                return config.get("entity_type", "sensor")
 
         # No match found - default to sensor
-        return 'sensor'
+        return "sensor"
 
     def _normalize_property_name(self, prop: str) -> str:
         """Normalize property names for matching."""
@@ -557,7 +641,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         prefixes_to_remove = ["WEB-", "MAIN-", "CONFIG-"]
         for prefix in prefixes_to_remove:
             if normalized.startswith(prefix):
-                normalized = normalized[len(prefix):]
+                normalized = normalized[len(prefix) :]
 
         return normalized
 
@@ -569,13 +653,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # First try exact match
         config = self.entity_configs.get(prop)
         if config:
-            return config.get('writable', False)
+            return config.get("writable", False)
 
         # Try normalized matching
         normalized_prop = self._normalize_property_name(prop)
         for config_prop, config in self.entity_configs.items():
             if self._normalize_property_name(config_prop) == normalized_prop:
-                return config.get('writable', False)
+                return config.get("writable", False)
 
         return False
 

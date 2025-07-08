@@ -1,17 +1,16 @@
-"""
-XCC Heat Pump Controller Client Library
+"""XCC Heat Pump Controller Client Library
 
 Reusable authentication and data fetching for CLI, pyscript, and HA integration.
 """
 
-import hashlib
-import aiohttp
 import asyncio
+import hashlib
 import json
 import os
-from typing import Dict, List, Optional, Tuple
-from yarl import URL
+
+import aiohttp
 from lxml import etree
+from yarl import URL
 
 try:
     from .descriptor_parser import XCCDescriptorParser
@@ -26,8 +25,13 @@ _auth_locks = {}
 class XCCClient:
     """Client for XCC heat pump controller communication."""
 
-    def __init__(self, ip: str, username: str = "xcc",
-                 password: str = "xcc", cookie_file: Optional[str] = None):
+    def __init__(
+        self,
+        ip: str,
+        username: str = "xcc",
+        password: str = "xcc",
+        cookie_file: str | None = None,
+    ):
         self.ip = ip
         self.username = username
         self.password = password
@@ -45,6 +49,7 @@ class XCCClient:
     async def close(self):
         """Close the session and clean up connections."""
         import logging
+
         _LOGGER = logging.getLogger(__name__)
 
         if self.session and not self.session.closed:
@@ -62,35 +67,37 @@ class XCCClient:
             try:
                 # Use async file operations to avoid blocking
                 import aiofiles
-                async with aiofiles.open(self.cookie_file, "r") as f:
+
+                async with aiofiles.open(self.cookie_file) as f:
                     content = await f.read()
                     saved = json.loads(content)
                     session_cookie = saved.get("SoftPLC")
                     if session_cookie:
                         cookie_jar.update_cookies(
                             {"SoftPLC": session_cookie},
-                            response_url=URL(f"http://{self.ip}/")
+                            response_url=URL(f"http://{self.ip}/"),
                         )
             except Exception:
                 pass  # Continue with fresh login
 
         # Create session with strict connection limits for XCC controllers
         connector = aiohttp.TCPConnector(
-            limit=1,           # Total connection pool limit
+            limit=1,  # Total connection pool limit
             limit_per_host=1,  # Per-host connection limit
-            ttl_dns_cache=300, # DNS cache TTL
+            ttl_dns_cache=300,  # DNS cache TTL
             use_dns_cache=True,
             keepalive_timeout=30,
-            enable_cleanup_closed=True
+            enable_cleanup_closed=True,
         )
         self.session = aiohttp.ClientSession(
             connector=connector,
             cookie_jar=cookie_jar,
-            timeout=aiohttp.ClientTimeout(total=30)
+            timeout=aiohttp.ClientTimeout(total=30),
         )
 
         # Test if existing session works, otherwise authenticate
         import logging
+
         _LOGGER = logging.getLogger(__name__)
 
         _LOGGER.debug("Checking if existing session is valid")
@@ -113,6 +120,7 @@ class XCCClient:
     async def _test_session(self) -> bool:
         """Test if current session is valid."""
         import logging
+
         _LOGGER = logging.getLogger(__name__)
 
         try:
@@ -121,9 +129,16 @@ class XCCClient:
             async with self.session.get(f"http://{self.ip}/INDEX.XML") as resp:
                 raw = await resp.read()
                 text = raw.decode(resp.get_encoding() or "utf-8")
-                is_valid = resp.status == 200 and "<LOGIN>" not in text and "500" not in text
-                _LOGGER.debug("Session test result: status=%d, contains_login=%s, contains_500=%s, valid=%s",
-                             resp.status, "<LOGIN>" in text, "500" in text, is_valid)
+                is_valid = (
+                    resp.status == 200 and "<LOGIN>" not in text and "500" not in text
+                )
+                _LOGGER.debug(
+                    "Session test result: status=%d, contains_login=%s, contains_500=%s, valid=%s",
+                    resp.status,
+                    "<LOGIN>" in text,
+                    "500" in text,
+                    is_valid,
+                )
                 if not is_valid:
                     _LOGGER.debug("Session test content: %s", text[:200])
                 return is_valid
@@ -133,11 +148,14 @@ class XCCClient:
 
     async def _authenticate(self):
         """Perform authentication and save session with retry logic."""
-        import logging
         import asyncio
+        import logging
+
         _LOGGER = logging.getLogger(__name__)
 
-        _LOGGER.debug("Starting authentication for %s with username %s", self.ip, self.username)
+        _LOGGER.debug(
+            "Starting authentication for %s with username %s", self.ip, self.username
+        )
 
         # Retry logic for connection limit errors
         max_retries = 3
@@ -151,14 +169,20 @@ class XCCClient:
                         error_text = await resp.text()
                         if "maximum number of connection" in error_text.lower():
                             if attempt < max_retries - 1:
-                                _LOGGER.warning("XCC connection limit reached, retrying in %d seconds (attempt %d/%d)",
-                                              retry_delay, attempt + 1, max_retries)
+                                _LOGGER.warning(
+                                    "XCC connection limit reached, retrying in %d seconds (attempt %d/%d)",
+                                    retry_delay,
+                                    attempt + 1,
+                                    max_retries,
+                                )
                                 await asyncio.sleep(retry_delay)
                                 retry_delay *= 2  # Exponential backoff
                                 continue
-                            else:
-                                _LOGGER.error("XCC connection limit reached after %d attempts", max_retries)
-                                raise Exception("XCC controller connection limit reached")
+                            _LOGGER.error(
+                                "XCC connection limit reached after %d attempts",
+                                max_retries,
+                            )
+                            raise Exception("XCC controller connection limit reached")
 
                     if resp.status != 200:
                         _LOGGER.error("Failed to get LOGIN.XML: status %d", resp.status)
@@ -168,12 +192,15 @@ class XCCClient:
 
             except Exception as e:
                 if attempt < max_retries - 1:
-                    _LOGGER.warning("Authentication attempt %d failed: %s, retrying...", attempt + 1, e)
+                    _LOGGER.warning(
+                        "Authentication attempt %d failed: %s, retrying...",
+                        attempt + 1,
+                        e,
+                    )
                     await asyncio.sleep(retry_delay)
                     retry_delay *= 2
                     continue
-                else:
-                    raise
+                raise
 
         # Extract session ID from cookie
         session_id = None
@@ -185,7 +212,10 @@ class XCCClient:
                 break
 
         if not session_id:
-            _LOGGER.error("No SoftPLC cookie found in %d cookies", len(list(self.session.cookie_jar)))
+            _LOGGER.error(
+                "No SoftPLC cookie found in %d cookies",
+                len(list(self.session.cookie_jar)),
+            )
             raise Exception("No SoftPLC cookie found")
 
         _LOGGER.debug("Found session ID: %s", session_id)
@@ -194,17 +224,30 @@ class XCCClient:
         passhash = hashlib.sha1(f"{session_id}{self.password}".encode()).hexdigest()
         login_data = {"USER": self.username, "PASS": passhash}
 
-        _LOGGER.debug("Attempting login with username=%s, passhash=%s", self.username, passhash[:10] + "...")
+        _LOGGER.debug(
+            "Attempting login with username=%s, passhash=%s",
+            self.username,
+            passhash[:10] + "...",
+        )
 
-        async with self.session.post(f"http://{self.ip}/RPC/WEBSES/create.asp",
-                                   data=login_data) as resp:
+        async with self.session.post(
+            f"http://{self.ip}/RPC/WEBSES/create.asp", data=login_data
+        ) as resp:
             response_text = await resp.text()
-            _LOGGER.debug("Login response: status=%d, content=%s", resp.status, response_text[:200])
+            _LOGGER.debug(
+                "Login response: status=%d, content=%s",
+                resp.status,
+                response_text[:200],
+            )
 
             # Check both status and content like the working script
             if resp.status != 200 or "<LOGIN>" in response_text:
-                _LOGGER.error("Authentication failed: status=%d, contains_login=%s, content=%s",
-                             resp.status, "<LOGIN>" in response_text, response_text[:200])
+                _LOGGER.error(
+                    "Authentication failed: status=%d, contains_login=%s, content=%s",
+                    resp.status,
+                    "<LOGIN>" in response_text,
+                    response_text[:200],
+                )
                 raise Exception("Authentication failed")
 
             _LOGGER.info("Authentication successful for %s", self.ip)
@@ -226,6 +269,7 @@ class XCCClient:
 
             # Use async file operations to avoid blocking
             import aiofiles
+
             async with aiofiles.open(self.cookie_file, "w") as f:
                 await f.write(json.dumps(session_data))
         except Exception:
@@ -233,8 +277,9 @@ class XCCClient:
 
     async def fetch_page(self, page: str) -> str:
         """Fetch XML page content with proper encoding detection."""
-        import re
         import logging
+        import re
+
         _LOGGER = logging.getLogger(__name__)
 
         async with self.session.get(f"http://{self.ip}/{page}") as resp:
@@ -246,7 +291,9 @@ class XCCClient:
 
             # Extract declared encoding from XML header
             encoding = "utf-8"  # default
-            match = re.search(br'<\?xml[^>]+encoding=["\']([^"\']+)["\']', raw_bytes[:200])
+            match = re.search(
+                rb'<\?xml[^>]+encoding=["\']([^"\']+)["\']', raw_bytes[:200]
+            )
             if match:
                 encoding = match.group(1).decode("ascii", errors="replace").lower()
 
@@ -255,20 +302,22 @@ class XCCClient:
             try:
                 content = raw_bytes.decode(encoding, errors="replace")
                 # Basic sanitization like the working script
-                content = (content
-                          .replace('\u00A0', ' ')
-                          .replace('\u202F', ' ')
-                          .replace('\u200B', '')
-                          .replace('\uFEFF', ''))
+                content = (
+                    content.replace("\u00a0", " ")
+                    .replace("\u202f", " ")
+                    .replace("\u200b", "")
+                    .replace("\ufeff", "")
+                )
                 return content
             except Exception as e:
                 _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
                 return raw_bytes.decode("utf-8", errors="replace")
 
-    async def fetch_pages(self, pages: List[str]) -> Dict[str, str]:
+    async def fetch_pages(self, pages: list[str]) -> dict[str, str]:
         """Fetch multiple pages with delays to avoid overwhelming XCC controller."""
         import asyncio
         import logging
+
         _LOGGER = logging.getLogger(__name__)
 
         results = {}
@@ -279,15 +328,18 @@ class XCCClient:
                     await asyncio.sleep(0.2)  # 200ms delay between requests
 
                 results[page] = await self.fetch_page(page)
-                _LOGGER.debug("Successfully fetched page %s (%d/%d)", page, i+1, len(pages))
+                _LOGGER.debug(
+                    "Successfully fetched page %s (%d/%d)", page, i + 1, len(pages)
+                )
             except Exception as e:
                 _LOGGER.warning("Error fetching page %s: %s", page, e)
                 results[page] = f"Error: {e}"
         return results
 
-    def _extract_name_mapping_from_xml(self, xml_content: str) -> Dict[str, str]:
+    def _extract_name_mapping_from_xml(self, xml_content: str) -> dict[str, str]:
         """Extract the mapping of property names to internal NAME attributes from XML."""
         import re
+
         name_mapping = {}
 
         # Find all INPUT elements with P and NAME attributes
@@ -303,6 +355,7 @@ class XCCClient:
     async def set_value(self, prop: str, value: str) -> bool:
         """Set a value on the XCC controller."""
         import logging
+
         _LOGGER = logging.getLogger(__name__)
 
         try:
@@ -313,29 +366,43 @@ class XCCClient:
             page_to_fetch = None
 
             # Determine which page this property might be on based on common patterns
-            if any(tuv_word in prop.upper() for tuv_word in ['TUV', 'DHW']):
-                page_to_fetch = 'TUV11.XML'
-            elif any(fve_word in prop.upper() for fve_word in ['FVE', 'SOLAR', 'PV']):
-                page_to_fetch = 'FVE4.XML'
-            elif any(okruh_word in prop.upper() for okruh_word in ['OKRUH', 'CIRCUIT']):
-                page_to_fetch = 'OKRUH10.XML'
-            elif any(biv_word in prop.upper() for biv_word in ['BIV', 'BIVALENCE']):
-                page_to_fetch = 'BIV1.XML'
+            if any(tuv_word in prop.upper() for tuv_word in ["TUV", "DHW"]):
+                page_to_fetch = "TUV11.XML"
+            elif any(fve_word in prop.upper() for fve_word in ["FVE", "SOLAR", "PV"]):
+                page_to_fetch = "FVE4.XML"
+            elif any(okruh_word in prop.upper() for okruh_word in ["OKRUH", "CIRCUIT"]):
+                page_to_fetch = "OKRUH10.XML"
+            elif any(biv_word in prop.upper() for biv_word in ["BIV", "BIVALENCE"]):
+                page_to_fetch = "BIV1.XML"
             else:
-                page_to_fetch = 'STAVJED1.XML'  # Default page
+                page_to_fetch = "STAVJED1.XML"  # Default page
 
             # Try to fetch the page and extract NAME mapping
             try:
-                _LOGGER.info("🔍 Fetching %s to find internal NAME for property %s", page_to_fetch, prop)
+                _LOGGER.info(
+                    "🔍 Fetching %s to find internal NAME for property %s",
+                    page_to_fetch,
+                    prop,
+                )
                 page_content = await self.fetch_page(page_to_fetch)
                 name_mapping = self._extract_name_mapping_from_xml(page_content)
                 internal_name = name_mapping.get(prop)
                 if internal_name:
-                    _LOGGER.info("✅ Found internal NAME: %s for property %s", internal_name, prop)
+                    _LOGGER.info(
+                        "✅ Found internal NAME: %s for property %s",
+                        internal_name,
+                        prop,
+                    )
                 else:
-                    _LOGGER.warning("⚠️ Could not find internal NAME for property %s in %s", prop, page_to_fetch)
+                    _LOGGER.warning(
+                        "⚠️ Could not find internal NAME for property %s in %s",
+                        prop,
+                        page_to_fetch,
+                    )
             except Exception as fetch_err:
-                _LOGGER.warning("⚠️ Could not fetch page %s: %s", page_to_fetch, fetch_err)
+                _LOGGER.warning(
+                    "⚠️ Could not fetch page %s: %s", page_to_fetch, fetch_err
+                )
 
             # XCC devices use different API patterns depending on the model and firmware
             # Let's try multiple approaches in order of likelihood
@@ -344,55 +411,64 @@ class XCCClient:
 
             # If we have the internal NAME, try using it first
             if internal_name:
-                endpoints_to_try.extend([
-                    # Method 1: Using internal NAME via POST with proper headers (confirmed working)
+                endpoints_to_try.extend(
+                    [
+                        # Method 1: Using internal NAME via POST with proper headers (confirmed working)
+                        {
+                            "method": "POST",
+                            "url": f"http://{self.ip}/{page_to_fetch}",
+                            "data": {internal_name: value},
+                            "headers": {
+                                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                                "X-Requested-With": "XMLHttpRequest",
+                                "Accept": "application/xml, text/xml, */*; q=0.01",
+                                "Referer": f"http://{self.ip}/{page_to_fetch.lower().replace('.xml', '1.xml')}?tab=1",
+                            },
+                            "description": f"Internal NAME POST to {page_to_fetch} (confirmed format)",
+                        },
+                        # Method 2: Using internal NAME via GET
+                        {
+                            "method": "GET",
+                            "url": f"http://{self.ip}/{page_to_fetch}?{internal_name}={value}",
+                            "description": f"Internal NAME GET to {page_to_fetch}",
+                        },
+                    ]
+                )
+
+            # Add fallback methods using property name
+            endpoints_to_try.extend(
+                [
+                    # Method 3: Direct property setting via GET
+                    {
+                        "method": "GET",
+                        "url": f"http://{self.ip}/{page_to_fetch}?{prop}={value}",
+                        "description": "Property name GET",
+                    },
+                    # Method 4: Property setting via POST to property page
                     {
                         "method": "POST",
                         "url": f"http://{self.ip}/{page_to_fetch}",
-                        "data": {internal_name: value},
-                        "headers": {
-                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                            "X-Requested-With": "XMLHttpRequest",
-                            "Accept": "application/xml, text/xml, */*; q=0.01",
-                            "Referer": f"http://{self.ip}/{page_to_fetch.lower().replace('.xml', '1.xml')}?tab=1"
-                        },
-                        "description": f"Internal NAME POST to {page_to_fetch} (confirmed format)"
+                        "data": {prop: value},
+                        "description": "Property name POST",
                     },
-                    # Method 2: Using internal NAME via GET
+                    # Method 5: Generic RPC endpoint
                     {
-                        "method": "GET",
-                        "url": f"http://{self.ip}/{page_to_fetch}?{internal_name}={value}",
-                        "description": f"Internal NAME GET to {page_to_fetch}"
-                    }
-                ])
-
-            # Add fallback methods using property name
-            endpoints_to_try.extend([
-                # Method 3: Direct property setting via GET
-                {
-                    "method": "GET",
-                    "url": f"http://{self.ip}/{page_to_fetch}?{prop}={value}",
-                    "description": "Property name GET"
-                },
-                # Method 4: Property setting via POST to property page
-                {
-                    "method": "POST",
-                    "url": f"http://{self.ip}/{page_to_fetch}",
-                    "data": {prop: value},
-                    "description": "Property name POST"
-                },
-                # Method 5: Generic RPC endpoint
-                {
-                    "method": "POST",
-                    "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
-                    "data": {prop: value},
-                    "description": "Generic RPC POST"
-                }
-            ])
+                        "method": "POST",
+                        "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
+                        "data": {prop: value},
+                        "description": "Generic RPC POST",
+                    },
+                ]
+            )
 
             for i, endpoint in enumerate(endpoints_to_try, 1):
                 try:
-                    _LOGGER.info("🔄 Attempt %d/%d: %s", i, len(endpoints_to_try), endpoint["description"])
+                    _LOGGER.info(
+                        "🔄 Attempt %d/%d: %s",
+                        i,
+                        len(endpoints_to_try),
+                        endpoint["description"],
+                    )
 
                     if endpoint["method"] == "GET":
                         async with self.session.get(endpoint["url"]) as resp:
@@ -400,7 +476,11 @@ class XCCClient:
                             _LOGGER.info("📡 GET response: status=%d", resp.status)
 
                             if resp.status == 200:
-                                _LOGGER.info("✅ Successfully set XCC property %s to %s via GET", prop, value)
+                                _LOGGER.info(
+                                    "✅ Successfully set XCC property %s to %s via GET",
+                                    prop,
+                                    value,
+                                )
                                 return True
                     else:
                         # Use custom headers if provided
@@ -408,24 +488,35 @@ class XCCClient:
                         async with self.session.post(
                             endpoint["url"],
                             data=endpoint.get("data", {}),
-                            headers=headers
+                            headers=headers,
                         ) as resp:
                             response_text = await resp.text()
                             _LOGGER.info("📡 POST response: status=%d", resp.status)
 
-                            if resp.status == 200 and "ERROR" not in response_text.upper():
-                                _LOGGER.info("✅ Successfully set XCC property %s to %s via POST", prop, value)
+                            if (
+                                resp.status == 200
+                                and "ERROR" not in response_text.upper()
+                            ):
+                                _LOGGER.info(
+                                    "✅ Successfully set XCC property %s to %s via POST",
+                                    prop,
+                                    value,
+                                )
                                 return True
 
                 except Exception as endpoint_err:
                     _LOGGER.warning("⚠️ Endpoint %d failed: %s", i, endpoint_err)
                     continue
 
-            _LOGGER.error("❌ All endpoints failed for setting XCC property %s to %s", prop, value)
+            _LOGGER.error(
+                "❌ All endpoints failed for setting XCC property %s to %s", prop, value
+            )
             return False
 
         except Exception as err:
-            _LOGGER.error("❌ Error setting XCC property %s to %s: %s", prop, value, err)
+            _LOGGER.error(
+                "❌ Error setting XCC property %s to %s: %s", prop, value, err
+            )
             return False
 
     async def close(self):
@@ -434,19 +525,23 @@ class XCCClient:
             await self.session.close()
 
 
-def parse_xml_entities(xml_content: str, page_name: str,
-                      entity_prefix: str = "xcc") -> List[Dict]:
+def parse_xml_entities(
+    xml_content: str, page_name: str, entity_prefix: str = "xcc"
+) -> list[dict]:
     """Parse XML content into entity data."""
     import logging
+
     _LOGGER = logging.getLogger(__name__)
 
     entities = []
 
-    _LOGGER.debug("Parsing XML for page %s, content length: %d bytes", page_name, len(xml_content))
+    _LOGGER.debug(
+        "Parsing XML for page %s, content length: %d bytes", page_name, len(xml_content)
+    )
 
     try:
         # Try different encodings for XCC XML files
-        encodings = ['utf-8', 'windows-1250', 'iso-8859-1']
+        encodings = ["utf-8", "windows-1250", "iso-8859-1"]
         root = None
         used_encoding = None
 
@@ -470,7 +565,9 @@ def parse_xml_entities(xml_content: str, page_name: str,
                 used_encoding = "direct"
                 _LOGGER.debug("Successfully parsed XML directly (no encoding)")
             except Exception as e:
-                _LOGGER.warning("All XML parsing attempts failed for %s: %s", page_name, e)
+                _LOGGER.warning(
+                    "All XML parsing attempts failed for %s: %s", page_name, e
+                )
                 return entities
     except Exception as e:
         _LOGGER.error("Unexpected error parsing XML for %s: %s", page_name, e)
@@ -481,7 +578,9 @@ def parse_xml_entities(xml_content: str, page_name: str,
 
     # Format 1: XCC Values format (STAVJED1.XML style) - <INPUT P="name" VALUE="value"/>
     input_elements = root.xpath(".//INPUT[@P and @VALUE]")
-    _LOGGER.debug("Found %d INPUT elements with P and VALUE attributes", len(input_elements))
+    _LOGGER.debug(
+        "Found %d INPUT elements with P and VALUE attributes", len(input_elements)
+    )
 
     if input_elements:
         _LOGGER.debug("Processing INPUT elements for %s", page_name)
@@ -494,7 +593,7 @@ def parse_xml_entities(xml_content: str, page_name: str,
 
             # Only log first 3 elements once per function call to avoid spam (they're always the same)
             # Use a global variable since this is a standalone function
-            if not hasattr(parse_xml_entities, '_logged_input_elements'):
+            if not hasattr(parse_xml_entities, "_logged_input_elements"):
                 parse_xml_entities._logged_input_elements = False
 
             if i < 3 and not parse_xml_entities._logged_input_elements:
@@ -518,29 +617,47 @@ def parse_xml_entities(xml_content: str, page_name: str,
             attributes = {
                 "source_page": page_name,
                 "field_name": prop,
-                "friendly_name": prop.replace("-", " ").replace("_", " ").title()
+                "friendly_name": prop.replace("-", " ").replace("_", " ").title(),
             }
 
             # Parse NAME attribute for more info
             name_attr = elem.get("NAME", "")
             if "_REAL_" in name_attr:
                 # Only assign temperature device class if it's actually a temperature sensor
-                if any(temp_indicator in prop.upper() for temp_indicator in ["TEMP", "TEPLOTA", "SVENKU", "SVNITR"]):
+                if any(
+                    temp_indicator in prop.upper()
+                    for temp_indicator in ["TEMP", "TEPLOTA", "SVENKU", "SVNITR"]
+                ):
                     attributes["device_class"] = "temperature"
                     attributes["unit_of_measurement"] = "°C"
-                elif any(power_indicator in prop.upper() for power_indicator in ["POWER", "VYKON", "WATT"]):
+                elif any(
+                    power_indicator in prop.upper()
+                    for power_indicator in ["POWER", "VYKON", "WATT"]
+                ):
                     attributes["device_class"] = "power"
                     attributes["unit_of_measurement"] = "W"
-                elif any(energy_indicator in prop.upper() for energy_indicator in ["ENERGY", "ENERGIE", "KWH"]):
+                elif any(
+                    energy_indicator in prop.upper()
+                    for energy_indicator in ["ENERGY", "ENERGIE", "KWH"]
+                ):
                     attributes["device_class"] = "energy"
                     attributes["unit_of_measurement"] = "kWh"
-                elif any(current_indicator in prop.upper() for current_indicator in ["CURRENT", "PROUD", "AMP"]):
+                elif any(
+                    current_indicator in prop.upper()
+                    for current_indicator in ["CURRENT", "PROUD", "AMP"]
+                ):
                     attributes["device_class"] = "current"
                     attributes["unit_of_measurement"] = "A"
-                elif any(voltage_indicator in prop.upper() for voltage_indicator in ["VOLTAGE", "NAPETI", "VOLT"]):
+                elif any(
+                    voltage_indicator in prop.upper()
+                    for voltage_indicator in ["VOLTAGE", "NAPETI", "VOLT"]
+                ):
                     attributes["device_class"] = "voltage"
                     attributes["unit_of_measurement"] = "V"
-                elif any(price_indicator in prop.upper() for price_indicator in ["PRICE", "CENA", "COST"]):
+                elif any(
+                    price_indicator in prop.upper()
+                    for price_indicator in ["PRICE", "CENA", "COST"]
+                ):
                     attributes["device_class"] = "monetary"
                     attributes["unit_of_measurement"] = "CZK"
                 # Don't assign device class for other REAL values
@@ -553,21 +670,29 @@ def parse_xml_entities(xml_content: str, page_name: str,
                 except:
                     pass
 
-            entities.append({
-                "entity_id": entity_id,
-                "entity_type": entity_type,
-                "state": value,
-                "attributes": attributes
-            })
+            entities.append(
+                {
+                    "entity_id": entity_id,
+                    "entity_type": entity_type,
+                    "state": value,
+                    "attributes": attributes,
+                }
+            )
             processed_count += 1
 
-        _LOGGER.debug("INPUT processing complete: %d processed, %d skipped, %d total entities",
-                     processed_count, skipped_count, len(entities))
+        _LOGGER.debug(
+            "INPUT processing complete: %d processed, %d skipped, %d total entities",
+            processed_count,
+            skipped_count,
+            len(entities),
+        )
         return entities
 
     # Format 2: XCC Structure format with values (prop attributes with text)
     prop_elements = root.xpath(".//*[@prop and text()]")
-    _LOGGER.debug("Found %d elements with prop attributes and text content", len(prop_elements))
+    _LOGGER.debug(
+        "Found %d elements with prop attributes and text content", len(prop_elements)
+    )
 
     if prop_elements:
         _LOGGER.debug("Processing prop elements for %s", page_name)
@@ -588,7 +713,7 @@ def parse_xml_entities(xml_content: str, page_name: str,
         attributes = {
             "source_page": page_name,
             "field_name": prop,
-            "friendly_name": prop.replace("-", " ").title()
+            "friendly_name": prop.replace("-", " ").title(),
         }
 
         # Add type-specific attributes
@@ -608,16 +733,22 @@ def parse_xml_entities(xml_content: str, page_name: str,
             entity_type = "binary_sensor"
             value = value == "1"
 
-        entities.append({
-            "entity_id": entity_id,
-            "entity_type": entity_type,
-            "state": value,
-            "attributes": attributes
-        })
+        entities.append(
+            {
+                "entity_id": entity_id,
+                "entity_type": entity_type,
+                "state": value,
+                "attributes": attributes,
+            }
+        )
 
-    _LOGGER.debug("XML parsing complete for %s: %d total entities found", page_name, len(entities))
+    _LOGGER.debug(
+        "XML parsing complete for %s: %d total entities found", page_name, len(entities)
+    )
     if len(entities) == 0:
-        _LOGGER.warning("No entities found in %s - this may indicate an XML format issue", page_name)
+        _LOGGER.warning(
+            "No entities found in %s - this may indicate an XML format issue", page_name
+        )
         # Log a sample of the XML content for debugging
         sample_content = xml_content[:500] if len(xml_content) > 500 else xml_content
         _LOGGER.debug("Sample XML content for %s: %s", page_name, sample_content)
@@ -625,7 +756,7 @@ def parse_xml_entities(xml_content: str, page_name: str,
     return entities
 
 
-def _get_device_class(unit: str) -> Optional[str]:
+def _get_device_class(unit: str) -> str | None:
     """Map units to device classes."""
     unit_map = {
         "°C": "temperature",
@@ -634,19 +765,35 @@ def _get_device_class(unit: str) -> Optional[str]:
         "V": "voltage",
         "A": "current",
         "%": "battery" if "batt" in unit.lower() else None,
-        "bar": "pressure"
+        "bar": "pressure",
     }
     return unit_map.get(unit)
 
 
-async def fetch_all_data_with_descriptors(client: 'XCCClient') -> Tuple[Dict[str, str], Dict[str, str]]:
+async def fetch_all_data_with_descriptors(
+    client: "XCCClient",
+) -> tuple[dict[str, str], dict[str, str]]:
     """Fetch all XCC data pages and their corresponding descriptor files."""
     import asyncio
 
     # Data pages (with values)
-    data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+    data_pages = [
+        "STAVJED1.XML",
+        "OKRUH10.XML",
+        "TUV11.XML",
+        "BIV1.XML",
+        "FVE4.XML",
+        "SPOT1.XML",
+    ]
     # Descriptor pages (with UI definitions)
-    descriptor_pages = ["STAVJED.XML", "OKRUH.XML", "TUV1.XML", "BIV.XML", "FVE.XML", "SPOT.XML"]
+    descriptor_pages = [
+        "STAVJED.XML",
+        "OKRUH.XML",
+        "TUV1.XML",
+        "BIV.XML",
+        "FVE.XML",
+        "SPOT.XML",
+    ]
 
     all_data = {}
     all_descriptors = {}
@@ -688,14 +835,23 @@ async def fetch_all_data_with_descriptors(client: 'XCCClient') -> Tuple[Dict[str
 
 # Standard page sets for different use cases
 STANDARD_PAGES = [
-    "stavjed.xml", "STAVJED1.XML",  # Status
-    "okruh.xml", "OKRUH10.XML",     # Heating circuits
-    "tuv1.xml", "TUV11.XML",        # Hot water
-    "biv.xml", "BIV1.XML",          # Bivalent heating
-    "fve.xml", "FVE4.XML",          # Photovoltaics
-    "spot.xml", "SPOT1.XML",        # Spot pricing
+    "stavjed.xml",
+    "STAVJED1.XML",  # Status
+    "okruh.xml",
+    "OKRUH10.XML",  # Heating circuits
+    "tuv1.xml",
+    "TUV11.XML",  # Hot water
+    "biv.xml",
+    "BIV1.XML",  # Bivalent heating
+    "fve.xml",
+    "FVE4.XML",  # Photovoltaics
+    "spot.xml",
+    "SPOT1.XML",  # Spot pricing
 ]
 
 MINIMAL_PAGES = [
-    "stavjed.xml", "okruh.xml", "tuv1.xml", "fve.xml"
+    "stavjed.xml",
+    "okruh.xml",
+    "tuv1.xml",
+    "fve.xml",
 ]

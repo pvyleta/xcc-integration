@@ -8,25 +8,20 @@ from typing import Any
 
 import aiohttp
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers import selector
 
 from .const import (
-    CONF_SCAN_INTERVAL,
     CONF_ENTITY_TYPE,
+    CONF_SCAN_INTERVAL,
     DEFAULT_PASSWORD,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DEFAULT_USERNAME,
     DOMAIN,
     ENTITY_TYPE_INTEGRATION,
-
-    DEFAULT_ENTITY_TYPE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,11 +32,12 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_USERNAME, default=DEFAULT_USERNAME): str,
         vol.Optional(CONF_PASSWORD, default=DEFAULT_PASSWORD): str,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-            vol.Coerce(int), vol.Range(min=10, max=3600)
+            vol.Coerce(int),
+            vol.Range(min=10, max=3600),
         ),
         # Entity type is now fixed to integration entities only
         # vol.Optional(CONF_ENTITY_TYPE, default=DEFAULT_ENTITY_TYPE): removed MQTT option
-    }
+    },
 )
 
 
@@ -69,9 +65,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         ) as client:
             # Try to fetch a basic page to validate connection
             await asyncio.wait_for(
-                client.fetch_page("stavjed.xml"), timeout=DEFAULT_TIMEOUT
+                client.fetch_page("stavjed.xml"),
+                timeout=DEFAULT_TIMEOUT,
             )
-    except asyncio.TimeoutError as err:
+    except TimeoutError as err:
         raise CannotConnect("Connection timeout") from err
     except aiohttp.ClientError as err:
         raise CannotConnect("Connection failed") from err
@@ -95,7 +92,8 @@ class XCCConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
@@ -121,7 +119,9 @@ class XCCConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(title=info["title"], data=config_data)
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=STEP_USER_DATA_SCHEMA,
+            errors=errors,
         )
 
 

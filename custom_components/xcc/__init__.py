@@ -10,12 +10,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
-    DOMAIN,
-    PLATFORMS,
     CONF_ENTITY_TYPE,
-
+    DEFAULT_ENTITY_TYPE,
+    DOMAIN,
     ENTITY_TYPE_INTEGRATION,
-    DEFAULT_ENTITY_TYPE
+    PLATFORMS,
 )
 from .coordinator import XCCDataUpdateCoordinator
 
@@ -35,7 +34,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up XCC Heat Pump Controller from a config entry."""
     # Log integration version for debugging
     from .const import VERSION
-    _LOGGER.info("Setting up XCC integration v%s for %s", VERSION, entry.data.get("ip_address"))
+
+    _LOGGER.info(
+        "Setting up XCC integration v%s for %s", VERSION, entry.data.get("ip_address")
+    )
     _LOGGER.debug("Setting up XCC integration for %s", entry.data.get("ip_address"))
 
     # Create data update coordinator
@@ -76,7 +78,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Unload integration platforms
     _LOGGER.debug("Unloading integration entities")
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS_TO_SETUP)
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry, PLATFORMS_TO_SETUP
+    )
 
     # Clean up coordinator resources
     try:
@@ -89,9 +93,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
-
-
-
-
-
-
