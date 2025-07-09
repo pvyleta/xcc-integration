@@ -159,14 +159,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             self._xcc_data = self._entity_data["data"]
             self._attributes = self._xcc_data.get("attributes", {})
 
-            # Log coordinator update for debugging (occasionally to avoid spam)
-            import random
 
-            if random.random() < 0.05:  # Log ~5% of updates
-                current_value = self._get_current_value()
-                _LOGGER.debug(
-                    "🔄 COORDINATOR UPDATE: %s = %s", self.entity_id, current_value
-                )
         else:
             _LOGGER.warning(
                 "No entity data found for %s during coordinator update",

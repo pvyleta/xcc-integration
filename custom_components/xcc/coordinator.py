@@ -198,16 +198,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             prop = entity["attributes"]["field_name"]
             entity_type = self.get_entity_type(prop)
 
-            # Debug logging for entity type detection
-            if entity_type != "sensor":
-                _LOGGER.debug(
-                    "Entity %s: classified as %s (has descriptor)", prop, entity_type
-                )
-            elif prop in self.entity_configs:
-                # Entity has descriptor but classified as sensor - this is normal
-                pass
-            else:
-                # Only log missing descriptors once per entity to avoid spam
+            # Only log missing descriptors once per entity to avoid spam
+            if entity_type == "sensor" and prop not in self.entity_configs:
                 if not hasattr(self, "_logged_missing_descriptors"):
                     self._logged_missing_descriptors = set()
 
@@ -228,19 +220,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 or prop
             )
 
-            # Debug logging for language preference
-            if descriptor_config.get("friendly_name_en") and descriptor_config.get(
-                "friendly_name"
-            ):
-                if descriptor_config.get("friendly_name_en") != descriptor_config.get(
-                    "friendly_name"
-                ):
-                    _LOGGER.debug(
-                        "Entity %s: Using English name '%s' instead of Czech '%s'",
-                        prop,
-                        descriptor_config.get("friendly_name_en"),
-                        descriptor_config.get("friendly_name"),
-                    )
+
             unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
 
             # Create entity data structure for new platforms
@@ -621,11 +601,6 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         normalized_prop = self._normalize_property_name(prop)
         for config_prop, config in self.entity_configs.items():
             if self._normalize_property_name(config_prop) == normalized_prop:
-                _LOGGER.debug(
-                    "Entity %s matched descriptor %s via normalization",
-                    prop,
-                    config_prop,
-                )
                 return config.get("entity_type", "sensor")
 
         # No match found - default to sensor
