@@ -342,13 +342,20 @@ class XCCClient:
 
         name_mapping = {}
 
-        # Find all INPUT elements with P and NAME attributes
-        # Pattern: <INPUT P="PROP_NAME" NAME="INTERNAL_NAME" VALUE="..."/>
-        pattern = r'<INPUT\s+P="([^"]+)"\s+NAME="([^"]+)"\s+VALUE="[^"]*"'
-        matches = re.findall(pattern, xml_content)
+        # Find all INPUT elements with P and NAME attributes (flexible attribute order)
+        # Use more flexible regex that handles any attribute order
+        input_pattern = r'<INPUT\s+([^>]+)>'
+        input_matches = re.findall(input_pattern, xml_content)
 
-        for prop, internal_name in matches:
-            name_mapping[prop] = internal_name
+        for attributes in input_matches:
+            # Extract P and NAME attributes from the attribute string
+            p_match = re.search(r'P="([^"]+)"', attributes)
+            name_match = re.search(r'NAME="([^"]+)"', attributes)
+
+            if p_match and name_match:
+                prop = p_match.group(1)
+                internal_name = name_match.group(1)
+                name_mapping[prop] = internal_name
 
         return name_mapping
 
@@ -366,16 +373,26 @@ class XCCClient:
             page_to_fetch = None
 
             # Determine which page this property might be on based on common patterns
-            if any(tuv_word in prop.upper() for tuv_word in ["TUV", "DHW"]):
+            prop_upper = prop.upper()
+            _LOGGER.debug("🔍 Analyzing property %s for page selection", prop)
+
+            # Check for TUV/DHW related properties (including Czech terms)
+            tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]  # Added Czech DHW-related terms
+            if any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
-            elif any(fve_word in prop.upper() for fve_word in ["FVE", "SOLAR", "PV"]):
+                _LOGGER.debug("🎯 Property contains TUV/DHW keywords, using TUV11.XML")
+            elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
                 page_to_fetch = "FVE4.XML"
-            elif any(okruh_word in prop.upper() for okruh_word in ["OKRUH", "CIRCUIT"]):
+                _LOGGER.debug("🎯 Property contains FVE/SOLAR/PV keywords, using FVE4.XML")
+            elif any(okruh_word in prop_upper for okruh_word in ["OKRUH", "CIRCUIT"]):
                 page_to_fetch = "OKRUH10.XML"
-            elif any(biv_word in prop.upper() for biv_word in ["BIV", "BIVALENCE"]):
+                _LOGGER.debug("🎯 Property contains OKRUH/CIRCUIT keywords, using OKRUH10.XML")
+            elif any(biv_word in prop_upper for biv_word in ["BIV", "BIVALENCE"]):
                 page_to_fetch = "BIV1.XML"
+                _LOGGER.debug("🎯 Property contains BIV/BIVALENCE keywords, using BIV1.XML")
             else:
                 page_to_fetch = "STAVJED1.XML"  # Default page
+                _LOGGER.debug("🎯 Property doesn't match known patterns, using default STAVJED1.XML")
 
             # Try to fetch the page and extract NAME mapping
             try:
@@ -540,35 +557,19 @@ def parse_xml_entities(
     )
 
     try:
-        # Try different encodings for XCC XML files
-        encodings = ["utf-8", "windows-1250", "iso-8859-1"]
-        root = None
-        used_encoding = None
+        # xml_content is already a properly decoded string from fetch_page()
+        # Remove XML declaration if present to avoid encoding issues with etree.fromstring()
+        import re
+        xml_clean = re.sub(r'<\?xml[^>]*\?>', '', xml_content).strip()
 
-        for encoding in encodings:
-            try:
-                root = etree.fromstring(xml_content.encode(encoding))
-                used_encoding = encoding
-                _LOGGER.debug("Successfully parsed XML with %s encoding", encoding)
-                break
-            except (UnicodeEncodeError, UnicodeDecodeError) as e:
-                _LOGGER.debug("Encoding %s failed: %s", encoding, e)
-                continue
-            except Exception as e:
-                _LOGGER.debug("XML parsing with %s failed: %s", encoding, e)
-                continue
-
-        if root is None:
-            # If encoding fails, try parsing as-is (already a string)
-            try:
-                root = etree.fromstring(xml_content)
-                used_encoding = "direct"
-                _LOGGER.debug("Successfully parsed XML directly (no encoding)")
-            except Exception as e:
-                _LOGGER.warning(
-                    "All XML parsing attempts failed for %s: %s", page_name, e
-                )
-                return entities
+        try:
+            root = etree.fromstring(xml_clean)
+            _LOGGER.debug("Successfully parsed XML content for %s", page_name)
+        except Exception as e:
+            _LOGGER.warning(
+                "Failed to parse XML for %s: %s", page_name, e
+            )
+            return entities
     except Exception as e:
         _LOGGER.error("Unexpected error parsing XML for %s: %s", page_name, e)
         return entities
