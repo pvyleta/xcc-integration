@@ -77,10 +77,27 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
                 "friendly_name", entity_data.get("name", self._prop)
             )
 
-        # Set number properties from descriptor
-        self._attr_native_min_value = self._entity_config.get("min", 0)
-        self._attr_native_max_value = self._entity_config.get("max", 100)
+        # Set number properties from descriptor with safe defaults
+        # Handle None values from descriptor parser when XML doesn't specify min/max
+        # Use Python's float limits for unlimited ranges
+        import sys
+
+        min_val = self._entity_config.get("min")
+        max_val = self._entity_config.get("max")
+
+        # Use full float range when limits are not specified
+        self._attr_native_min_value = min_val if min_val is not None else -sys.float_info.max
+        self._attr_native_max_value = max_val if max_val is not None else sys.float_info.max
         self._attr_native_step = self._entity_config.get("step", 1.0)
+
+        # Log when using unlimited range for debugging
+        if min_val is None or max_val is None:
+            _LOGGER.debug(
+                "Number entity %s using unlimited range: min=%s->%s, max=%s->%s",
+                self.entity_id,
+                min_val, "unlimited" if min_val is None else min_val,
+                max_val, "unlimited" if max_val is None else max_val
+            )
 
         # Set unit of measurement
         unit = self._entity_config.get("unit_en") or self._entity_config.get("unit", "")
