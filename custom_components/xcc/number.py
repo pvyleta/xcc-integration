@@ -170,28 +170,43 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set new value."""
         try:
+            # Validate input value
+            if value is None:
+                _LOGGER.error("❌ Cannot set number %s: value is None", self.name)
+                return
+
             # Convert float to string for XCC
             str_value = str(value)
 
             _LOGGER.info(
                 "🔢 Setting number %s (%s) to %s", self.name, self._prop, str_value
             )
+            _LOGGER.debug("Entity data for %s: %s", self.name, self._entity_data)
+
+            # Validate entity data
+            if not self._entity_data:
+                _LOGGER.error("❌ Cannot set number %s: no entity data available", self.name)
+                return
+
+            entity_id = self._entity_data.get("entity_id")
+            if not entity_id:
+                _LOGGER.error("❌ Cannot set number %s: no entity_id in entity data", self.name)
+                return
 
             # Use coordinator's set_entity_value method
-            success = await self.coordinator.async_set_entity_value(
-                self._entity_data["entity_id"],
-                str_value,
-            )
+            _LOGGER.debug("Calling coordinator.async_set_entity_value with entity_id=%s, value=%s", entity_id, str_value)
+            success = await self.coordinator.async_set_entity_value(entity_id, str_value)
 
             if success:
-                _LOGGER.info("Successfully set number %s to %s", self.name, value)
-                # Request immediate data refresh to update state
-                await self.coordinator.async_request_refresh()
+                _LOGGER.info("✅ Successfully set number %s to %s", self.name, value)
+                # Note: coordinator already requests refresh, no need to do it again here
             else:
-                _LOGGER.error("Failed to set number %s to %s", self.name, value)
+                _LOGGER.error("❌ Failed to set number %s to %s", self.name, value)
 
         except Exception as err:
-            _LOGGER.error("Error setting number %s: %s", self.name, err)
+            _LOGGER.error("❌ Exception setting number %s to %s: %s", self.name, value, err)
+            import traceback
+            _LOGGER.debug("Full traceback: %s", traceback.format_exc())
 
     @property
     def available(self) -> bool:
