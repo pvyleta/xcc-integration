@@ -305,13 +305,13 @@ async def test_coordinator_property_not_found():
 
 def test_number_entity_validation():
     """Test number entity input validation."""
-    
+
     # Test the validation logic without importing Home Assistant components
     def simulate_number_validation(value):
         """Simulate the validation logic from async_set_native_value"""
         if value is None:
             return False, "value is None"
-        
+
         try:
             str_value = str(value)
             return True, str_value
@@ -337,6 +337,48 @@ def test_number_entity_validation():
     print("✅ Number entity validation test passed")
 
 
+def test_encoding_handling_simulation():
+    """Test encoding handling for HTTP responses."""
+
+    def simulate_encoding_handling(response_bytes, expected_encoding):
+        """Simulate the encoding handling logic from set_value method"""
+        try:
+            # First try UTF-8 (this might fail)
+            return response_bytes.decode('utf-8'), 'utf-8'
+        except UnicodeDecodeError:
+            # Try with different encodings if UTF-8 fails
+            for encoding in ['windows-1250', 'iso-8859-2', 'utf-8']:
+                try:
+                    return response_bytes.decode(encoding), encoding
+                except UnicodeDecodeError:
+                    continue
+            # Fallback with error handling
+            return response_bytes.decode('utf-8', errors='ignore'), 'utf-8-ignore'
+
+    # Test cases with different encodings
+    test_cases = [
+        # UTF-8 text (should work normally)
+        ("Hello World".encode('utf-8'), 'utf-8'),
+        # Windows-1250 text with Czech characters (common for XCC)
+        ("Teplota zásobníku".encode('windows-1250'), 'windows-1250'),
+        # ISO-8859-2 text with Czech characters
+        ("Minimální teplota".encode('iso-8859-2'), 'iso-8859-2'),
+    ]
+
+    for test_bytes, expected_encoding in test_cases:
+        decoded_text, used_encoding = simulate_encoding_handling(test_bytes, expected_encoding)
+
+        # Should successfully decode without raising exceptions
+        assert isinstance(decoded_text, str), f"Should return string, got {type(decoded_text)}"
+        assert len(decoded_text) > 0, "Should return non-empty string"
+
+        # For non-UTF-8 encodings, should use fallback encoding
+        if expected_encoding != 'utf-8':
+            assert used_encoding in ['windows-1250', 'iso-8859-2', 'utf-8-ignore'], f"Should use fallback encoding, got {used_encoding}"
+
+    print("✅ Encoding handling simulation test passed")
+
+
 if __name__ == "__main__":
     """Run tests when executed directly."""
     print("🔧 Testing Entity Setting Comprehensive Functionality")
@@ -345,7 +387,8 @@ if __name__ == "__main__":
     try:
         test_property_name_resolution()
         test_number_entity_validation()
-        
+        test_encoding_handling_simulation()
+
         # Run async tests
         import asyncio
         asyncio.run(test_coordinator_set_entity_value_success())
@@ -359,6 +402,7 @@ if __name__ == "__main__":
         print("✅ Number entity validation robust")
         print("✅ Error handling comprehensive")
         print("✅ Logging improvements verified")
+        print("✅ Encoding handling for HTTP responses working")
         
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")

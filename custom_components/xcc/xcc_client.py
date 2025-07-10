@@ -489,7 +489,21 @@ class XCCClient:
 
                     if endpoint["method"] == "GET":
                         async with self.session.get(endpoint["url"]) as resp:
-                            response_text = await resp.text()
+                            # Handle encoding issues like we do for XML parsing
+                            try:
+                                response_text = await resp.text()
+                            except UnicodeDecodeError:
+                                # Try with different encodings if UTF-8 fails
+                                response_bytes = await resp.read()
+                                for encoding in ['windows-1250', 'iso-8859-2', 'utf-8']:
+                                    try:
+                                        response_text = response_bytes.decode(encoding)
+                                        break
+                                    except UnicodeDecodeError:
+                                        continue
+                                else:
+                                    response_text = response_bytes.decode('utf-8', errors='ignore')
+
                             _LOGGER.info("📡 GET response: status=%d", resp.status)
 
                             if resp.status == 200:
@@ -507,7 +521,21 @@ class XCCClient:
                             data=endpoint.get("data", {}),
                             headers=headers,
                         ) as resp:
-                            response_text = await resp.text()
+                            # Handle encoding issues like we do for XML parsing
+                            try:
+                                response_text = await resp.text()
+                            except UnicodeDecodeError:
+                                # Try with different encodings if UTF-8 fails
+                                response_bytes = await resp.read()
+                                for encoding in ['windows-1250', 'iso-8859-2', 'utf-8']:
+                                    try:
+                                        response_text = response_bytes.decode(encoding)
+                                        break
+                                    except UnicodeDecodeError:
+                                        continue
+                                else:
+                                    response_text = response_bytes.decode('utf-8', errors='ignore')
+
                             _LOGGER.info("📡 POST response: status=%d", resp.status)
 
                             if (
