@@ -206,8 +206,9 @@ def test_state_class_fix_for_string_sensors():
     assert "STRING" in sensor_content, "Should check for STRING type indicators"
     assert "REAL" in sensor_content, "Should check for REAL type indicators"
 
-    # Check for conditional state class assignment
-    assert "if is_clearly_string:" in sensor_content, "Should conditionally assign state class based on type"
+    # Check for conditional state class assignment (updated to include boolean detection)
+    assert "if is_clearly_string or is_clearly_boolean:" in sensor_content, "Should conditionally assign state class based on type"
+    assert "is_clearly_boolean" in sensor_content, "Should have boolean type detection"
 
     # Check that string values get no state class
     assert "state_class = None" in sensor_content, "Should set state_class to None for strings"

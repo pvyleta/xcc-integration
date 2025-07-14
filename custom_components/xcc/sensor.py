@@ -344,13 +344,31 @@ class XCCSensor(XCCEntity, SensorEntity):
                 ]  # Known string fields
             )
 
-            # Look for clear indicators of numeric types
+            # Look for clear indicators of boolean types (should not have state class)
+            is_clearly_boolean = (
+                "BOOL" in xml_name.upper()
+                or "_BOOL_" in xml_name.upper()
+                or prop in [
+                    "SZAPNUTO",  # Known boolean system status
+                    "ENABLED",
+                    "ACTIVE",
+                    "STATUS",
+                ]  # Known boolean fields
+                or (
+                    # Check if current value is clearly boolean (0/1 only)
+                    entity_data.get("state", "") in ["0", "1", 0, 1]
+                    and xml_name.endswith("_i")  # Integer type but likely boolean
+                    and len(str(entity_data.get("state", ""))) == 1  # Single digit
+                )
+            )
+
+            # Look for clear indicators of numeric types (should have state class)
             is_clearly_numeric = (
                 "REAL" in xml_name.upper()
                 or "INT" in xml_name.upper()
                 or "FLOAT" in xml_name.upper()
                 or "_f" in xml_name  # Float suffix
-                or "_i" in xml_name  # Integer suffix
+                or ("_i" in xml_name and not is_clearly_boolean)  # Integer suffix but not boolean
                 or ".1f" in xml_name  # Float format
                 or prop
                 in [
@@ -362,20 +380,33 @@ class XCCSensor(XCCEntity, SensorEntity):
                 ]  # Known numeric fields
             )
 
-            if is_clearly_string:
-                # Definitely a string sensor - no state class
+            if is_clearly_string or is_clearly_boolean:
+                # Definitely a string or boolean sensor - no state class
                 state_class = None
+                if is_clearly_boolean:
+                    _LOGGER.debug(
+                        "Entity %s identified as boolean, no state class assigned", prop
+                    )
             elif is_clearly_numeric or device_class is not None:
                 # Likely numeric or has device class - default to measurement
                 state_class = SensorStateClass.MEASUREMENT
             else:
-                # Unknown type - check current value as fallback
+                # Unknown type - check current value as fallback, but be more careful
                 current_value = entity_data.get("state", "")
                 if current_value is not None:
                     try:
-                        float(str(current_value))
-                        # Current value is numeric - probably should have state class
-                        state_class = SensorStateClass.MEASUREMENT
+                        numeric_value = float(str(current_value))
+                        # Check if this looks like a boolean disguised as numeric
+                        if str(current_value) in ["0", "1", "0.0", "1.0"] and xml_name.endswith("_i"):
+                            # Likely a boolean value - no state class
+                            state_class = None
+                            _LOGGER.debug(
+                                "Entity %s appears to be boolean (value=%s), no state class assigned",
+                                prop, current_value
+                            )
+                        else:
+                            # Current value is numeric and not boolean - probably should have state class
+                            state_class = SensorStateClass.MEASUREMENT
                     except (ValueError, TypeError):
                         # Current value is not numeric - no state class
                         state_class = None
@@ -400,6 +431,27 @@ class XCCSensor(XCCEntity, SensorEntity):
         else:
             entity_name = entity_data.get(
                 "friendly_name", entity_data.get("name", prop)
+            )
+
+        # Log state class assignment for debugging
+        _LOGGER.debug(
+            "Created sensor description for %s: device_class=%s, state_class=%s, unit=%s, xml_name=%s, current_value=%s",
+            prop,
+            device_class,
+            state_class,
+            ha_unit,
+            xml_name,
+            entity_data.get("state", "N/A"),
+        )
+
+        # Special logging for entities that might cause state class issues
+        if prop in ["SZAPNUTO"] or "BOOL" in xml_name.upper():
+            _LOGGER.info(
+                "🔍 Boolean entity %s: state_class=%s, xml_name=%s, value=%s",
+                prop,
+                state_class,
+                xml_name,
+                entity_data.get("state", "N/A"),
             )
 
         return SensorEntityDescription(
