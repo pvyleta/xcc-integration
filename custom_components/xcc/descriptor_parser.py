@@ -107,7 +107,10 @@ class XCCDescriptorParser:
 
         # Get friendly names from row
         text = row.get("text", "")
-        text_en = row.get("text_en", text)
+        text_en = row.get("text_en", "")  # Don't default to text here
+
+        # Prefer English text, fall back to Czech if English is empty
+        friendly_name_en = text_en or text or prop
 
         # Get unit from element (try both unit and unit_en)
         unit = element.get("unit_en") or element.get("unit", "")
@@ -122,8 +125,8 @@ class XCCDescriptorParser:
         # Create sensor configuration
         sensor_config = {
             "prop": prop,
-            "friendly_name": text_en or text or prop,
-            "friendly_name_en": text_en or text or prop,
+            "friendly_name": friendly_name_en,
+            "friendly_name_en": friendly_name_en,
             "unit": unit,
             "device_class": device_class,
             "page": page_name,
@@ -280,21 +283,34 @@ class XCCDescriptorParser:
 
         # Get friendly names
         text = element.get("text", "")
-        text_en = element.get("text_en", text)
+        text_en = element.get("text_en", "")  # Don't default to text here
 
         # Get parent row for additional context
         parent_row = self._find_parent_row(element)
+        row_text = ""
+        row_text_en = ""
         if parent_row is not None:
             row_text = parent_row.get("text", "")
-            row_text_en = parent_row.get("text_en", row_text)
-            if row_text and text:
-                friendly_name = (
-                    f"{row_text_en} - {text_en}" if text_en else f"{row_text} - {text}"
-                )
+            row_text_en = parent_row.get("text_en", "")
+
+        # Determine the best English friendly name
+        # Priority: element's text_en > parent row's text_en > element's text > parent row's text > prop
+        friendly_name_en = text_en or row_text_en or text or row_text or prop
+
+        # For display, prefer English names but fall back to Czech if needed
+        if row_text and text:
+            # Both row and element have text - combine them
+            if row_text_en and text_en:
+                friendly_name = f"{row_text_en} - {text_en}"
+            elif row_text_en and text:
+                friendly_name = f"{row_text_en} - {text}"
+            elif row_text and text_en:
+                friendly_name = f"{row_text} - {text_en}"
             else:
-                friendly_name = text_en or text or row_text_en or row_text or prop
+                friendly_name = f"{row_text} - {text}"
         else:
-            friendly_name = text_en or text or prop
+            # Use the best available name
+            friendly_name = friendly_name_en
 
         # Determine entity type and configuration
         # Check if element is writable (not readonly)
@@ -303,7 +319,7 @@ class XCCDescriptorParser:
         entity_config = {
             "prop": prop,
             "friendly_name": friendly_name,
-            "friendly_name_en": text_en or friendly_name,
+            "friendly_name_en": friendly_name_en,
             "page": page_name,
             "writable": is_writable,
         }
