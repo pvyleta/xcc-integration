@@ -289,25 +289,37 @@ class XCCDescriptorParser:
         parent_row = self._find_parent_row(element)
         row_text = ""
         row_text_en = ""
+        label_text = ""
+        label_text_en = ""
+
         if parent_row is not None:
             row_text = parent_row.get("text", "")
             row_text_en = parent_row.get("text_en", "")
 
+            # Look for corresponding label in the row that provides text context
+            # For TO-FVEPRETOPENI-POVOLENI, this will be Row 7 which has the labels
+            label_text, label_text_en = self._find_label_for_element(element, parent_row)
+
+
+
         # Determine the best English friendly name
-        # Priority: element's text_en > parent row's text_en > element's text > parent row's text > prop
-        friendly_name_en = text_en or row_text_en or text or row_text or prop
+        # Priority: element's text_en > label's text_en > parent row's text_en > element's text > label's text > parent row's text > prop
+        friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or prop
 
         # For display, prefer English names but fall back to Czech if needed
-        if row_text and text:
-            # Both row and element have text - combine them
-            if row_text_en and text_en:
-                friendly_name = f"{row_text_en} - {text_en}"
-            elif row_text_en and text:
-                friendly_name = f"{row_text_en} - {text}"
-            elif row_text and text_en:
-                friendly_name = f"{row_text} - {text_en}"
+        # Handle different combinations of row, label, and element text
+        if row_text and (text or label_text):
+            # Row has text and element/label has text - combine them
+            element_part = text_en or label_text_en or text or label_text
+            row_part = row_text_en or row_text
+
+            if element_part:
+                friendly_name = f"{row_part} - {element_part}"
             else:
-                friendly_name = f"{row_text} - {text}"
+                friendly_name = row_part
+        elif label_text:
+            # No row text but label has text
+            friendly_name = label_text_en or label_text
         else:
             # Use the best available name
             friendly_name = friendly_name_en
@@ -435,11 +447,120 @@ class XCCDescriptorParser:
             return None
 
         # Find the element in the tree and get its parent row
+        immediate_parent = None
+        for row in self._current_root.iter("row"):
+            for child in row.iter():
+                if child is element:
+                    immediate_parent = row
+                    break
+            if immediate_parent is not None:
+                break
+
+        # If the immediate parent has no text, look for the previous row with text
+        if immediate_parent is not None:
+            row_text = immediate_parent.get("text", "")
+            row_text_en = immediate_parent.get("text_en", "")
+
+            if not row_text and not row_text_en:
+                # Look for the previous row with text in the same block
+                for block in self._current_root.iter("block"):
+                    rows = list(block.iter("row"))
+                    for i, row in enumerate(rows):
+                        if row is immediate_parent and i > 0:
+                            # Check previous rows for text
+                            for j in range(i - 1, -1, -1):
+                                prev_row = rows[j]
+                                prev_text = prev_row.get("text", "")
+                                prev_text_en = prev_row.get("text_en", "")
+                                if prev_text or prev_text_en:
+                                    return prev_row
+                            break
+
+        return immediate_parent
+
+    def _find_immediate_parent_row(self, element: ET.Element) -> ET.Element | None:
+        """Find the immediate parent row element (without looking for text context)."""
+        if not hasattr(self, "_current_root"):
+            return None
+
+        # Find the element in the tree and get its immediate parent row
         for row in self._current_root.iter("row"):
             for child in row.iter():
                 if child is element:
                     return row
         return None
+
+    def _find_label_for_element(self, element: ET.Element, context_row: ET.Element) -> tuple[str, str]:
+        """Find the corresponding label for an element.
+
+        The element might be in a different row than the labels, so we need to find
+        the corresponding label by matching positions across rows in the same block.
+
+        Returns tuple of (label_text, label_text_en).
+        """
+        if context_row is None:
+            return "", ""
+
+        # Find the block containing both the context row and the element
+        element_block = None
+        context_block = None
+
+        if hasattr(self, "_current_root"):
+            for block in self._current_root.iter("block"):
+                # Check if this block contains the context row
+                for row in block.iter("row"):
+                    if row is context_row:
+                        context_block = block
+                        break
+
+                # Check if this block contains the element
+                for elem in block.iter():
+                    if elem is element:
+                        element_block = block
+                        break
+
+        # If they're not in the same block, can't match labels
+        if element_block != context_block or element_block is None:
+            return "", ""
+
+        # Get all labels in the context row (but skip status/dynamic labels)
+        labels = []
+        for label in context_row.iter("label"):
+            label_text = label.get("text", "")
+            label_text_en = label.get("text_en", "")
+
+            # Skip labels that look like status messages or dynamic content
+            if not any(skip_word in label_text.lower() for skip_word in ["probíhá", "nastavování", "writing", "settings"]):
+                labels.append(label)
+
+        # Get all input elements in the entire block (across all rows)
+        input_elements = []
+        for row in element_block.iter("row"):
+            for child in row.iter():
+                if child.tag in ["number", "switch", "select", "button"] and child.get("prop"):
+                    input_elements.append(child)
+
+        # Find the index of our element
+        element_index = -1
+        for i, input_elem in enumerate(input_elements):
+            if input_elem is element:
+                element_index = i
+                break
+
+
+
+        # If we found the element, calculate the corresponding label index
+        # Labels might not correspond 1:1 with input elements - they might be for the last N elements
+        if element_index >= 0 and len(labels) > 0:
+            # Calculate the offset - labels are for the last N input elements
+            label_offset = len(input_elements) - len(labels)
+            label_index = element_index - label_offset
+
+            if label_index >= 0 and label_index < len(labels):
+                label = labels[label_index]
+                return label.get("text", ""), label.get("text_en", "")
+
+        return "", ""
 
     def _get_float_attr(
         self, element: ET.Element, attr: str, default: float | None = None,
