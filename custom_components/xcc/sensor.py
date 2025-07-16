@@ -317,13 +317,14 @@ class XCCSensor(XCCEntity, SensorEntity):
         # Determine state class based on device class and data type hints
         state_class = None
 
+        # Get XML name for type analysis (used in multiple places)
+        xml_name = entity_data.get("attributes", {}).get("name", "") or "unknown"
+
         # First, check if we have a device class mapping
         if device_class in STATE_CLASS_MAPPING:
             state_class = STATE_CLASS_MAPPING[device_class]
         else:
             # Use data type hints from XML to determine if this should be numeric
-            # Check the 'name' attribute which often contains type information
-            xml_name = entity_data.get("attributes", {}).get("name", "")
 
             # Check descriptor information for data type
             descriptor_data_type = entity_config.get("data_type", "")
@@ -433,24 +434,37 @@ class XCCSensor(XCCEntity, SensorEntity):
                 "friendly_name", entity_data.get("name", prop)
             )
 
-        # Log state class assignment for debugging
-        _LOGGER.debug(
-            "Created sensor description for %s: device_class=%s, state_class=%s, unit=%s, xml_name=%s, current_value=%s",
-            prop,
+        # Log comprehensive entity creation details
+        # Ensure xml_name is always defined for logging
+        safe_xml_name = locals().get('xml_name', 'undefined')
+
+        _LOGGER.info(
+            "🏗️ SENSOR ENTITY CREATION: %s",
+            prop
+        )
+        _LOGGER.info(
+            "   📝 Friendly Name: '%s'",
+            entity_name
+        )
+        _LOGGER.info(
+            "   🌍 Device Class: %s | State Class: %s | Unit: %s",
             device_class,
             state_class,
-            ha_unit,
-            xml_name,
-            entity_data.get("state", "N/A"),
+            ha_unit
+        )
+        _LOGGER.info(
+            "   🔧 XML Name: %s | Current Value: %s",
+            safe_xml_name,
+            entity_data.get("state", "N/A")
         )
 
         # Special logging for entities that might cause state class issues
-        if prop in ["SZAPNUTO"] or "BOOL" in xml_name.upper():
+        if prop in ["SZAPNUTO"] or (safe_xml_name != 'undefined' and "BOOL" in safe_xml_name.upper()):
             _LOGGER.info(
                 "🔍 Boolean entity %s: state_class=%s, xml_name=%s, value=%s",
                 prop,
                 state_class,
-                xml_name,
+                safe_xml_name,
                 entity_data.get("state", "N/A"),
             )
 

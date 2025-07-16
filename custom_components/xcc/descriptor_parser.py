@@ -134,6 +134,12 @@ class XCCDescriptorParser:
             "entity_type": "sensor",
         }
 
+        # Log sensor extraction for debugging
+        _LOGGER.debug(
+            "🔍 SENSOR EXTRACTION: %s -> friendly_name='%s', device_class=%s, unit='%s'",
+            prop, friendly_name_en, device_class, unit
+        )
+
         _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
         return sensor_config
 
@@ -335,6 +341,12 @@ class XCCDescriptorParser:
             "page": page_name,
             "writable": is_writable,
         }
+
+        # Log friendly name extraction for debugging
+        _LOGGER.debug(
+            "🔍 DESCRIPTOR PARSING: %s -> friendly_name='%s', friendly_name_en='%s'",
+            prop, friendly_name, friendly_name_en
+        )
 
         if element.tag == "switch":
             # Readonly switches become sensors

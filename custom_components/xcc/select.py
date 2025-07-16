@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.select import SelectEntity
+from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -64,29 +64,23 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
         self.entity_id = f"select.{entity_data['entity_id']}"
 
         # Set friendly name from descriptor or fallback to entity data
-        friendly_name = self._entity_config.get(
-            "friendly_name_en"
-        ) or self._entity_config.get("friendly_name")
+        friendly_name = self._entity_config.get('friendly_name_en') or self._entity_config.get('friendly_name')
         if friendly_name:
             self._attr_name = friendly_name
         else:
-            self._attr_name = entity_data.get(
-                "friendly_name", entity_data.get("name", self._prop)
-            )
+            self._attr_name = entity_data.get("friendly_name", entity_data.get("name", self._prop))
 
         # Set options from descriptor
-        options = self._entity_config.get("options", [])
+        options = self._entity_config.get('options', [])
         if options:
             # Use English text if available, otherwise use regular text
             self._attr_options = [
-                opt.get("text_en", opt.get("text", opt.get("value", "")))
+                opt.get('text_en', opt.get('text', opt.get('value', '')))
                 for opt in options
             ]
             # Create mapping from display text to values
             self._option_to_value = {
-                opt.get("text_en", opt.get("text", opt.get("value", ""))): opt.get(
-                    "value", ""
-                )
+                opt.get('text_en', opt.get('text', opt.get('value', ''))): opt.get('value', '')
                 for opt in options
             }
             self._value_to_option = {v: k for k, v in self._option_to_value.items()}
@@ -112,11 +106,12 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
             state = entity_data.get("state", "")
             # Convert XCC value to display option
             return self._value_to_option.get(state, state)
-        # Fallback: try the entities list (for backward compatibility)
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == entity_id:
-                state = entity.get("state", "")
-                return self._value_to_option.get(state, state)
+        else:
+            # Fallback: try the entities list (for backward compatibility)
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    state = entity.get("state", "")
+                    return self._value_to_option.get(state, state)
 
         _LOGGER.warning("No data found for select entity %s in coordinator", entity_id)
         return None
@@ -127,18 +122,12 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
             # Convert display option to XCC value
             value = self._option_to_value.get(option, option)
 
-            _LOGGER.info(
-                "📋 Setting select %s (%s) to %s (value: %s)",
-                self.name,
-                self._prop,
-                option,
-                value,
-            )
+            _LOGGER.info("📋 Setting select %s (%s) to %s (value: %s)", self.name, self._prop, option, value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(
                 self._entity_data["entity_id"],
-                value,
+                value
             )
 
             if success:

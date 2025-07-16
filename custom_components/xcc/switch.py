@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -37,7 +37,9 @@ async def async_setup_entry(
         if entity_type == "switch" and coordinator.is_writable(prop):
             switch = XCCSwitch(coordinator, entity_data)
             switches.append(switch)
-            _LOGGER.debug("Created switch entity: %s (%s)", switch.name, prop)
+            _LOGGER.info("🏗️ SWITCH ENTITY CREATION: %s", prop)
+            _LOGGER.info("   📝 Friendly Name: '%s'", switch.name)
+            _LOGGER.info("   🔧 Entity ID: %s", switch.entity_id)
 
     if switches:
         async_add_entities(switches)
@@ -61,20 +63,16 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
 
         # Generate entity ID and unique ID
         # Normalize entity_id to avoid duplicates (replace hyphens with underscores)
-        normalized_entity_id = entity_data["entity_id"].replace("-", "_")
+        normalized_entity_id = entity_data['entity_id'].replace('-', '_')
         self._attr_unique_id = f"{coordinator.ip_address}_{normalized_entity_id}"
         self.entity_id = f"switch.{normalized_entity_id}"
 
         # Set friendly name from descriptor or fallback to entity data
-        friendly_name = self._entity_config.get(
-            "friendly_name_en"
-        ) or self._entity_config.get("friendly_name")
+        friendly_name = self._entity_config.get('friendly_name_en') or self._entity_config.get('friendly_name')
         if friendly_name:
             self._attr_name = friendly_name
         else:
-            self._attr_name = entity_data.get(
-                "friendly_name", entity_data.get("name", self._prop)
-            )
+            self._attr_name = entity_data.get("friendly_name", entity_data.get("name", self._prop))
 
         # Device info
         self._attr_device_info = coordinator.device_info
@@ -108,38 +106,25 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
             # Log value updates occasionally to verify regular updates
             if result is not None:
                 import random
-
                 if random.random() < 0.05:  # Log ~5% of value retrievals
                     import time
-
                     timestamp = time.strftime("%H:%M:%S")
                     status_icon = "🟢 ON" if result else "🔴 OFF"
-                    _LOGGER.info(
-                        "📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator switches data)",
-                        timestamp,
-                        self.entity_id,
-                        status_icon,
-                    )
+                    _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator switches data)",
+                               timestamp, self.entity_id, status_icon)
 
             return result
-        # Fallback: try the entities list (for backward compatibility)
-        for entity in self.coordinator.data.get("entities", []):
-            if entity.get("entity_id") == entity_id:
-                state = entity.get("state", "").lower()
-                try:
-                    result = (
-                        int(float(state)) != 0
-                        if state not in ["true", "false"]
-                        else state == "true"
-                    )
-                    _LOGGER.debug(
-                        "📊 FALLBACK: Found switch value %s = %s in entities list",
-                        entity_id,
-                        result,
-                    )
-                    return result
-                except (ValueError, TypeError):
-                    return None
+        else:
+            # Fallback: try the entities list (for backward compatibility)
+            for entity in self.coordinator.data.get("entities", []):
+                if entity.get("entity_id") == entity_id:
+                    state = entity.get("state", "").lower()
+                    try:
+                        result = int(float(state)) != 0 if state not in ["true", "false"] else state == "true"
+                        _LOGGER.debug("📊 FALLBACK: Found switch value %s = %s in entities list", entity_id, result)
+                        return result
+                    except (ValueError, TypeError):
+                        return None
 
         _LOGGER.warning("No data found for switch entity %s in coordinator", entity_id)
         return None
@@ -158,28 +143,20 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
             # Convert boolean to appropriate value for XCC
             value = "1" if state else "0"
 
-            _LOGGER.info(
-                "🔘 Setting switch %s (%s) to %s", self.name, self._prop, value
-            )
+            _LOGGER.info("🔘 Setting switch %s (%s) to %s", self.name, self._prop, value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(
                 self._entity_data["entity_id"],
-                value,
+                value
             )
 
             if success:
-                _LOGGER.info(
-                    "Successfully set switch %s to %s",
-                    self.name,
-                    "ON" if state else "OFF",
-                )
+                _LOGGER.info("Successfully set switch %s to %s", self.name, "ON" if state else "OFF")
                 # Request immediate data refresh to update state
                 await self.coordinator.async_request_refresh()
             else:
-                _LOGGER.error(
-                    "Failed to set switch %s to %s", self.name, "ON" if state else "OFF"
-                )
+                _LOGGER.error("Failed to set switch %s to %s", self.name, "ON" if state else "OFF")
 
         except Exception as err:
             _LOGGER.error("Error setting switch %s: %s", self.name, err)

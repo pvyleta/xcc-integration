@@ -98,12 +98,67 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
     def _get_entity_name(self) -> str:
         """Get the entity name - always prefer English strings."""
         # Always prefer English friendly name first
-        name = self._attributes.get("friendly_name_en", "")
-        if not name:
-            # Fall back to Czech name if English not available
-            name = self._attributes.get("friendly_name", "")
+        friendly_name_en = self._attributes.get("friendly_name_en", "")
+        friendly_name_cz = self._attributes.get("friendly_name", "")
 
-        return name or self.entity_id_suffix
+        # Debug logging for entity name selection
+        _LOGGER.debug(
+            "🏷️ ENTITY NAME SELECTION for %s: friendly_name_en='%s', friendly_name_cz='%s'",
+            self.entity_id_suffix, friendly_name_en, friendly_name_cz
+        )
+
+        if friendly_name_en:
+            selected_name = friendly_name_en
+            _LOGGER.debug("   ✅ Using English name: '%s'", selected_name)
+        elif friendly_name_cz:
+            selected_name = friendly_name_cz
+            _LOGGER.debug("   ⚠️ Using Czech name (no English available): '%s'", selected_name)
+        else:
+            selected_name = self.entity_id_suffix
+            _LOGGER.debug("   ❌ Using entity ID suffix (no friendly names): '%s'", selected_name)
+
+        return selected_name
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to Home Assistant."""
+        await super().async_added_to_hass()
+
+        # Force update entity name in registry if it has changed
+        await self._update_entity_registry_name()
+
+    async def _update_entity_registry_name(self) -> None:
+        """Update entity name in the entity registry if needed."""
+        try:
+            from homeassistant.helpers import entity_registry as er
+
+            registry = er.async_get(self.hass)
+            entity_entry = registry.async_get(self.entity_id)
+
+            if entity_entry:
+                current_name = self._get_entity_name()
+
+                # Check if the name needs to be updated
+                if entity_entry.name != current_name:
+                    _LOGGER.info(
+                        "🔄 UPDATING ENTITY NAME: %s from '%s' to '%s'",
+                        self.entity_id, entity_entry.name or "None", current_name
+                    )
+
+                    # Update the entity registry
+                    registry.async_update_entity(
+                        self.entity_id,
+                        name=current_name
+                    )
+                else:
+                    _LOGGER.debug(
+                        "✅ Entity name already correct: %s = '%s'",
+                        self.entity_id, current_name
+                    )
+            else:
+                _LOGGER.debug("Entity not found in registry: %s", self.entity_id)
+
+        except Exception as e:
+            _LOGGER.warning("Failed to update entity registry name for %s: %s", self.entity_id, e)
 
     @property
     def available(self) -> bool:
