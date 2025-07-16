@@ -39,7 +39,7 @@ async def async_setup_entry(
             switches.append(switch)
             _LOGGER.info("🏗️ SWITCH ENTITY CREATION: %s", prop)
             _LOGGER.info("   📝 Friendly Name: '%s'", switch.name)
-            _LOGGER.info("   🔧 Entity ID: %s", switch.entity_id)
+            _LOGGER.info("   🔧 Entity ID: %s", getattr(switch, 'entity_id', 'not_set'))
 
     if switches:
         async_add_entities(switches)

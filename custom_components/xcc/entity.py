@@ -69,6 +69,16 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             )
             self._attributes = {}
 
+        # CRITICAL FIX: Add friendly names from descriptor config to attributes
+        # The descriptor config contains friendly_name_en which is needed for proper entity naming
+        descriptor_config = self._entity_data.get("descriptor_config", {})
+        if descriptor_config:
+            # Add friendly names from descriptor to attributes so _get_entity_name can access them
+            if "friendly_name" in descriptor_config:
+                self._attributes["friendly_name"] = descriptor_config["friendly_name"]
+            if "friendly_name_en" in descriptor_config:
+                self._attributes["friendly_name_en"] = descriptor_config["friendly_name_en"]
+
         _LOGGER.debug(
             "Initialized entity %s with attributes: %s",
             entity_id,

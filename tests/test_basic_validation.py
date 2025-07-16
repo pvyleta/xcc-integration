@@ -72,10 +72,11 @@ def test_no_critical_undefined_variables():
                 continue
             
             # CRITICAL PATTERN: entity_id used in logging before definition
-            # BUT exclude self.entity_id and variables that just contain "entity_id" in their name
+            # BUT exclude self.entity_id, getattr(..., 'entity_id', ...), and variables that just contain "entity_id" in their name
             if ('_LOGGER' in line_stripped and
                 ('info(' in line_stripped or 'error(' in line_stripped or 'warning(' in line_stripped or 'debug(' in line_stripped) and
-                'self.entity_id' not in line_stripped):
+                'self.entity_id' not in line_stripped and
+                'getattr(' not in line_stripped):
 
                 # Look for exact entity_id usage (not entity_id_from_data, etc.)
                 import re
