@@ -95,14 +95,16 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         # Set entity name
         self._attr_name = self._get_entity_name()
 
-        # Set device info
+        # Set device info based on entity's assigned device
+        device_info = coordinator.get_device_info_for_entity(entity_id)
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.ip_address)},
-            name=coordinator.device_info["name"],
-            manufacturer=coordinator.device_info["manufacturer"],
-            model=coordinator.device_info["model"],
-            sw_version=coordinator.device_info.get("sw_version"),
-            configuration_url=coordinator.device_info.get("configuration_url"),
+            identifiers=device_info["identifiers"],
+            name=device_info["name"],
+            manufacturer=device_info["manufacturer"],
+            model=device_info["model"],
+            sw_version=device_info.get("sw_version"),
+            configuration_url=device_info.get("configuration_url"),
+            via_device=device_info.get("via_device"),  # Link to parent device if applicable
         )
 
     def _get_entity_name(self) -> str:

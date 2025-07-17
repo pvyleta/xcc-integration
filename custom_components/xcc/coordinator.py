@@ -160,6 +160,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     "configuration_url": f"http://{self.ip_address}",
                 }
 
+                # Initialize device info for all sub-devices
+                self._init_device_info()
+
             return processed_data
 
         except TimeoutError as err:
@@ -180,7 +183,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             ) from err
 
     def _process_entities(self, entities: list[dict[str, Any]]) -> dict[str, Any]:
-        """Process raw entities into organized data structure."""
+        """Process raw entities into organized data structure with priority-based device assignment."""
         processed_data = {
             "sensors": {},
             "binary_sensors": {},
@@ -194,96 +197,139 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Create entities list for the new platform approach
         entities_list = []
 
+        # Priority-based device assignment: each entity appears only once
+        # Priority order (highest to lowest): SPOT, FVE, BIV, OKRUH, TUV1, STAVJED
+        device_priority = [
+            "SPOT",
+            "FVE",
+            "BIV",
+            "OKRUH",
+            "TUV1",
+            "STAVJED"
+        ]
+
+        # Track assigned entities to prevent duplicates
+        assigned_entities = set()
+
+        # Group entities by page/device for priority processing
+        entities_by_page = {}
         for entity in entities:
-            prop = entity["attributes"]["field_name"]
-            entity_type = self.get_entity_type(prop)
+            page = entity["attributes"].get("page", "unknown").upper()
+            # Normalize page names (remove numbers and .XML extension)
+            page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
+            if page_normalized not in entities_by_page:
+                entities_by_page[page_normalized] = []
+            entities_by_page[page_normalized].append(entity)
 
-            # Only log missing descriptors once per entity to avoid spam
-            if entity_type == "sensor" and prop not in self.entity_configs:
-                if not hasattr(self, "_logged_missing_descriptors"):
-                    self._logged_missing_descriptors = set()
+        _LOGGER.info("🏗️ PRIORITY-BASED DEVICE ASSIGNMENT")
+        _LOGGER.info("   Device priority order: %s", " > ".join(device_priority))
+        _LOGGER.info("   Pages found: %s", list(entities_by_page.keys()))
 
-                if prop not in self._logged_missing_descriptors:
-                    _LOGGER.debug(
-                        "Entity %s: no descriptor found, defaulting to sensor", prop
-                    )
-                    self._logged_missing_descriptors.add(prop)
+        # Process entities in priority order
+        for device_name in device_priority:
+            if device_name not in entities_by_page:
+                _LOGGER.debug("   📄 %s: No entities found", device_name)
+                continue
 
-            # Get descriptor information for this entity
-            descriptor_config = self.entity_configs.get(prop, {})
+            device_entities = entities_by_page[device_name]
+            assigned_count = 0
+            skipped_count = 0
 
-            # Use descriptor friendly name if available, otherwise fall back to prop
-            # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
-            friendly_name = (
-                descriptor_config.get("friendly_name_en")
-                or descriptor_config.get("friendly_name")
-                or prop
-            )
+            for entity in device_entities:
+                prop = entity["attributes"]["field_name"]
 
+                # Skip if entity already assigned to higher priority device
+                if prop in assigned_entities:
+                    skipped_count += 1
+                    continue
 
-            unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
+                # Mark entity as assigned
+                assigned_entities.add(prop)
+                assigned_count += 1
 
-            # Create entity data structure for new platforms
-            entity_data = {
-                "entity_id": f"xcc_{prop.lower()}",
-                "prop": prop,
-                "name": friendly_name,
-                "friendly_name": friendly_name,
-                "state": entity["attributes"].get("value", ""),
-                "unit": unit,
-                "page": entity["attributes"].get("page", "unknown"),
-            }
+                entity_type = self.get_entity_type(prop)
 
-            entities_list.append(entity_data)
+                # Only log missing descriptors once per entity to avoid spam
+                if entity_type == "sensor" and prop not in self.entity_configs:
+                    if not hasattr(self, "_logged_missing_descriptors"):
+                        self._logged_missing_descriptors = set()
 
-            # Store entity metadata for later use (use entity_id as key for proper lookup)
-            self.entities[entity_data["entity_id"]] = {
-                "type": entity_type,
-                "data": entity,
-                "page": entity["attributes"].get("page", "unknown"),
-                "prop": prop,  # Keep prop for reference
-                "descriptor_config": descriptor_config,  # Include descriptor config for platforms
-            }
+                    if prop not in self._logged_missing_descriptors:
+                        _LOGGER.debug(
+                            "Entity %s: no descriptor found, defaulting to sensor", prop
+                        )
+                        self._logged_missing_descriptors.add(prop)
 
-            # Create state data structure that entities can use to retrieve values
-            # This is the key fix - store data in the format that _get_current_value expects
-            # IMPORTANT: Extract state from the correct field - entities have "state", not "value" in attributes
-            state_value = entity.get("state", "")
+                # Get descriptor information for this entity
+                descriptor_config = self.entity_configs.get(prop, {})
 
-            # IMPORTANT: Define entity_id BEFORE using it in logging to avoid UnboundLocalError
-            entity_id = entity_data["entity_id"]
-
-            state_data = {
-                "state": state_value,
-                "attributes": entity["attributes"],
-                "entity_id": entity_id,
-                "prop": prop,
-                "name": friendly_name,  # Use enhanced friendly name
-                "unit": unit,  # Use enhanced unit from descriptor
-                "page": entity["attributes"].get("page", "unknown"),
-            }
-
-            # Log state values for debugging (only for first few entities to avoid spam)
-            if len(entities_list) <= 10:
-                _LOGGER.info(
-                    "📊 COORDINATOR STORING: %s = %s (type: %s, prop: %s)",
-                    entity_id,
-                    state_value,
-                    entity_type,
-                    prop,
+                # Use descriptor friendly name if available, otherwise fall back to prop
+                # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
+                friendly_name = (
+                    descriptor_config.get("friendly_name_en")
+                    or descriptor_config.get("friendly_name")
+                    or prop
                 )
 
-            # Store in processed_data with the correct structure for entity value retrieval
-            if entity_type == "switch":
-                processed_data["switches"][entity_id] = state_data
-            elif entity_type == "number":
-                processed_data["numbers"][entity_id] = state_data
-            elif entity_type == "select":
-                processed_data["selects"][entity_id] = state_data
-            elif entity_type == "button":
-                processed_data["buttons"][entity_id] = state_data
-            else:
-                processed_data["sensors"][entity_id] = state_data
+                unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
+
+                # Create entity data structure for new platforms with device assignment
+                entity_data = {
+                    "entity_id": f"xcc_{prop.lower()}",
+                    "prop": prop,
+                    "name": friendly_name,
+                    "friendly_name": friendly_name,
+                    "state": entity["attributes"].get("value", ""),
+                    "unit": unit,
+                    "page": entity["attributes"].get("page", "unknown"),
+                    "device": device_name,  # Add device assignment
+                }
+
+                entities_list.append(entity_data)
+
+                # Store entity metadata for later use (use entity_id as key for proper lookup)
+                self.entities[entity_data["entity_id"]] = {
+                    "type": entity_type,
+                    "data": entity,
+                    "page": entity["attributes"].get("page", "unknown"),
+                    "prop": prop,  # Keep prop for reference
+                    "descriptor_config": descriptor_config,  # Include descriptor config for platforms
+                    "device": device_name,  # Add device assignment
+                }
+
+                # Create state data structure that entities can use to retrieve values
+                # This is the key fix - store data in the format that _get_current_value expects
+                # IMPORTANT: Extract state from the correct field - entities have "state", not "value" in attributes
+                state_value = entity.get("state", "")
+
+                # IMPORTANT: Define entity_id BEFORE using it in logging to avoid UnboundLocalError
+                entity_id = entity_data["entity_id"]
+
+                state_data = {
+                    "state": state_value,
+                    "attributes": entity["attributes"],
+                    "entity_id": entity_id,
+                    "prop": prop,
+                    "name": friendly_name,  # Use enhanced friendly name
+                    "unit": unit,  # Use enhanced unit from descriptor
+                    "page": entity["attributes"].get("page", "unknown"),
+                    "device": device_name,  # Add device assignment
+                }
+
+                # Store in processed_data with the correct structure for entity value retrieval
+                if entity_type == "switch":
+                    processed_data["switches"][entity_id] = state_data
+                elif entity_type == "number":
+                    processed_data["numbers"][entity_id] = state_data
+                elif entity_type == "select":
+                    processed_data["selects"][entity_id] = state_data
+                elif entity_type == "button":
+                    processed_data["buttons"][entity_id] = state_data
+                else:
+                    processed_data["sensors"][entity_id] = state_data
+
+            # Log device assignment summary
+            _LOGGER.info("   📄 %s: Assigned %d entities, skipped %d duplicates", device_name, assigned_count, skipped_count)
 
         # Store entities list for new platforms
         processed_data["entities"] = entities_list
@@ -309,6 +355,44 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
         return processed_data
+
+    def _init_device_info(self) -> None:
+        """Initialize device info for all sub-devices."""
+        # Device names and descriptions
+        device_configs = {
+            "SPOT": {"name": "Spot Prices", "model": "Energy Market Data"},
+            "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
+            "BIV": {"name": "Heat Pump", "model": "Bivalent Heat Pump"},
+            "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
+            "TUV1": {"name": "Hot Water System", "model": "Domestic Hot Water"},
+            "STAVJED": {"name": "Unit Status", "model": "System Status Monitor"},
+        }
+
+        self.sub_device_info = {}
+        for device_name, config in device_configs.items():
+            self.sub_device_info[device_name] = {
+                "identifiers": {(DOMAIN, f"{self.ip_address}_{device_name}")},
+                "name": f"{config['name']} ({self.ip_address})",
+                "manufacturer": "XCC",
+                "model": config["model"],
+                "sw_version": "Unknown",
+                "configuration_url": f"http://{self.ip_address}",
+                "via_device": (DOMAIN, self.ip_address),  # Link to main controller
+            }
+
+    def get_device_info_for_entity(self, entity_id: str) -> dict[str, Any]:
+        """Get device info for a specific entity."""
+        entity_data = self.entities.get(entity_id)
+        if not entity_data:
+            # Fallback to main device
+            return self.device_info
+
+        device_name = entity_data.get("device")
+        if device_name and hasattr(self, 'sub_device_info') and device_name in self.sub_device_info:
+            return self.sub_device_info[device_name]
+
+        # Fallback to main device
+        return self.device_info
 
     def _print_entity_values(self, processed_data: dict[str, Any]) -> None:
         """Print current values for all entity types in an organized way."""
