@@ -79,6 +79,21 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             if "friendly_name_en" in descriptor_config:
                 self._attributes["friendly_name_en"] = descriptor_config["friendly_name_en"]
 
+            # Add data type and element type information from descriptor config
+            if "data_type" in descriptor_config:
+                self._attributes["data_type"] = descriptor_config["data_type"]
+            if "entity_type" in descriptor_config:
+                # Map entity_type to element_type for consistency
+                entity_type = descriptor_config["entity_type"]
+                if entity_type == "number":
+                    self._attributes["element_type"] = "INPUT"
+                elif entity_type == "switch":
+                    self._attributes["element_type"] = "SWITCH"
+                elif entity_type == "select":
+                    self._attributes["element_type"] = "SELECT"
+                else:
+                    self._attributes["element_type"] = "DISPLAY"
+
         _LOGGER.debug(
             "Initialized entity %s with attributes: %s",
             entity_id,
@@ -195,12 +210,26 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
+        # Get the original XCC property name from entity data
+        xcc_prop = self._entity_data.get("prop", self.entity_id_suffix) if self._entity_data else self.entity_id_suffix
+
+        # Get page information from entity data
+        xcc_page = self._entity_data.get("page", "unknown") if self._entity_data else "unknown"
+
         attrs = {
-            "xcc_field_name": self.entity_id_suffix,
-            "xcc_page": self._entity_data.get("page", "unknown"),
+            "xcc_field_name": xcc_prop,  # Use original XCC property name, not entity ID
+            "xcc_page": xcc_page,  # Use page from entity data
             "xcc_data_type": self._attributes.get("data_type", "unknown"),
             "xcc_element_type": self._attributes.get("element_type", "unknown"),
         }
+
+        # Add settable information from descriptor config
+        descriptor_config = self._entity_data.get("descriptor_config", {}) if self._entity_data else {}
+        if descriptor_config:
+            attrs["xcc_settable"] = descriptor_config.get("writable", False)
+        else:
+            # For entities without descriptors, check if they're settable from raw attributes
+            attrs["xcc_settable"] = self._attributes.get("is_settable", False)
 
         # Add settable indicator
         if "is_settable" in self._attributes:
