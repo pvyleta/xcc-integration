@@ -30,12 +30,18 @@ CONF_USERNAME: Final = "username"
 CONF_PASSWORD: Final = "password"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
 CONF_ENTITY_TYPE: Final = "entity_type"
+CONF_LANGUAGE: Final = "language"
 
 # Default values
 DEFAULT_USERNAME: Final = "xcc"
 DEFAULT_PASSWORD: Final = "xcc"
 DEFAULT_SCAN_INTERVAL: Final = 30  # seconds
 DEFAULT_TIMEOUT: Final = 10  # seconds
+
+# Language options
+LANGUAGE_ENGLISH: Final = "english"
+LANGUAGE_CZECH: Final = "czech"
+DEFAULT_LANGUAGE: Final = LANGUAGE_ENGLISH
 
 # Entity type options
 ENTITY_TYPE_INTEGRATION: Final = "integration"

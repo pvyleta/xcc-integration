@@ -14,10 +14,13 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_LANGUAGE,
     CONF_SCAN_INTERVAL,
+    DEFAULT_LANGUAGE,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,
+    LANGUAGE_ENGLISH,
     XCC_DATA_PAGES,
     XCC_DESCRIPTOR_PAGES,
 )
@@ -35,6 +38,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.ip_address = entry.data[CONF_IP_ADDRESS]
         self.username = entry.data[CONF_USERNAME]
         self.password = entry.data[CONF_PASSWORD]
+
+        # Set language preference from config or default
+        self.language = entry.data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
 
         # Set update interval from config or default
         scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
@@ -263,13 +269,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 # Get descriptor information for this entity
                 descriptor_config = self.entity_configs.get(prop, {})
 
-                # Use descriptor friendly name if available, otherwise fall back to prop
-                # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
-                friendly_name = (
-                    descriptor_config.get("friendly_name_en")
-                    or descriptor_config.get("friendly_name")
-                    or prop
-                )
+                # Use descriptor friendly name based on language preference
+                friendly_name = self._get_friendly_name(descriptor_config, prop)
 
                 unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
 
@@ -355,6 +356,23 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
         return processed_data
+
+    def _get_friendly_name(self, descriptor_config: dict[str, Any], prop: str) -> str:
+        """Get friendly name based on language preference."""
+        if self.language == LANGUAGE_ENGLISH:
+            # Prefer English, fallback to Czech, then prop
+            return (
+                descriptor_config.get("friendly_name_en")
+                or descriptor_config.get("friendly_name")
+                or prop
+            )
+        else:
+            # Prefer Czech, fallback to English, then prop
+            return (
+                descriptor_config.get("friendly_name")
+                or descriptor_config.get("friendly_name_en")
+                or prop
+            )
 
     def _init_device_info(self) -> None:
         """Initialize device info for all sub-devices."""

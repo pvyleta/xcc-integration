@@ -15,13 +15,17 @@ from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     CONF_ENTITY_TYPE,
+    CONF_LANGUAGE,
     CONF_SCAN_INTERVAL,
+    DEFAULT_LANGUAGE,
     DEFAULT_PASSWORD,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DEFAULT_USERNAME,
     DOMAIN,
     ENTITY_TYPE_INTEGRATION,
+    LANGUAGE_CZECH,
+    LANGUAGE_ENGLISH,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,6 +39,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             vol.Coerce(int),
             vol.Range(min=10, max=3600),
         ),
+        vol.Optional(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In([
+            LANGUAGE_ENGLISH,
+            LANGUAGE_CZECH,
+        ]),
         # Entity type is now fixed to integration entities only
         # vol.Optional(CONF_ENTITY_TYPE, default=DEFAULT_ENTITY_TYPE): removed MQTT option
     },

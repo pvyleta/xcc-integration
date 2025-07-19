@@ -10,7 +10,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, LANGUAGE_ENGLISH
 from .coordinator import XCCDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -108,26 +108,41 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         )
 
     def _get_entity_name(self) -> str:
-        """Get the entity name - always prefer English strings."""
-        # Always prefer English friendly name first
+        """Get the entity name based on language preference."""
         friendly_name_en = self._attributes.get("friendly_name_en", "")
         friendly_name_cz = self._attributes.get("friendly_name", "")
 
+        # Get language preference from coordinator
+        language_preference = getattr(self.coordinator, 'language', LANGUAGE_ENGLISH)
+
         # Debug logging for entity name selection
         _LOGGER.debug(
-            "🏷️ ENTITY NAME SELECTION for %s: friendly_name_en='%s', friendly_name_cz='%s'",
-            self.entity_id_suffix, friendly_name_en, friendly_name_cz
+            "🏷️ ENTITY NAME SELECTION for %s (lang: %s): friendly_name_en='%s', friendly_name_cz='%s'",
+            self.entity_id_suffix, language_preference, friendly_name_en, friendly_name_cz
         )
 
-        if friendly_name_en:
-            selected_name = friendly_name_en
-            _LOGGER.debug("   ✅ Using English name: '%s'", selected_name)
-        elif friendly_name_cz:
-            selected_name = friendly_name_cz
-            _LOGGER.debug("   ⚠️ Using Czech name (no English available): '%s'", selected_name)
+        if language_preference == LANGUAGE_ENGLISH:
+            # Prefer English, fallback to Czech, then entity ID
+            if friendly_name_en:
+                selected_name = friendly_name_en
+                _LOGGER.debug("   ✅ Using English name: '%s'", selected_name)
+            elif friendly_name_cz:
+                selected_name = friendly_name_cz
+                _LOGGER.debug("   ⚠️ Using Czech name (no English available): '%s'", selected_name)
+            else:
+                selected_name = self.entity_id_suffix
+                _LOGGER.debug("   ❌ Using entity ID suffix (no friendly names): '%s'", selected_name)
         else:
-            selected_name = self.entity_id_suffix
-            _LOGGER.debug("   ❌ Using entity ID suffix (no friendly names): '%s'", selected_name)
+            # Prefer Czech, fallback to English, then entity ID
+            if friendly_name_cz:
+                selected_name = friendly_name_cz
+                _LOGGER.debug("   ✅ Using Czech name: '%s'", selected_name)
+            elif friendly_name_en:
+                selected_name = friendly_name_en
+                _LOGGER.debug("   ⚠️ Using English name (no Czech available): '%s'", selected_name)
+            else:
+                selected_name = self.entity_id_suffix
+                _LOGGER.debug("   ❌ Using entity ID suffix (no friendly names): '%s'", selected_name)
 
         return selected_name
 
