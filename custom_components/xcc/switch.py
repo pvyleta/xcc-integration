@@ -67,9 +67,9 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         self._attr_unique_id = f"{coordinator.ip_address}_{normalized_entity_id}"
         self.entity_id = f"switch.{normalized_entity_id}"
 
-        # Set friendly name from descriptor or fallback to entity data
-        friendly_name = self._entity_config.get('friendly_name_en') or self._entity_config.get('friendly_name')
-        if friendly_name:
+        # Set friendly name using coordinator's language-aware method
+        friendly_name = coordinator._get_friendly_name(self._entity_config, self._prop)
+        if friendly_name and friendly_name != self._prop:
             self._attr_name = friendly_name
         else:
             self._attr_name = entity_data.get("friendly_name", entity_data.get("name", self._prop))

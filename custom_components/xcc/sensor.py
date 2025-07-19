@@ -440,26 +440,23 @@ class XCCSensor(XCCEntity, SensorEntity):
                         # Current value is not numeric - no state class
                         state_class = None
 
-        # Get entity name from descriptor or entity data
-        # ALWAYS prioritize English names (friendly_name_en) over Czech names (friendly_name)
-        friendly_name_en = entity_config.get("friendly_name_en")
-        friendly_name_cs = entity_config.get("friendly_name")
-
-        if friendly_name_en:
-            entity_name = friendly_name_en
-            # Debug logging for language preference
-            if friendly_name_cs and friendly_name_en != friendly_name_cs:
-                _LOGGER.debug(
-                    "Sensor %s: Using English name '%s' instead of Czech '%s'",
-                    prop,
-                    friendly_name_en,
-                    friendly_name_cs,
-                )
-        elif friendly_name_cs:
-            entity_name = friendly_name_cs
-        else:
+        # Get entity name using coordinator's language-aware method
+        entity_name = coordinator._get_friendly_name(entity_config, prop)
+        if not entity_name or entity_name == prop:
             entity_name = entity_data.get(
                 "friendly_name", entity_data.get("name", prop)
+            )
+
+        # Debug logging for language preference
+        friendly_name_en = entity_config.get("friendly_name_en")
+        friendly_name_cs = entity_config.get("friendly_name")
+        if friendly_name_cs and friendly_name_en and friendly_name_en != friendly_name_cs:
+            _LOGGER.debug(
+                "Sensor %s: Using language-aware name '%s' (Czech: '%s', English: '%s')",
+                prop,
+                entity_name,
+                friendly_name_cs,
+                friendly_name_en,
             )
 
         # Log comprehensive entity creation details
