@@ -109,8 +109,12 @@ class XCCDescriptorParser:
         text = row.get("text", "")
         text_en = row.get("text_en", "")  # Don't default to text here
 
-        # Prefer English text, fall back to Czech if English is empty
+        # Create separate Czech and English friendly names
+        # English friendly name - prioritize English text
         friendly_name_en = text_en or text or prop
+
+        # Czech friendly name - prioritize Czech text
+        friendly_name_cz = text or text_en or prop
 
         # Get unit from element (try both unit and unit_en)
         unit = element.get("unit_en") or element.get("unit", "")
@@ -125,8 +129,8 @@ class XCCDescriptorParser:
         # Create sensor configuration
         sensor_config = {
             "prop": prop,
-            "friendly_name": friendly_name_en,
-            "friendly_name_en": friendly_name_en,
+            "friendly_name": friendly_name_cz,  # Use Czech for friendly_name
+            "friendly_name_en": friendly_name_en,  # Use English for friendly_name_en
             "unit": unit,
             "device_class": device_class,
             "page": page_name,
@@ -136,8 +140,8 @@ class XCCDescriptorParser:
 
         # Log sensor extraction for debugging
         _LOGGER.debug(
-            "🔍 SENSOR EXTRACTION: %s -> friendly_name='%s', device_class=%s, unit='%s'",
-            prop, friendly_name_en, device_class, unit
+            "🔍 SENSOR EXTRACTION: %s -> friendly_name='%s', friendly_name_en='%s', device_class=%s, unit='%s'",
+            prop, friendly_name_cz, friendly_name_en, device_class, unit
         )
 
         _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
@@ -302,9 +306,19 @@ class XCCDescriptorParser:
             row_text = parent_row.get("text", "")
             row_text_en = parent_row.get("text_en", "")
 
+            _LOGGER.debug(
+                "🔍 DESCRIPTOR PARSING ROW TEXT: %s -> row_text='%s', row_text_en='%s'",
+                prop, row_text, row_text_en
+            )
+
             # Look for corresponding label in the row that provides text context
             # For TO-FVEPRETOPENI-POVOLENI, this will be Row 7 which has the labels
             label_text, label_text_en = self._find_label_for_element(element, parent_row)
+        else:
+            _LOGGER.debug(
+                "🔍 DESCRIPTOR PARSING ROW TEXT: %s -> NO PARENT ROW FOUND",
+                prop
+            )
 
 
 
@@ -314,6 +328,11 @@ class XCCDescriptorParser:
 
         # Czech friendly name - prioritize Czech text
         friendly_name_cz = text or label_text or row_text or text_en or label_text_en or row_text_en or prop
+
+        _LOGGER.debug(
+            "🔍 DESCRIPTOR PARSING FALLBACK: %s -> friendly_name_cz='%s', friendly_name_en='%s'",
+            prop, friendly_name_cz, friendly_name_en
+        )
 
         # Handle different combinations of row, label, and element text for ENGLISH
         if row_text_en and (text_en or label_text_en):
@@ -367,6 +386,10 @@ class XCCDescriptorParser:
         }
 
         # Log friendly name extraction for debugging
+        _LOGGER.debug(
+            "🔍 DESCRIPTOR PARSING: %s -> text='%s', text_en='%s', row_text='%s', row_text_en='%s', label_text='%s', label_text_en='%s'",
+            prop, text, text_en, row_text, row_text_en, label_text, label_text_en
+        )
         _LOGGER.debug(
             "🔍 DESCRIPTOR PARSING: %s -> friendly_name='%s', friendly_name_en='%s'",
             prop, friendly_name, friendly_name_en
