@@ -46,7 +46,7 @@ def test_python_syntax():
             _LOGGER.error(error_msg)
             errors.append(error_msg)
     
-    return errors
+    assert not errors, f"Syntax errors found: {errors}"
 
 def test_basic_imports():
     """Test that basic imports work without external dependencies."""
@@ -81,7 +81,7 @@ def test_basic_imports():
             _LOGGER.error(error_msg)
             errors.append(error_msg)
     
-    return errors
+    assert not errors, f"Import errors found: {errors}"
 
 def test_undefined_variables():
     """Test for common undefined variable patterns - STRICT VERSION."""
@@ -143,7 +143,7 @@ def test_undefined_variables():
             _LOGGER.error(error_msg)
             errors.append(error_msg)
 
-    return errors
+    assert not errors, f"Undefined variable errors found: {errors}"
 
 def main():
     """Main test function."""
