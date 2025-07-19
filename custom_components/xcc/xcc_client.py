@@ -644,7 +644,7 @@ def parse_xml_entities(
             # Determine entity type and attributes
             entity_type = "sensor"
             attributes = {
-                "source_page": page_name,
+                "page": page_name,  # Fixed: use "page" instead of "source_page"
                 "field_name": prop,
                 "friendly_name": prop.replace("-", " ").replace("_", " ").title(),
             }

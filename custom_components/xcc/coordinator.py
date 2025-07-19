@@ -222,19 +222,38 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         entities_with_descriptors = []
         entities_without_descriptors = []
 
+        _LOGGER.debug("🔍 ENTITY SEPARATION DEBUG:")
+        _LOGGER.debug("   Total entities to process: %d", len(entities))
+        _LOGGER.debug("   Available entity configs: %d", len(self.entity_configs))
+
         for entity in entities:
             prop = entity["attributes"]["field_name"]
-            if prop in self.entity_configs:
+            page = entity["attributes"].get("page", "unknown")
+            has_descriptor = prop in self.entity_configs
+
+            if has_descriptor:
                 entities_with_descriptors.append(entity)
+                _LOGGER.debug("   ✅ WITH descriptor: %s (page: %s)", prop, page)
             else:
                 entities_without_descriptors.append(entity)
+                _LOGGER.debug("   ❌ NO descriptor: %s (page: %s)", prop, page)
+
+        _LOGGER.debug("📊 SEPARATION RESULTS:")
+        _LOGGER.debug("   Entities WITH descriptors: %d", len(entities_with_descriptors))
+        _LOGGER.debug("   Entities WITHOUT descriptors: %d", len(entities_without_descriptors))
 
         # Group entities with descriptors by page/device for priority processing
         entities_by_page = {}
+        _LOGGER.debug("🔍 PAGE GROUPING DEBUG:")
+
         for entity in entities_with_descriptors:
             page = entity["attributes"].get("page", "unknown").upper()
+            prop = entity["attributes"]["field_name"]
             # Normalize page names (remove numbers and .XML extension)
             page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
+
+            _LOGGER.debug("   Entity %s: page='%s' -> normalized='%s'", prop, page, page_normalized)
+
             if page_normalized not in entities_by_page:
                 entities_by_page[page_normalized] = []
             entities_by_page[page_normalized].append(entity)
@@ -242,6 +261,11 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Add entities without descriptors to hidden settings device
         if entities_without_descriptors:
             entities_by_page["XCC_HIDDEN_SETTINGS"] = entities_without_descriptors
+            _LOGGER.debug("   Added %d entities to XCC_HIDDEN_SETTINGS", len(entities_without_descriptors))
+
+        _LOGGER.debug("📊 PAGE GROUPING RESULTS:")
+        for page_name, page_entities in entities_by_page.items():
+            _LOGGER.debug("   %s: %d entities", page_name, len(page_entities))
 
         _LOGGER.info("🏗️ PRIORITY-BASED DEVICE ASSIGNMENT")
         _LOGGER.info("   Device priority order: %s", " > ".join(device_priority))
