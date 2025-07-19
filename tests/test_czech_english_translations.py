@@ -6,15 +6,18 @@ from unittest.mock import Mock, patch
 import sys
 import os
 
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components'))
+# Add the project root to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 def test_czech_english_translations_comprehensive():
     """Test that both _determine_entity_config and _extract_sensor_info_from_row create proper Czech and English friendly names."""
     
     # Mock the logger to avoid import issues
     with patch('custom_components.xcc.descriptor_parser._LOGGER') as mock_logger:
-        from xcc.descriptor_parser import DescriptorParser
+        try:
+            from custom_components.xcc.descriptor_parser import DescriptorParser
+        except ImportError:
+            pytest.skip("Home Assistant dependencies not available")
         
         parser = DescriptorParser()
         
@@ -97,7 +100,10 @@ def test_czech_english_fallback_scenarios():
     """Test fallback scenarios for Czech and English translations."""
     
     with patch('custom_components.xcc.descriptor_parser._LOGGER') as mock_logger:
-        from xcc.descriptor_parser import DescriptorParser
+        try:
+            from custom_components.xcc.descriptor_parser import DescriptorParser
+        except ImportError:
+            pytest.skip("Home Assistant dependencies not available")
         
         parser = DescriptorParser()
         
@@ -153,7 +159,10 @@ def test_regression_prevention():
     """Test to prevent regression of the Czech translation bug."""
     
     with patch('custom_components.xcc.descriptor_parser._LOGGER') as mock_logger:
-        from xcc.descriptor_parser import DescriptorParser
+        try:
+            from custom_components.xcc.descriptor_parser import DescriptorParser
+        except ImportError:
+            pytest.skip("Home Assistant dependencies not available")
         
         parser = DescriptorParser()
         

@@ -4,13 +4,18 @@ import sys
 import os
 import logging
 
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'custom_components'))
+# Add the project root to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Set up logging to see debug messages
 logging.basicConfig(level=logging.DEBUG, format='%(levelname)s - %(name)s - %(message)s')
 
-from xcc.descriptor_parser import DescriptorParser
+try:
+    from custom_components.xcc.descriptor_parser import DescriptorParser
+except ImportError:
+    # Skip this test if Home Assistant dependencies are not available
+    import pytest
+    pytest.skip("Home Assistant dependencies not available", allow_module_level=True)
 
 def test_specific_entities():
     """Test specific entities that should have Czech translations."""
