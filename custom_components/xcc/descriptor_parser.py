@@ -42,6 +42,10 @@ class XCCDescriptorParser:
             "Parsed %d total entity configurations from descriptors",
             len(entity_configs),
         )
+
+        # Post-process to handle duplicate friendly names
+        entity_configs = self._handle_duplicate_friendly_names(entity_configs)
+
         return entity_configs
 
     def _parse_single_descriptor(
@@ -693,6 +697,57 @@ class XCCDescriptorParser:
             english_text
         )
         return english_text
+
+    def _handle_duplicate_friendly_names(self, entity_configs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Handle duplicate friendly names by adding XCC variable name as suffix."""
+        # Track friendly names and their occurrences
+        czech_name_counts = {}
+        english_name_counts = {}
+
+        # First pass: count occurrences of each friendly name
+        for prop, config in entity_configs.items():
+            friendly_name_cz = config.get("friendly_name", "")
+            friendly_name_en = config.get("friendly_name_en", "")
+
+            if friendly_name_cz:
+                czech_name_counts[friendly_name_cz] = czech_name_counts.get(friendly_name_cz, 0) + 1
+            if friendly_name_en:
+                english_name_counts[friendly_name_en] = english_name_counts.get(friendly_name_en, 0) + 1
+
+        # Find duplicates
+        czech_duplicates = {name for name, count in czech_name_counts.items() if count > 1}
+        english_duplicates = {name for name, count in english_name_counts.items() if count > 1}
+
+        # Log duplicate detection
+        if czech_duplicates:
+            _LOGGER.debug("🔍 DUPLICATE CZECH NAMES DETECTED: %s", list(czech_duplicates))
+        if english_duplicates:
+            _LOGGER.debug("🔍 DUPLICATE ENGLISH NAMES DETECTED: %s", list(english_duplicates))
+
+        # Second pass: add suffixes to duplicates
+        for prop, config in entity_configs.items():
+            friendly_name_cz = config.get("friendly_name", "")
+            friendly_name_en = config.get("friendly_name_en", "")
+
+            # Add suffix to Czech name if it's a duplicate
+            if friendly_name_cz in czech_duplicates:
+                new_name_cz = f"{friendly_name_cz} ({prop})"
+                config["friendly_name"] = new_name_cz
+                _LOGGER.debug(
+                    "🔧 DUPLICATE CZECH NAME FIXED: '%s' -> '%s'",
+                    friendly_name_cz, new_name_cz
+                )
+
+            # Add suffix to English name if it's a duplicate
+            if friendly_name_en in english_duplicates:
+                new_name_en = f"{friendly_name_en} ({prop})"
+                config["friendly_name_en"] = new_name_en
+                _LOGGER.debug(
+                    "🔧 DUPLICATE ENGLISH NAME FIXED: '%s' -> '%s'",
+                    friendly_name_en, new_name_en
+                )
+
+        return entity_configs
 
     def _find_parent_row(self, element: ET.Element) -> ET.Element | None:
         """Find the parent row element for context."""
