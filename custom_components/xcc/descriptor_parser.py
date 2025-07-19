@@ -308,27 +308,51 @@ class XCCDescriptorParser:
 
 
 
-        # Determine the best English friendly name
-        # Priority: element's text_en > label's text_en > parent row's text_en > element's text > label's text > parent row's text > prop
+        # Create separate Czech and English friendly names
+        # English friendly name - prioritize English text
         friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or prop
 
-        # For display, prefer English names but fall back to Czech if needed
-        # Handle different combinations of row, label, and element text
-        if row_text and (text or label_text):
-            # Row has text and element/label has text - combine them
-            element_part = text_en or label_text_en or text or label_text
-            row_part = row_text_en or row_text
+        # Czech friendly name - prioritize Czech text
+        friendly_name_cz = text or label_text or row_text or text_en or label_text_en or row_text_en or prop
 
-            if element_part:
-                friendly_name = f"{row_part} - {element_part}"
-            else:
-                friendly_name = row_part
+        # Handle different combinations of row, label, and element text for ENGLISH
+        if row_text_en and (text_en or label_text_en):
+            # Both row and element/label have English text - combine them
+            element_part_en = text_en or label_text_en
+            friendly_name_en = f"{row_text_en} - {element_part_en}"
+        elif row_text and (text_en or label_text_en):
+            # Row has Czech text, element has English text - use English element with Czech row
+            element_part_en = text_en or label_text_en
+            friendly_name_en = f"{row_text} - {element_part_en}"
+        elif row_text_en and (text or label_text):
+            # Row has English text, element has Czech text - use Czech element with English row
+            element_part_cz = text or label_text
+            friendly_name_en = f"{row_text_en} - {element_part_cz}"
+        elif label_text_en:
+            # No row text but label has English text
+            friendly_name_en = label_text_en
+        # friendly_name_en already set above with fallback logic
+
+        # Handle different combinations of row, label, and element text for CZECH
+        if row_text and (text or label_text):
+            # Both row and element/label have Czech text - combine them
+            element_part_cz = text or label_text
+            friendly_name_cz = f"{row_text} - {element_part_cz}"
+        elif row_text_en and (text or label_text):
+            # Row has English text, element has Czech text - use Czech element with English row
+            element_part_cz = text or label_text
+            friendly_name_cz = f"{row_text_en} - {element_part_cz}"
+        elif row_text and (text_en or label_text_en):
+            # Row has Czech text, element has English text - use English element with Czech row
+            element_part_en = text_en or label_text_en
+            friendly_name_cz = f"{row_text} - {element_part_en}"
         elif label_text:
-            # No row text but label has text
-            friendly_name = label_text_en or label_text
-        else:
-            # Use the best available name
-            friendly_name = friendly_name_en
+            # No row text but label has Czech text
+            friendly_name_cz = label_text
+        # friendly_name_cz already set above with fallback logic
+
+        # For backward compatibility, set friendly_name to the Czech version
+        friendly_name = friendly_name_cz
 
         # Determine entity type and configuration
         # Check if element is writable (not readonly)
