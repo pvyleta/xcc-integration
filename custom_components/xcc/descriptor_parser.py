@@ -115,10 +115,10 @@ class XCCDescriptorParser:
 
         # Create separate Czech and English friendly names
         # English friendly name - prioritize English text
-        friendly_name_en = text_en or text or self._format_prop_name(prop)
+        friendly_name_en = text_en or text or self._format_prop_name_english(prop)
 
         # Czech friendly name - prioritize Czech text
-        friendly_name_cz = text or text_en or self._format_prop_name(prop)
+        friendly_name_cz = text or text_en or self._format_prop_name_czech(prop)
 
         # Get unit from element (try both unit and unit_en)
         unit = element.get("unit_en") or element.get("unit", "")
@@ -144,7 +144,7 @@ class XCCDescriptorParser:
 
         # Consolidated sensor extraction log
         fallback_info = ""
-        if friendly_name_cz == self._format_prop_name(prop):
+        if friendly_name_cz == self._format_prop_name_czech(prop):
             fallback_info = " [FALLBACK]"
         elif text_en and not text:
             fallback_info = " [EN-ONLY]"
@@ -334,7 +334,7 @@ class XCCDescriptorParser:
 
         # Create separate Czech and English friendly names
         # English friendly name - prioritize English text
-        friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or self._format_prop_name(prop)
+        friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or self._format_prop_name_english(prop)
 
         # Czech friendly name - prioritize Czech text, but try to translate English-only terms
         friendly_name_cz = text or label_text or row_text
@@ -344,7 +344,7 @@ class XCCDescriptorParser:
             if english_text:
                 friendly_name_cz = self._translate_english_to_czech(english_text)
             else:
-                friendly_name_cz = self._format_prop_name(prop)
+                friendly_name_cz = self._format_prop_name_czech(prop)
 
         _LOGGER.debug(
             "🔍 DESCRIPTOR PARSING FALLBACK: %s -> friendly_name_cz='%s', friendly_name_en='%s'",
@@ -412,7 +412,7 @@ class XCCDescriptorParser:
             source_info.append(f"label='{label_text or label_text_en}'")
 
         fallback_info = ""
-        if friendly_name == self._format_prop_name(prop):
+        if friendly_name == self._format_prop_name_czech(prop):
             fallback_info = " [FALLBACK]"
         elif text_en and not text and not label_text and not row_text:
             fallback_info = " [EN-ONLY]"
@@ -525,8 +525,35 @@ class XCCDescriptorParser:
 
         return entity_config
 
-    def _format_prop_name(self, prop):
-        """Format a prop name to be more user-friendly when no text attributes are available."""
+
+
+    def _format_prop_name_czech(self, prop):
+        """Format a prop name to be more user-friendly in Czech when no text attributes are available."""
+        if not prop:
+            return prop
+
+        # Handle special cases for user-editable fields
+        if prop == "PAGENAME":
+            return "Název stránky"
+
+        # Handle CONFIG-NAZEV entities (user-editable names)
+        if prop.endswith("-CONFIG-NAZEV"):
+            # Extract the circuit/device name and format it
+            circuit_name = prop.replace("-CONFIG-NAZEV", "")
+            formatted_circuit = self._format_circuit_name(circuit_name, "cs")
+            return f"{formatted_circuit} - Název"
+
+        # Handle other NAZEV entities (user-editable names)
+        if prop.endswith("-NAZEV"):
+            base_name = prop.replace("-NAZEV", "")
+            formatted_base = self._format_circuit_name(base_name, "cs")
+            return f"{formatted_base} - Název"
+
+        # Use the generic formatting
+        return self._format_prop_name_generic(prop)
+
+    def _format_prop_name_english(self, prop):
+        """Format a prop name to be more user-friendly in English when no text attributes are available."""
         if not prop:
             return prop
 
@@ -538,14 +565,22 @@ class XCCDescriptorParser:
         if prop.endswith("-CONFIG-NAZEV"):
             # Extract the circuit/device name and format it
             circuit_name = prop.replace("-CONFIG-NAZEV", "")
-            formatted_circuit = self._format_circuit_name(circuit_name)
+            formatted_circuit = self._format_circuit_name(circuit_name, "en")
             return f"{formatted_circuit} - Name"
 
         # Handle other NAZEV entities (user-editable names)
         if prop.endswith("-NAZEV"):
             base_name = prop.replace("-NAZEV", "")
-            formatted_base = self._format_circuit_name(base_name)
+            formatted_base = self._format_circuit_name(base_name, "en")
             return f"{formatted_base} - Name"
+
+        # Use the generic formatting
+        return self._format_prop_name_generic(prop)
+
+    def _format_prop_name_generic(self, prop):
+        """Generic prop name formatting used by both Czech and English methods."""
+        if not prop:
+            return prop
 
         # Split on common separators and format
         parts = prop.replace("-", " ").replace("_", " ").split()
@@ -570,24 +605,33 @@ class XCCDescriptorParser:
         formatted = " ".join(formatted_parts)
         return formatted
 
-    def _format_circuit_name(self, circuit_name):
-        """Format circuit/device names for better readability."""
+    def _format_circuit_name(self, circuit_name, language="cs"):
+        """Format circuit/device names for better readability with language support."""
         if not circuit_name:
             return circuit_name
 
-        # Handle specific circuit patterns
+        # Handle specific circuit patterns with language support
         if circuit_name.startswith("TOPNEOKRUHYIN"):
             # Extract circuit number
             circuit_num = circuit_name.replace("TOPNEOKRUHYIN", "")
-            return f"Heating Circuit {circuit_num}"
+            if language == "en":
+                return f"Heating Circuit {circuit_num}"
+            else:
+                return f"Topný okruh {circuit_num}"
         elif circuit_name.startswith("FVE-CASCADECONFIG"):
             # Extract cascade number
             cascade_num = circuit_name.replace("FVE-CASCADECONFIG", "")
-            return f"PV Cascade {cascade_num}"
+            if language == "en":
+                return f"PV Cascade {cascade_num}"
+            else:
+                return f"FVE kaskáda {cascade_num}"
         elif circuit_name.startswith("OKRUH"):
             # Extract circuit number
             circuit_num = circuit_name.replace("OKRUH", "")
-            return f"Circuit {circuit_num}"
+            if language == "en":
+                return f"Circuit {circuit_num}"
+            else:
+                return f"Okruh {circuit_num}"
         else:
             # Generic formatting
             return circuit_name.replace("-", " ").title()

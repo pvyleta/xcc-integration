@@ -134,44 +134,48 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         # Check if we have real translations (from descriptor) or just formatted property names
         has_real_translations = bool(friendly_name_en and friendly_name_cz and friendly_name_en != friendly_name_cz)
 
-        # Debug logging for entity name selection
-        _LOGGER.debug(
-            "🏷️ ENTITY NAME SELECTION for %s (lang: %s): friendly_name_en='%s', friendly_name_cz='%s', field_name='%s', has_real_translations=%s",
-            self.entity_id_suffix, language_preference, friendly_name_en, friendly_name_cz, field_name, has_real_translations
-        )
+
 
         if language_preference == LANGUAGE_ENGLISH:
             # Prefer English, fallback to Czech, then field name, then entity ID
             if friendly_name_en:
                 selected_name = friendly_name_en
-                _LOGGER.debug("   ✅ Using English name: '%s'", selected_name)
+                source = "english"
             elif friendly_name_cz and has_real_translations:
                 selected_name = friendly_name_cz
-                _LOGGER.debug("   ⚠️ Using Czech name (no English available): '%s'", selected_name)
+                source = "czech"
             elif field_name:
                 selected_name = field_name
-                _LOGGER.debug("   🔧 Using technical field name: '%s'", selected_name)
+                source = "field"
             else:
                 selected_name = self.entity_id_suffix
-                _LOGGER.debug("   ❌ Using entity ID suffix (no names available): '%s'", selected_name)
+                source = "entity_id"
+
         else:
             # Czech language preference
             if friendly_name_cz and has_real_translations:
                 # Use Czech translation if it's a real translation (different from English)
                 selected_name = friendly_name_cz
-                _LOGGER.debug("   ✅ Using Czech translation: '%s'", selected_name)
+                source = "czech"
             elif friendly_name_en:
                 # Use English name if available
                 selected_name = friendly_name_en
-                _LOGGER.debug("   ⚠️ Using English name (no Czech translation): '%s'", selected_name)
+                source = "english"
             elif field_name:
                 # For entities without descriptors, use the original technical field name
                 # This is more honest than a formatted version that looks like a translation
                 selected_name = field_name
-                _LOGGER.debug("   🔧 Using technical field name (no translations): '%s'", selected_name)
+                source = "field"
             else:
                 selected_name = self.entity_id_suffix
-                _LOGGER.debug("   ❌ Using entity ID suffix (no names available): '%s'", selected_name)
+                source = "entity_id"
+
+        # Consolidated entity name selection log
+        _LOGGER.debug(
+            "🏷️ NAME: %s -> '%s' | Lang:%s | Source:%s | Translations:%s",
+            self.entity_id_suffix, selected_name, language_preference,
+            source, "yes" if has_real_translations else "no"
+        )
 
         return selected_name
 

@@ -156,13 +156,8 @@ async def async_setup_entry(
 
     for entity_id, entity_data in sensor_entities.items():
         try:
-            _LOGGER.debug("Creating sensor for entity_id: %s", entity_id)
-            _LOGGER.debug(
-                "Entity data keys: %s",
-                list(entity_data.keys())
-                if isinstance(entity_data, dict)
-                else "Not a dict",
-            )
+            _LOGGER.debug("🔧 Creating sensor: %s | Keys: %s", entity_id,
+                         list(entity_data.keys()) if isinstance(entity_data, dict) else "Not a dict")
 
             # IMPORTANT: Ensure entity_data has entity_id key for sensor initialization
             # The entity_id comes from the dictionary key, but the sensor expects it in the data
@@ -171,9 +166,7 @@ async def async_setup_entry(
                     entity_data
                 )  # Make a copy to avoid modifying original
                 entity_data["entity_id"] = entity_id
-                _LOGGER.debug(
-                    "Added missing entity_id to entity_data for %s", entity_id
-                )
+
 
             sensor = XCCSensor(coordinator, entity_data)
             sensors.append(sensor)
@@ -227,7 +220,7 @@ class XCCSensor(XCCEntity, SensorEntity):
                         f"No entity_id found in entity_data and no prop to generate from. Data keys: {list(entity_data.keys())}"
                     )
 
-            _LOGGER.debug("Initializing XCCSensor for entity_id: %s", entity_id)
+
 
             # Create entity description
             description = self._create_entity_description(coordinator, entity_data)
@@ -464,23 +457,9 @@ class XCCSensor(XCCEntity, SensorEntity):
         safe_xml_name = locals().get('xml_name', 'undefined')
 
         _LOGGER.info(
-            "🏗️ SENSOR ENTITY CREATION: %s",
-            prop
-        )
-        _LOGGER.info(
-            "   📝 Friendly Name: '%s'",
-            entity_name
-        )
-        _LOGGER.info(
-            "   🌍 Device Class: %s | State Class: %s | Unit: %s",
-            device_class,
-            state_class,
-            ha_unit
-        )
-        _LOGGER.info(
-            "   🔧 XML Name: %s | Current Value: %s",
-            safe_xml_name,
-            entity_data.get("state", "N/A")
+            "🏗️ SENSOR: %s -> '%s' | ID:%s | Class:%s/%s Unit:%s | Value:%s",
+            prop, entity_name, entity_id.split('.')[-1], device_class or "none",
+            state_class or "none", ha_unit or "none", entity_data.get("state", "N/A")
         )
 
         # Special logging for entities that might cause state class issues
