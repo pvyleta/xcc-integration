@@ -1,24 +1,65 @@
-# XCC Tepelné Čerpadlo CLI
+# XCC Tepelné Čerpadlo - Home Assistant Integrace
 
-Komplexní nástroj příkazové řádky pro správu řadičů tepelných čerpadel XCC s podporou fotovoltaické integrace. Tento nástroj umožňuje číst, monitorovat a konfigurovat váš systém tepelného čerpadla prostřednictvím strukturovaného rozhraní organizovaného podle stránek.
+Home Assistant integrace pro řadiče tepelných čerpadel XCC s podporou fotovoltaické integrace. Monitorujte a ovládejte váš systém tepelného čerpadla přímo z Home Assistant s automatickým objevováním entit a dvojjazyčnou podporou.
 
-## Funkce
+## 🏠 Funkce Home Assistant Integrace
 
-- 🔧 **470+ Nastavitelných Polí** napříč 6 konfiguračními stránkami
-- 📊 **Živé Načítání Dat** s aktuálními hodnotami v reálném čase
-- 🌐 **Dvojjazyčná Podpora** (anglické/české popisy)
-- 📋 **Strukturované Rozhraní** organizované podle konfiguračních stránek
-- 🔍 **Pokročilé Vyhledávání** napříč všemi poli a stránkami
-- 🔄 **Obnovení Databáze** pro synchronizaci s aktualizacemi firmwaru
-- 📈 **Bohaté Zobrazení** s omezeními, možnostmi a aktuálními hodnotami
-- 🖥️ **Click framework** pro robustní CLI rozhraní
-- 🛠️ **Shell integrace** s wrapper skriptem
+- 🔧 **470+ nastavitelných polí** automaticky objevených napříč 6 konfiguračními stránkami
+- 📊 **Živé monitorování dat** s hodnotami senzorů v reálném čase
+- 🌐 **Dvojjazyčná podpora** (angličtina/čeština s automatickou detekcí)
+- 🎛️ **Nativní HA entity**: Senzory, přepínače, čísla, výběry, binární senzory
+- 📋 **Organizováno podle zařízení** (vytápění, FV, teplá voda, pomocný zdroj, atd.)
+- 🔄 **Automatické aktualizace** s konfigurovatelným intervalem skenování
+- 📈 **Profesionální UI** s nativním konfiguračním tokem Home Assistant
+- 🏷️ **Konzistentní pojmenování** s prefixem `xcc_` pro snadnou identifikaci
 
-## Instalace
+## 📦 Instalace
+
+### 🚀 HACS Instalace (Doporučeno)
+
+1. **Přidání vlastního repozitáře**:
+   - Otevřete HACS v Home Assistant
+   - Klikněte na 3 tečky (⋮) → "Custom repositories"
+   - Přidejte repozitář: `https://github.com/pvyleta/xcc-integration`
+   - Kategorie: `Integration`
+
+2. **Instalace integrace**:
+   - Jděte do HACS > Integrations
+   - Vyhledejte "XCC Heat Pump Controller"
+   - Klikněte na "Download" a restartujte Home Assistant
+
+3. **Konfigurace integrace**:
+   - Nastavení > Zařízení a služby > "Přidat integraci"
+   - Vyhledejte "XCC Heat Pump Controller"
+   - Zadejte údaje vašeho XCC řadiče:
+     - IP adresa: IP adresa vašeho XCC řadiče
+     - Uživatelské jméno: Vaše XCC uživatelské jméno
+     - Heslo: Vaše XCC heslo
+     - Interval skenování: 30 sekund (doporučeno)
+
+### 📁 Manuální instalace
+
+1. Stáhněte nejnovější verzi
+2. Zkopírujte `custom_components/xcc/` do vašeho Home Assistant `custom_components/` adresáře
+3. Restartujte Home Assistant
+4. Postupujte podle konfiguračních kroků výše
+
+## ✅ Co získáte
+
+- 🌡️ **Teplotní senzory**: Venkovní, vnitřní, teploty vody
+- 🔄 **Stavové senzory**: Kompresor, čerpadlo, provozní režimy
+- 🎛️ **Ovládání**: Přepínače, nastavení teploty, provozní režimy
+- 📊 **Výkonnostní metriky**: Spotřeba energie, data účinnosti
+- 🌐 **Vícejazyčnost**: Angličtina/čeština s automatickou detekcí
+- 🏷️ **Organizované entity**: Všechny entity s prefixem `xcc_` pro snadnou identifikaci
+
+## 🔧 Vývoj a Testování
+
+### Vývojové prostředí
 
 1. **Klonování repozitáře:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/pvyleta/xcc-integration
    cd xcc-integration
    ```
 
@@ -33,231 +74,112 @@ Komplexní nástroj příkazové řádky pro správu řadičů tepelných čerpa
    pip install -r requirements.txt
    ```
 
-4. **Generování databáze polí:**
-   ```bash
-   python analyze_known_pages.py
-   ```
+### Spuštění testů
 
-5. **Nastavení shell skriptu (volitelné):**
-   ```bash
-   # Učinit shell skript spustitelným
-   chmod +x xcc
-
-   # Přidat do PATH nebo vytvořit symbolický odkaz
-   sudo ln -s $(pwd)/xcc /usr/local/bin/xcc
-   ```
-
-**Poznámka:** Databáze polí se automaticky vygeneruje při prvním spuštění, pokud chybí.
-
-## Rychlý Start
-
-### Seznam Dostupných Stránek
-```bash
-python xcc_cli.py --ip 192.168.0.50 pages
-```
-
-### Zobrazení Konfiguračních Polí
-```bash
-# Seznam všech nastavitelných polí na stránce spotových cen
-xcc spot --list
-
-# Seznam všech polí (včetně pouze pro čtení) na FVE stránce
-xcc fve --list-all
-
-# Zobrazení detailních informací o konkrétním poli
-xcc fve --show FVE-USEMODE
-
-# Získání aktuální hodnoty pole
-xcc tuv1 --get TUVPOZADOVANA
-```
-
-### Vyhledávání a Filtrování
-```bash
-# Vyhledání polí souvisejících s baterií na FVE stránce
-xcc fve --search battery
-
-# Vyhledávání napříč všemi stránkami
-xcc search temperature
-```
-
-## Konfigurační Stránky
-
-| Příkaz | Stránka | Popis | Pole |
-|--------|---------|-------|------|
-| `okruh` | Topné Okruhy | Řízení teploty, časové programy, vliv počasí | 114 |
-| `fve` | Fotovoltaika | Správa baterie, limity exportu, spotové ceny | 220 |
-| `tuv1` | Teplá Voda | Sanitace, cirkulace, externí ohřev | 82 |
-| `biv` | Bivalentní Topení | Konfigurace záložního topného systému | 47 |
-| `spot` | Spotové Ceny | Optimalizace dynamických cen | 7 |
-
-## Rozhraní Příkazové Řádky
-
-### Shell Skript vs Python Skript
-
-**Shell Skript (Doporučeno):**
-```bash
-xcc --lang cz spot --list
-```
+Integrace obsahuje komplexní testy pro zajištění spolehlivosti:
 
 ```bash
-python xcc_cli.py --ip 192.168.0.50 --lang cz spot --list
+# Spuštění všech testů
+python -m pytest tests/ -v
+
+# Spuštění konkrétních kategorií testů
+python -m pytest tests/test_basic_validation.py -v
+python -m pytest tests/test_xcc_client.py -v
 ```
 
-### Globální Možnosti
+**Pokrytí testů:**
+- ✅ Validace Python syntaxe
+- ✅ Validace manifest.json
+- ✅ Parsování ukázkových dat
+- ✅ Validace XML struktury
+- ✅ Ověření konstant integrace
 
-**Důležité**: Globální možnosti musí být **před** podpříkazem.
+## 🔧 Řešení problémů
 
-- `--ip IP` - IP adresa řadiče (výchozí: 192.168.0.50)
-- `--username USER` - Uživatelské jméno (výchozí: xcc)
-- `--password PASS` - Heslo (výchozí: xcc)
-- `--lang {en,cz}` - Jazyk pro popisy (výchozí: en)
-- `-v, --verbose` - Povolit podrobný ladicí výstup
-- `--show-entities` - Zobrazit výstup entit během načítání dat
+### Integrace se nezobrazuje v HACS
+- Ujistěte se, že jste správně přidali repozitář do HACS vlastních repozitářů
+- Obnovte HACS a vyhledejte znovu
+- Zkontrolujte HACS logy pro případné chyby
 
-### Příkazy Stránek
-Každá stránka podporuje tyto podpříkazy:
-- `--list` - Seznam všech nastavitelných polí s aktuálními hodnotami
-- `--list-all` - Seznam všech polí (nastavitelná + pouze pro čtení)
-- `--show POLE` - Zobrazení detailních informací o poli
-- `--get POLE` - Získání aktuální hodnoty pole
-- `--search DOTAZ` - Vyhledávání polí na této stránce
+### Problémy s připojením
+- Ověřte, že IP adresa XCC řadiče je dostupná z Home Assistant
+- Zkontrolujte správnost uživatelského jména/hesla
+- Ujistěte se, že webové rozhraní XCC řadiče je přístupné
+- Otestujte připojení z hostitele Home Assistant: `ping <XCC_IP>`
 
-### Speciální Příkazy
-- `pages` - Seznam všech dostupných konfiguračních stránek
-- `search DOTAZ` - Vyhledávání napříč všemi stránkami
-- `refresh-db` - Aktualizace databáze polí z řadiče
-- `refresh-db --force` - Vynucení obnovení i když je databáze čerstvá
+### Problémy s entitami
+- Všechny XCC entity mají prefix `xcc_` pro snadnou identifikaci
+- Pokud se entity nezobrazují, zkontrolujte logy Home Assistant pro chyby
+- Restartujte Home Assistant po změnách konfigurace
+- Zkontrolujte registr entit v Developer Tools
 
-## Příklady
+## 📚 Konfigurační stránky
 
-### Základní Použití
-```bash
-# Zobrazení všech nastavení spotových cen
-xcc spot --list
+Integrace automaticky objevuje entity z těchto XCC stránek:
 
-# Kontrola aktuálního režimu baterie
-xcc fve --get FVE-USEMODE
+| Stránka | Popis | Typické entity |
+|---------|-------|----------------|
+| **Topné okruhy** | Řízení teploty, časové programy | Teplotní senzory, ovládání nastavení |
+| **Fotovoltaika** | Správa baterie, exportní limity | Výkonové senzory, ovládání baterie |
+| **Teplá voda** | Sanitace, cirkulace | Teplota vody, ovládání ohřevu |
+| **Pomocný zdroj** | Záložní topný systém | Stavové senzory, ovládání provozu |
+| **Spotové ceny** | Optimalizace dynamických cen | Cenové senzory, optimalizační přepínače |
+| **Stav systému** | Celkové informace o systému | Stavové senzory, diagnostická data |
 
-# Vyhledání nastavení souvisejících s teplotou
-xcc okruh --search temperature
-```
+## 🆘 Podpora
 
-### Pokročilé Použití
-```bash
-# Použití českých popisů (globální možnosti první)
-xcc --lang cz spot --list
+### Získání pomoci
+Pokud narazíte na problémy:
 
-# Vlastní přihlašovací údaje s podrobným výstupem
-xcc --username admin --password secret123 -v pages
+1. **Zkontrolujte logy Home Assistant**: Nastavení > Systém > Logy
+2. **Hledejte XCC chyby**: Vyhledejte "xcc" nebo "custom_components" v lozích
+3. **Ověřte konektivitu**: Ujistěte se, že XCC řadič je dostupný z HA
+4. **Zkontrolujte registr entit**: Developer Tools > States (hledejte `xcc_`)
 
-# Zobrazení výstupu entit během načítání dat
-xcc --show-entities fve --list
-```
+### Časté problémy
 
-### Správa Databáze
-```bash
-# Kontrola, zda databáze potřebuje obnovení
-xcc refresh-db
+**Entity se neaktualizují:**
+- Zkontrolujte konfiguraci intervalu skenování
+- Ověřte, že XCC řadič odpovídá
+- Hledejte chyby timeout v lozích
 
-# Vynucení obnovení databáze po aktualizaci firmwaru
-xcc refresh-db --force
-```
+**Chyby autentizace:**
+- Ověřte správnost uživatelského jména/hesla
+- Zkontrolujte, zda je webové rozhraní XCC přístupné
+- Ujistěte se, že v přihlašovacích údajích nejsou speciální znaky
 
+**Chybějící entity:**
+- Některé entity mohou být skryté, pokud nemají aktuální hodnotu
+- Zkontrolujte, zda XCC řadič má všechny očekávané moduly/funkce
+- Restartujte Home Assistant po změnách konfigurace
 
+### Hlášení problémů
 
-## Typy Polí a Zobrazení
+Při hlášení problémů prosím uveďte:
+- Verzi Home Assistant
+- Verzi XCC integrace
+- Model/firmware XCC řadiče
+- Relevantní záznamy z logů
+- Kroky k reprodukci problému
 
-### Sloupce Tabulky
-- **Field** - Název/identifikátor pole
-- **Type** - Datový typ (numeric, boolean, enum, time, action)
-- **Current Value** - Živá hodnota z řadiče
-- **Description** - Lidsky čitelný popis
-- **Constraints** - Min/max hodnoty, jednotky, dostupné možnosti
-- **Access** - 🔧 (nastavitelné) nebo 👁️ (pouze pro čtení)
+[Otevřete issue na GitHubu](https://github.com/pvyleta/xcc-integration/issues)
 
-### Formátování Hodnot
-- **Boolean**: ✓ (povoleno) / ✗ (zakázáno)
-- **Enum**: Aktuální hodnota s popisem (např. "3 (Ekonomický)")
-- **Numeric**: Hodnota s jednotkou (např. "21.0 °C")
-- **Time**: Formátované časové hodnoty
+## 📋 Changelog
 
-## Správa Databáze
+Viz [CHANGELOG.md](CHANGELOG.md) pro detailní historii verzí a změn.
 
-CLI používá hybridní přístup:
-- **Statická data** (definice polí, omezení) z JSON databáze
-- **Dynamická data** (aktuální hodnoty) načítaná živě z řadiče
-
-### Kdy Obnovit Databázi
-- Po aktualizacích firmwaru řadiče
-- Když jsou přidána nová pole
-- Pokud se změní definice polí
-- Pro řešení problémů se synchronizací
-
-### Proces Obnovení
-```bash
-# Příkaz refresh automaticky spustí analyze_known_pages.py
-xcc refresh-db
-```
-
-## Řešení Problémů
-
-### Problémy s Připojením
-```bash
-# Test s podrobným výstupem
-xcc -v pages
-
-# Kontrola s vlastní IP
-xcc --ip 192.168.1.100 pages
-```
-
-### Problémy s Databází
-```bash
-# Vynucení obnovení databáze
-xcc refresh-db --force
-
-# Ruční generování databáze
-python analyze_known_pages.py
-```
-
-### Problémy s Autentizací
-```bash
-# Použití vlastních přihlašovacích údajů
-xcc --username mojeuživatel --password mojeheslo pages
-```
-
-
-
-## Architektura
-
-### Tok Dat
-1. **Statická Databáze**: Definice polí načtené z `field_database.json`
-2. **Živé Připojení**: Aktuální hodnoty načtené z XML endpointů řadiče
-3. **Hybridní Zobrazení**: Kombinace statických metadat s živými hodnotami
-
-### Struktura Souborů
-- `xcc_cli.py` - Hlavní CLI aplikace
-- `xcc` - Shell wrapper skript
-- `xcc_client.py` - Znovupoužitelná XCC klientská knihovna
-- `scripts/analyze_known_pages.py` - Generátor databáze
-- `field_database.json` - Databáze polí (automaticky generovaná)
-- `requirements.txt` - Python závislosti
-
-## Přispívání
+## 🤝 Přispívání
 
 1. Forkněte repozitář
 2. Vytvořte feature branch
 3. Proveďte změny
-4. Otestujte s vaším řadičem
+4. Spusťte testy: `python -m pytest tests/ -v`
 5. Odešlete pull request
 
-## Licence
+## 📄 Licence
 
-[Přidejte informace o licenci zde]
+Tento projekt je licencován pod MIT licencí - viz soubor LICENSE pro detaily.
 
-## Podpora
+---
 
-Pro problémy a otázky:
-1. Zkontrolujte sekci řešení problémů
-2. Spusťte s `-v` flagou pro detailní logy
-3. Ověřte konektivitu řadiče
-4. Zkontrolujte čerstvost databáze pomocí `refresh-db`
+**Vytvořeno s ❤️ pro komunitu Home Assistant**
