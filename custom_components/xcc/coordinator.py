@@ -157,11 +157,19 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Update device info on first successful fetch
             if not self.device_info:
+                # Language-aware main controller name
+                if self.language == LANGUAGE_ENGLISH:
+                    controller_name = f"XCC Controller ({self.ip_address})"
+                    controller_model = "Heat Pump Controller"
+                else:
+                    controller_name = f"XCC Regulátor ({self.ip_address})"
+                    controller_model = "Regulátor tepelného čerpadla"
+
                 self.device_info = {
                     "identifiers": {(DOMAIN, self.ip_address)},
-                    "name": f"XCC Controller ({self.ip_address})",
+                    "name": controller_name,
                     "manufacturer": "XCC",
-                    "model": "Heat Pump Controller",
+                    "model": controller_model,
                     "sw_version": "Unknown",
                     "configuration_url": f"http://{self.ip_address}",
                 }
@@ -465,16 +473,28 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _init_device_info(self) -> None:
         """Initialize device info for all sub-devices."""
-        # Device names and descriptions
-        device_configs = {
-            "SPOT": {"name": "Spot Prices", "model": "Energy Market Data"},
-            "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
-            "BIV": {"name": "Heat Pump", "model": "Bivalent Heat Pump"},
-            "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
-            "TUV1": {"name": "Hot Water System", "model": "Domestic Hot Water"},
-            "STAVJED": {"name": "Unit Status", "model": "System Status Monitor"},
-            "XCC_HIDDEN_SETTINGS": {"name": "Hidden Settings", "model": "Advanced Configuration"},
-        }
+        # Device names and descriptions with language support
+        if self.language == LANGUAGE_ENGLISH:
+            device_configs = {
+                "SPOT": {"name": "Spot Prices", "model": "Energy Market Data"},
+                "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
+                "BIV": {"name": "Heat Pump", "model": "Bivalent Heat Pump"},
+                "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
+                "TUV1": {"name": "Hot Water System", "model": "Domestic Hot Water"},
+                "STAVJED": {"name": "Unit Status", "model": "System Status Monitor"},
+                "XCC_HIDDEN_SETTINGS": {"name": "Hidden Settings", "model": "Advanced Configuration"},
+            }
+        else:
+            # Czech language
+            device_configs = {
+                "SPOT": {"name": "Spotové ceny", "model": "Data energetického trhu"},
+                "FVE": {"name": "Fotovoltaický systém", "model": "Fotovoltaický regulátor"},
+                "BIV": {"name": "Tepelné čerpadlo", "model": "Bivalentní tepelné čerpadlo"},
+                "OKRUH": {"name": "Topné okruhy", "model": "Regulátor topných zón"},
+                "TUV1": {"name": "Systém teplé vody", "model": "Teplá užitková voda"},
+                "STAVJED": {"name": "Stav jednotky", "model": "Monitor stavu systému"},
+                "XCC_HIDDEN_SETTINGS": {"name": "Skrytá nastavení", "model": "Pokročilá konfigurace"},
+            }
 
         self.sub_device_info = {}
         for device_name, config in device_configs.items():
