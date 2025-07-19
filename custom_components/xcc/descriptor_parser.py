@@ -150,6 +150,11 @@ class XCCDescriptorParser:
                 "⚠️ SENSOR FALLBACK: %s -> No text attributes found, using formatted prop name: '%s'",
                 prop, friendly_name_cz
             )
+        elif text_en and not text:
+            _LOGGER.debug(
+                "⚠️ SENSOR ENGLISH ONLY: %s -> Only English text available: '%s'",
+                prop, text_en
+            )
 
         _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
         return sensor_config
@@ -333,8 +338,15 @@ class XCCDescriptorParser:
         # English friendly name - prioritize English text
         friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or self._format_prop_name(prop)
 
-        # Czech friendly name - prioritize Czech text
-        friendly_name_cz = text or label_text or row_text or text_en or label_text_en or row_text_en or self._format_prop_name(prop)
+        # Czech friendly name - prioritize Czech text, but try to translate English-only terms
+        friendly_name_cz = text or label_text or row_text
+        if not friendly_name_cz:
+            # Try to translate English terms to Czech
+            english_text = text_en or label_text_en or row_text_en
+            if english_text:
+                friendly_name_cz = self._translate_english_to_czech(english_text)
+            else:
+                friendly_name_cz = self._format_prop_name(prop)
 
         _LOGGER.debug(
             "🔍 DESCRIPTOR PARSING FALLBACK: %s -> friendly_name_cz='%s', friendly_name_en='%s'",
@@ -407,6 +419,11 @@ class XCCDescriptorParser:
             _LOGGER.debug(
                 "⚠️ DESCRIPTOR FALLBACK: %s -> No text attributes found, using formatted prop name: '%s'",
                 prop, friendly_name
+            )
+        elif text_en and not text and not label_text and not row_text:
+            _LOGGER.debug(
+                "⚠️ DESCRIPTOR ENGLISH ONLY: %s -> Only English text available: '%s'",
+                prop, text_en
             )
 
         if element.tag == "switch":
@@ -517,9 +534,22 @@ class XCCDescriptorParser:
         if not prop:
             return prop
 
-        # Handle special cases
+        # Handle special cases for user-editable fields
         if prop == "PAGENAME":
             return "Page Name"
+
+        # Handle CONFIG-NAZEV entities (user-editable names)
+        if prop.endswith("-CONFIG-NAZEV"):
+            # Extract the circuit/device name and format it
+            circuit_name = prop.replace("-CONFIG-NAZEV", "")
+            formatted_circuit = self._format_circuit_name(circuit_name)
+            return f"{formatted_circuit} - Name"
+
+        # Handle other NAZEV entities (user-editable names)
+        if prop.endswith("-NAZEV"):
+            base_name = prop.replace("-NAZEV", "")
+            formatted_base = self._format_circuit_name(base_name)
+            return f"{formatted_base} - Name"
 
         # Split on common separators and format
         parts = prop.replace("-", " ").replace("_", " ").split()
@@ -528,10 +558,10 @@ class XCCDescriptorParser:
         formatted_parts = []
         for part in parts:
             part_lower = part.lower()
-            if part_lower in ["config", "nazev", "stats", "boost", "enabled", "mode"]:
+            if part_lower in ["config", "nazev", "stats", "boost", "enabled", "mode", "priorita", "priority"]:
                 # Keep common words as-is but capitalized
                 formatted_parts.append(part_lower.capitalize())
-            elif part_lower in ["tuv", "fve", "tc", "hp"]:
+            elif part_lower in ["tuv", "fve", "tc", "hp", "biv"]:
                 # Keep technical abbreviations uppercase
                 formatted_parts.append(part.upper())
             elif len(part) <= 3 and part.isupper():
@@ -550,6 +580,119 @@ class XCCDescriptorParser:
         )
 
         return formatted
+
+    def _format_circuit_name(self, circuit_name):
+        """Format circuit/device names for better readability."""
+        if not circuit_name:
+            return circuit_name
+
+        # Handle specific circuit patterns
+        if circuit_name.startswith("TOPNEOKRUHYIN"):
+            # Extract circuit number
+            circuit_num = circuit_name.replace("TOPNEOKRUHYIN", "")
+            return f"Heating Circuit {circuit_num}"
+        elif circuit_name.startswith("FVE-CASCADECONFIG"):
+            # Extract cascade number
+            cascade_num = circuit_name.replace("FVE-CASCADECONFIG", "")
+            return f"PV Cascade {cascade_num}"
+        elif circuit_name.startswith("OKRUH"):
+            # Extract circuit number
+            circuit_num = circuit_name.replace("OKRUH", "")
+            return f"Circuit {circuit_num}"
+        else:
+            # Generic formatting
+            return circuit_name.replace("-", " ").title()
+
+    def _translate_english_to_czech(self, english_text):
+        """Translate common English terms to Czech for Heat Pump Controller entities."""
+        if not english_text:
+            return english_text
+
+        # Common translations for Heat Pump Controller entities
+        translations = {
+            # Heat pump terms
+            "Heat Pump": "Tepelné čerpadlo",
+            "Heat pump": "Tepelné čerpadlo",
+            "HP": "TČ",
+            "Compressor": "Kompresor",
+            "Evaporator": "Výparník",
+            "Condenser": "Kondenzátor",
+            "Refrigerant": "Chladivo",
+
+            # Temperature and heating
+            "Temperature": "Teplota",
+            "Heating": "Vytápění",
+            "Cooling": "Chlazení",
+            "Hot water": "Teplá voda",
+            "Flow": "Průtok",
+            "Return": "Zpátečka",
+            "Supply": "Přívod",
+
+            # Control and operation
+            "Control": "Řízení",
+            "Operation": "Provoz",
+            "Mode": "Režim",
+            "Status": "Stav",
+            "Enable": "Povolit",
+            "Enabled": "Povoleno",
+            "Disable": "Zakázat",
+            "Disabled": "Zakázáno",
+            "Priority": "Priorita",
+            "Configuration": "Konfigurace",
+            "Config": "Konfigurace",
+
+            # Measurements
+            "Power": "Výkon",
+            "Pressure": "Tlak",
+            "Current": "Proud",
+            "Voltage": "Napětí",
+            "Frequency": "Frekvence",
+            "Speed": "Rychlost",
+            "RPM": "Otáčky",
+
+            # Time and scheduling
+            "Time": "Čas",
+            "Schedule": "Plán",
+            "Timer": "Časovač",
+            "Delay": "Zpoždění",
+
+            # System components
+            "Pump": "Čerpadlo",
+            "Fan": "Ventilátor",
+            "Valve": "Ventil",
+            "Sensor": "Čidlo",
+            "Circuit": "Okruh",
+            "Zone": "Zóna",
+        }
+
+        # Try exact match first
+        if english_text in translations:
+            translated = translations[english_text]
+            _LOGGER.debug(
+                "🔄 ENGLISH->CZECH TRANSLATION: '%s' -> '%s'",
+                english_text, translated
+            )
+            return translated
+
+        # Try partial matches for compound terms
+        translated_text = english_text
+        for english, czech in translations.items():
+            if english.lower() in english_text.lower():
+                translated_text = translated_text.replace(english, czech)
+
+        if translated_text != english_text:
+            _LOGGER.debug(
+                "🔄 PARTIAL ENGLISH->CZECH TRANSLATION: '%s' -> '%s'",
+                english_text, translated_text
+            )
+            return translated_text
+
+        # No translation found, return original
+        _LOGGER.debug(
+            "❓ NO TRANSLATION FOUND: '%s' (keeping English)",
+            english_text
+        )
+        return english_text
 
     def _find_parent_row(self, element: ET.Element) -> ET.Element | None:
         """Find the parent row element for context."""
