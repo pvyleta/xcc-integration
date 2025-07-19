@@ -142,23 +142,17 @@ class XCCDescriptorParser:
             "entity_type": "sensor",
         }
 
-        # Enhanced debug logging for sensor extraction
-        _LOGGER.debug(
-            "🔍 SENSOR EXTRACTION: %s -> friendly_name='%s', friendly_name_en='%s', device_class=%s, unit='%s'",
-            prop, friendly_name_cz, friendly_name_en, device_class, unit
-        )
-
-        # Log if we had to use prop name as fallback
+        # Consolidated sensor extraction log
+        fallback_info = ""
         if friendly_name_cz == self._format_prop_name(prop):
-            _LOGGER.debug(
-                "⚠️ SENSOR FALLBACK: %s -> No text attributes found, using formatted prop name: '%s'",
-                prop, friendly_name_cz
-            )
+            fallback_info = " [FALLBACK]"
         elif text_en and not text:
-            _LOGGER.debug(
-                "⚠️ SENSOR ENGLISH ONLY: %s -> Only English text available: '%s'",
-                prop, text_en
-            )
+            fallback_info = " [EN-ONLY]"
+
+        _LOGGER.debug(
+            "🔍 SENSOR: %s -> CZ:'%s' | EN:'%s' | %s | %s%s",
+            prop, friendly_name_cz, friendly_name_en, device_class or "no-class", unit or "no-unit", fallback_info
+        )
 
         _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
         return sensor_config
@@ -408,27 +402,25 @@ class XCCDescriptorParser:
             "writable": is_writable,
         }
 
-        # Log friendly name extraction for debugging
-        _LOGGER.debug(
-            "🔍 DESCRIPTOR PARSING: %s -> text='%s', text_en='%s', row_text='%s', row_text_en='%s', label_text='%s', label_text_en='%s'",
-            prop, text, text_en, row_text, row_text_en, label_text, label_text_en
-        )
-        _LOGGER.debug(
-            "🔍 DESCRIPTOR PARSING: %s -> friendly_name='%s', friendly_name_en='%s'",
-            prop, friendly_name, friendly_name_en
-        )
+        # Consolidated descriptor parsing log
+        source_info = []
+        if text or text_en:
+            source_info.append(f"text='{text or text_en}'")
+        if row_text or row_text_en:
+            source_info.append(f"row='{row_text or row_text_en}'")
+        if label_text or label_text_en:
+            source_info.append(f"label='{label_text or label_text_en}'")
 
-        # Log if we had to use prop name as fallback
+        fallback_info = ""
         if friendly_name == self._format_prop_name(prop):
-            _LOGGER.debug(
-                "⚠️ DESCRIPTOR FALLBACK: %s -> No text attributes found, using formatted prop name: '%s'",
-                prop, friendly_name
-            )
+            fallback_info = " [FALLBACK]"
         elif text_en and not text and not label_text and not row_text:
-            _LOGGER.debug(
-                "⚠️ DESCRIPTOR ENGLISH ONLY: %s -> Only English text available: '%s'",
-                prop, text_en
-            )
+            fallback_info = " [EN-ONLY]"
+
+        _LOGGER.debug(
+            "🔍 DESCRIPTOR: %s -> CZ:'%s' | EN:'%s' | %s%s",
+            prop, friendly_name, friendly_name_en, " | ".join(source_info) or "no-text", fallback_info
+        )
 
         if element.tag == "switch":
             # Readonly switches become sensors
@@ -576,13 +568,6 @@ class XCCDescriptorParser:
                 formatted_parts.append(part.capitalize())
 
         formatted = " ".join(formatted_parts)
-
-        # Log the formatting for debugging
-        _LOGGER.debug(
-            "🔍 PROP NAME FORMATTING: '%s' -> '%s'",
-            prop, formatted
-        )
-
         return formatted
 
     def _format_circuit_name(self, circuit_name):

@@ -222,25 +222,36 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         entities_with_descriptors = []
         entities_without_descriptors = []
 
-        _LOGGER.debug("🔍 ENTITY SEPARATION DEBUG:")
-        _LOGGER.debug("   Total entities to process: %d", len(entities))
-        _LOGGER.debug("   Available entity configs: %d", len(self.entity_configs))
+        # Track descriptor stats by page for consolidated logging
+        descriptor_stats_by_page = {}
 
         for entity in entities:
             prop = entity["attributes"]["field_name"]
             page = entity["attributes"].get("page", "unknown")
             has_descriptor = prop in self.entity_configs
 
+            # Track stats by page
+            if page not in descriptor_stats_by_page:
+                descriptor_stats_by_page[page] = {"with": [], "without": []}
+
             if has_descriptor:
                 entities_with_descriptors.append(entity)
-                _LOGGER.debug("   ✅ WITH descriptor: %s (page: %s)", prop, page)
+                descriptor_stats_by_page[page]["with"].append(prop)
             else:
                 entities_without_descriptors.append(entity)
-                _LOGGER.debug("   ❌ NO descriptor: %s (page: %s)", prop, page)
+                descriptor_stats_by_page[page]["without"].append(prop)
 
-        _LOGGER.debug("📊 SEPARATION RESULTS:")
-        _LOGGER.debug("   Entities WITH descriptors: %d", len(entities_with_descriptors))
-        _LOGGER.debug("   Entities WITHOUT descriptors: %d", len(entities_without_descriptors))
+        # Log consolidated descriptor stats by page
+        _LOGGER.debug("📊 DESCRIPTOR STATS: %d total entities, %d configs available", len(entities), len(self.entity_configs))
+        for page, stats in descriptor_stats_by_page.items():
+            with_count = len(stats["with"])
+            without_count = len(stats["without"])
+            if with_count > 0 and without_count > 0:
+                _LOGGER.debug("📄 %s: ✅%d WITH | ❌%d WITHOUT descriptors", page, with_count, without_count)
+            elif with_count > 0:
+                _LOGGER.debug("📄 %s: ✅%d WITH descriptors", page, with_count)
+            elif without_count > 0:
+                _LOGGER.debug("📄 %s: ❌%d WITHOUT descriptors", page, without_count)
 
         # Group entities with descriptors by page/device for priority processing
         entities_by_page = {}

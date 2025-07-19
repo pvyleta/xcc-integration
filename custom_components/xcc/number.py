@@ -40,12 +40,12 @@ async def async_setup_entry(
         if entity_type == "number" and coordinator.is_writable(prop):
             number = XCCNumber(coordinator, entity_data)
             numbers.append(number)
-            _LOGGER.info("🏗️ NUMBER ENTITY CREATION: %s", prop)
-            _LOGGER.info("   📝 Friendly Name: '%s'", number.name)
-            _LOGGER.info("   🔧 Entity ID: %s", getattr(number, 'entity_id', 'not_set'))
-            _LOGGER.info("   📊 Min: %s | Max: %s | Step: %s | Unit: %s",
-                        number.native_min_value, number.native_max_value,
-                        number.native_step, number.native_unit_of_measurement)
+            _LOGGER.info(
+                "🏗️ NUMBER: %s -> '%s' | ID:%s | Range:[%s-%s] Step:%s Unit:%s | Value:%s",
+                prop, number.name, getattr(number, 'entity_id', 'not_set').split('.')[-1],
+                number.native_min_value, number.native_max_value, number.native_step,
+                number.native_unit_of_measurement or "none", number.native_value
+            )
 
     if numbers:
         async_add_entities(numbers)
