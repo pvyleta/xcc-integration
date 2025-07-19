@@ -111,10 +111,10 @@ class XCCDescriptorParser:
 
         # Create separate Czech and English friendly names
         # English friendly name - prioritize English text
-        friendly_name_en = text_en or text or prop
+        friendly_name_en = text_en or text or self._format_prop_name(prop)
 
         # Czech friendly name - prioritize Czech text
-        friendly_name_cz = text or text_en or prop
+        friendly_name_cz = text or text_en or self._format_prop_name(prop)
 
         # Get unit from element (try both unit and unit_en)
         unit = element.get("unit_en") or element.get("unit", "")
@@ -138,11 +138,18 @@ class XCCDescriptorParser:
             "entity_type": "sensor",
         }
 
-        # Log sensor extraction for debugging
+        # Enhanced debug logging for sensor extraction
         _LOGGER.debug(
             "🔍 SENSOR EXTRACTION: %s -> friendly_name='%s', friendly_name_en='%s', device_class=%s, unit='%s'",
             prop, friendly_name_cz, friendly_name_en, device_class, unit
         )
+
+        # Log if we had to use prop name as fallback
+        if friendly_name_cz == self._format_prop_name(prop):
+            _LOGGER.debug(
+                "⚠️ SENSOR FALLBACK: %s -> No text attributes found, using formatted prop name: '%s'",
+                prop, friendly_name_cz
+            )
 
         _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
         return sensor_config
@@ -324,10 +331,10 @@ class XCCDescriptorParser:
 
         # Create separate Czech and English friendly names
         # English friendly name - prioritize English text
-        friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or prop
+        friendly_name_en = text_en or label_text_en or row_text_en or text or label_text or row_text or self._format_prop_name(prop)
 
         # Czech friendly name - prioritize Czech text
-        friendly_name_cz = text or label_text or row_text or text_en or label_text_en or row_text_en or prop
+        friendly_name_cz = text or label_text or row_text or text_en or label_text_en or row_text_en or self._format_prop_name(prop)
 
         _LOGGER.debug(
             "🔍 DESCRIPTOR PARSING FALLBACK: %s -> friendly_name_cz='%s', friendly_name_en='%s'",
@@ -394,6 +401,13 @@ class XCCDescriptorParser:
             "🔍 DESCRIPTOR PARSING: %s -> friendly_name='%s', friendly_name_en='%s'",
             prop, friendly_name, friendly_name_en
         )
+
+        # Log if we had to use prop name as fallback
+        if friendly_name == self._format_prop_name(prop):
+            _LOGGER.debug(
+                "⚠️ DESCRIPTOR FALLBACK: %s -> No text attributes found, using formatted prop name: '%s'",
+                prop, friendly_name
+            )
 
         if element.tag == "switch":
             # Readonly switches become sensors
@@ -497,6 +511,45 @@ class XCCDescriptorParser:
             return None  # Unknown element type
 
         return entity_config
+
+    def _format_prop_name(self, prop):
+        """Format a prop name to be more user-friendly when no text attributes are available."""
+        if not prop:
+            return prop
+
+        # Handle special cases
+        if prop == "PAGENAME":
+            return "Page Name"
+
+        # Split on common separators and format
+        parts = prop.replace("-", " ").replace("_", " ").split()
+
+        # Capitalize each part and handle common abbreviations
+        formatted_parts = []
+        for part in parts:
+            part_lower = part.lower()
+            if part_lower in ["config", "nazev", "stats", "boost", "enabled", "mode"]:
+                # Keep common words as-is but capitalized
+                formatted_parts.append(part_lower.capitalize())
+            elif part_lower in ["tuv", "fve", "tc", "hp"]:
+                # Keep technical abbreviations uppercase
+                formatted_parts.append(part.upper())
+            elif len(part) <= 3 and part.isupper():
+                # Keep short uppercase parts as-is
+                formatted_parts.append(part)
+            else:
+                # Capitalize normally
+                formatted_parts.append(part.capitalize())
+
+        formatted = " ".join(formatted_parts)
+
+        # Log the formatting for debugging
+        _LOGGER.debug(
+            "🔍 PROP NAME FORMATTING: '%s' -> '%s'",
+            prop, formatted
+        )
+
+        return formatted
 
     def _find_parent_row(self, element: ET.Element) -> ET.Element | None:
         """Find the parent row element for context."""
