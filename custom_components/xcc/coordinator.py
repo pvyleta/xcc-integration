@@ -218,31 +218,30 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Track assigned entities to prevent duplicates
         assigned_entities = set()
 
-        # Group entities by page/device for priority processing
-        entities_by_page = {}
-        hidden_entities = []  # Collect entities without descriptors
+        # Separate entities with and without descriptors
+        entities_with_descriptors = []
+        entities_without_descriptors = []
 
         for entity in entities:
             prop = entity["attributes"]["field_name"]
-            page = entity["attributes"].get("page", "unknown").upper()
-
-            # Check if entity has a descriptor
-            has_descriptor = prop in self.entity_configs
-
-            if not has_descriptor:
-                # Entity has no descriptor - add to hidden settings
-                hidden_entities.append(entity)
+            if prop in self.entity_configs:
+                entities_with_descriptors.append(entity)
             else:
-                # Entity has descriptor - add to appropriate page device
-                # Normalize page names (remove numbers and .XML extension)
-                page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
-                if page_normalized not in entities_by_page:
-                    entities_by_page[page_normalized] = []
-                entities_by_page[page_normalized].append(entity)
+                entities_without_descriptors.append(entity)
 
-        # Add hidden entities to special device
-        if hidden_entities:
-            entities_by_page["XCC_HIDDEN_SETTINGS"] = hidden_entities
+        # Group entities with descriptors by page/device for priority processing
+        entities_by_page = {}
+        for entity in entities_with_descriptors:
+            page = entity["attributes"].get("page", "unknown").upper()
+            # Normalize page names (remove numbers and .XML extension)
+            page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
+            if page_normalized not in entities_by_page:
+                entities_by_page[page_normalized] = []
+            entities_by_page[page_normalized].append(entity)
+
+        # Add entities without descriptors to hidden settings device
+        if entities_without_descriptors:
+            entities_by_page["XCC_HIDDEN_SETTINGS"] = entities_without_descriptors
 
         _LOGGER.info("🏗️ PRIORITY-BASED DEVICE ASSIGNMENT")
         _LOGGER.info("   Device priority order: %s", " > ".join(device_priority))
@@ -350,6 +349,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Log device assignment summary
             _LOGGER.info("   📄 %s: Assigned %d entities, skipped %d duplicates", device_name, assigned_count, skipped_count)
+
+
 
         # Store entities list for new platforms
         processed_data["entities"] = entities_list
