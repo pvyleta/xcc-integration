@@ -292,8 +292,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
 
                 # Create entity data structure for new platforms with device assignment
+                # Ensure proper entity ID formatting with xcc_ prefix and valid characters
+                entity_id_suffix = self._format_entity_id(prop)
                 entity_data = {
-                    "entity_id": f"xcc_{prop.lower()}",
+                    "entity_id": f"xcc_{entity_id_suffix}",
                     "prop": prop,
                     "name": friendly_name,
                     "friendly_name": friendly_name,
@@ -373,6 +375,32 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
         return processed_data
+
+    def _format_entity_id(self, prop: str) -> str:
+        """Format XCC property name into valid Home Assistant entity ID suffix."""
+        # Convert to lowercase and replace invalid characters with underscores
+        entity_id = prop.lower()
+
+        # Replace common XCC separators with underscores
+        entity_id = entity_id.replace("-", "_")
+        entity_id = entity_id.replace(".", "_")
+        entity_id = entity_id.replace(" ", "_")
+
+        # Remove any characters that aren't alphanumeric or underscore
+        import re
+        entity_id = re.sub(r'[^a-z0-9_]', '_', entity_id)
+
+        # Remove multiple consecutive underscores
+        entity_id = re.sub(r'_+', '_', entity_id)
+
+        # Remove leading/trailing underscores
+        entity_id = entity_id.strip('_')
+
+        # Ensure it's not empty
+        if not entity_id:
+            entity_id = "unknown"
+
+        return entity_id
 
     def _get_friendly_name(self, descriptor_config: dict[str, Any], prop: str) -> str:
         """Get friendly name based on language preference."""

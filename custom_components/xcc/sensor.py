@@ -215,7 +215,9 @@ class XCCSensor(XCCEntity, SensorEntity):
                 # Try to extract from other fields if entity_id is missing
                 prop = entity_data.get("prop", "")
                 if prop:
-                    entity_id = f"xcc_{prop.lower()}"
+                    # Format entity ID properly with xcc_ prefix
+                    entity_id_suffix = self._format_entity_id_suffix(prop)
+                    entity_id = f"xcc_{entity_id_suffix}"
                     _LOGGER.warning(
                         "Missing entity_id in entity_data, generated from prop: %s",
                         entity_id,
@@ -241,6 +243,32 @@ class XCCSensor(XCCEntity, SensorEntity):
                 err,
             )
             raise
+
+    def _format_entity_id_suffix(self, prop: str) -> str:
+        """Format XCC property name into valid Home Assistant entity ID suffix."""
+        # Convert to lowercase and replace invalid characters with underscores
+        entity_id = prop.lower()
+
+        # Replace common XCC separators with underscores
+        entity_id = entity_id.replace("-", "_")
+        entity_id = entity_id.replace(".", "_")
+        entity_id = entity_id.replace(" ", "_")
+
+        # Remove any characters that aren't alphanumeric or underscore
+        import re
+        entity_id = re.sub(r'[^a-z0-9_]', '_', entity_id)
+
+        # Remove multiple consecutive underscores
+        entity_id = re.sub(r'_+', '_', entity_id)
+
+        # Remove leading/trailing underscores
+        entity_id = entity_id.strip('_')
+
+        # Ensure it's not empty
+        if not entity_id:
+            entity_id = "unknown"
+
+        return entity_id
 
     def _create_entity_description(
         self,
