@@ -255,7 +255,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Group entities with descriptors by page/device for priority processing
         entities_by_page = {}
-        _LOGGER.debug("🔍 PAGE GROUPING DEBUG:")
+        page_normalization_stats = {}
 
         for entity in entities_with_descriptors:
             page = entity["attributes"].get("page", "unknown").upper()
@@ -263,16 +263,24 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Normalize page names (remove numbers and .XML extension)
             page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
 
-            _LOGGER.debug("   Entity %s: page='%s' -> normalized='%s'", prop, page, page_normalized)
+            # Track normalization stats
+            if page not in page_normalization_stats:
+                page_normalization_stats[page] = {"normalized": page_normalized, "count": 0}
+            page_normalization_stats[page]["count"] += 1
 
             if page_normalized not in entities_by_page:
                 entities_by_page[page_normalized] = []
             entities_by_page[page_normalized].append(entity)
 
+        # Log consolidated page normalization results
+        _LOGGER.debug("🔍 PAGE NORMALIZATION:")
+        for page, stats in page_normalization_stats.items():
+            _LOGGER.debug("   %s -> %s (%d entities)", page, stats["normalized"], stats["count"])
+
         # Add entities without descriptors to hidden settings device
         if entities_without_descriptors:
             entities_by_page["XCC_HIDDEN_SETTINGS"] = entities_without_descriptors
-            _LOGGER.debug("   Added %d entities to XCC_HIDDEN_SETTINGS", len(entities_without_descriptors))
+            _LOGGER.debug("   XCC_HIDDEN_SETTINGS (%d entities without descriptors)", len(entities_without_descriptors))
 
         _LOGGER.debug("📊 PAGE GROUPING RESULTS:")
         for page_name, page_entities in entities_by_page.items():
