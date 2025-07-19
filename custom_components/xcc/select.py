@@ -70,20 +70,32 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
         else:
             self._attr_name = entity_data.get("friendly_name", entity_data.get("name", self._prop))
 
-        # Set options from descriptor
+        # Set options from descriptor using language-aware selection
         options = self._entity_config.get('options', [])
         if options:
-            # Use English text if available, otherwise use regular text
-            self._attr_options = [
-                opt.get('text_en', opt.get('text', opt.get('value', '')))
-                for opt in options
-            ]
-            # Create mapping from display text to values
-            self._option_to_value = {
-                opt.get('text_en', opt.get('text', opt.get('value', ''))): opt.get('value', '')
-                for opt in options
-            }
+            # Use coordinator's language preference for option text
+            self._attr_options = []
+            self._option_to_value = {}
+
+            for opt in options:
+                # Get localized option text using coordinator's language preference
+                if coordinator.language == "en":
+                    # English preference: text_en -> text -> value
+                    option_text = opt.get('text_en', opt.get('text', opt.get('value', '')))
+                else:
+                    # Czech preference: text -> text_en -> value
+                    option_text = opt.get('text', opt.get('text_en', opt.get('value', '')))
+
+                self._attr_options.append(option_text)
+                self._option_to_value[option_text] = opt.get('value', '')
+
             self._value_to_option = {v: k for k, v in self._option_to_value.items()}
+
+            # Debug logging for enum options
+            _LOGGER.debug(
+                "🔍 SELECT OPTIONS: %s -> %s (language: %s)",
+                self._prop, self._attr_options, coordinator.language
+            )
         else:
             self._attr_options = []
             self._option_to_value = {}
