@@ -154,7 +154,7 @@ class XCCDescriptorParser:
             prop, friendly_name_cz, friendly_name_en, device_class or "no-class", unit or "no-unit", fallback_info
         )
 
-        _LOGGER.debug("Extracted sensor info for %s: %s", prop, sensor_config)
+
         return sensor_config
 
     def _determine_device_class_from_unit(self, unit: str) -> str | None:
@@ -316,21 +316,11 @@ class XCCDescriptorParser:
             row_text = parent_row.get("text", "")
             row_text_en = parent_row.get("text_en", "")
 
-            _LOGGER.debug(
-                "🔍 DESCRIPTOR PARSING ROW TEXT: %s -> row_text='%s', row_text_en='%s'",
-                prop, row_text, row_text_en
-            )
+
 
             # Look for corresponding label in the row that provides text context
             # For TO-FVEPRETOPENI-POVOLENI, this will be Row 7 which has the labels
             label_text, label_text_en = self._find_label_for_element(element, parent_row)
-        else:
-            _LOGGER.debug(
-                "🔍 DESCRIPTOR PARSING ROW TEXT: %s -> NO PARENT ROW FOUND",
-                prop
-            )
-
-
 
         # Create separate Czech and English friendly names
         # English friendly name - prioritize English text
@@ -346,10 +336,7 @@ class XCCDescriptorParser:
             else:
                 friendly_name_cz = self._format_prop_name_czech(prop)
 
-        _LOGGER.debug(
-            "🔍 DESCRIPTOR PARSING FALLBACK: %s -> friendly_name_cz='%s', friendly_name_en='%s'",
-            prop, friendly_name_cz, friendly_name_en
-        )
+
 
         # Handle different combinations of row, label, and element text for ENGLISH
         if row_text_en and (text_en or label_text_en):
@@ -758,23 +745,20 @@ class XCCDescriptorParser:
             friendly_name_cz = config.get("friendly_name", "")
             friendly_name_en = config.get("friendly_name_en", "")
 
-            # Add suffix to Czech name if it's a duplicate
+            # Add suffix to duplicate names and log consolidated fixes
+            fixes = []
             if friendly_name_cz in czech_duplicates:
                 new_name_cz = f"{friendly_name_cz} ({prop})"
                 config["friendly_name"] = new_name_cz
-                _LOGGER.debug(
-                    "🔧 DUPLICATE CZECH NAME FIXED: '%s' -> '%s'",
-                    friendly_name_cz, new_name_cz
-                )
+                fixes.append(f"CZ:'{friendly_name_cz}' -> '{new_name_cz}'")
 
-            # Add suffix to English name if it's a duplicate
             if friendly_name_en in english_duplicates:
                 new_name_en = f"{friendly_name_en} ({prop})"
                 config["friendly_name_en"] = new_name_en
-                _LOGGER.debug(
-                    "🔧 DUPLICATE ENGLISH NAME FIXED: '%s' -> '%s'",
-                    friendly_name_en, new_name_en
-                )
+                fixes.append(f"EN:'{friendly_name_en}' -> '{new_name_en}'")
+
+            if fixes:
+                _LOGGER.debug("🔧 DUPLICATE NAMES FIXED: %s", " | ".join(fixes))
 
         return entity_configs
 

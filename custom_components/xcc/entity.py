@@ -43,19 +43,11 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 f"Entity data not found for '{entity_id}'. Available entities (first 10): {available_entities}"
             )
 
-        _LOGGER.debug(
-            "Entity %s data structure: %s",
-            entity_id,
-            {k: type(v).__name__ for k, v in self._entity_data.items()},
-        )
-
         self._xcc_data = self._entity_data.get("data", {})
         _LOGGER.debug(
-            "Entity %s xcc_data keys: %s",
-            entity_id,
-            list(self._xcc_data.keys())
-            if isinstance(self._xcc_data, dict)
-            else type(self._xcc_data).__name__,
+            "🔧 Entity init: %s | Structure:%s | XCC keys:%s",
+            entity_id, {k: type(v).__name__ for k, v in self._entity_data.items()},
+            list(self._xcc_data.keys()) if isinstance(self._xcc_data, dict) else type(self._xcc_data).__name__
         )
 
         self._attributes = self._xcc_data.get("attributes", {})
@@ -94,11 +86,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 else:
                     self._attributes["element_type"] = "DISPLAY"
 
-        _LOGGER.debug(
-            "Initialized entity %s with attributes: %s",
-            entity_id,
-            list(self._attributes.keys()),
-        )
+
 
         # Set entity description if provided
         if description:
@@ -170,11 +158,11 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                 selected_name = self.entity_id_suffix
                 source = "entity_id"
 
-        # Consolidated entity name selection log
+        # Consolidated entity name selection log with attributes
         _LOGGER.debug(
-            "🏷️ NAME: %s -> '%s' | Lang:%s | Source:%s | Translations:%s",
+            "🏷️ NAME: %s -> '%s' | Lang:%s | Source:%s | Translations:%s | Attrs:%s",
             self.entity_id_suffix, selected_name, language_preference,
-            source, "yes" if has_real_translations else "no"
+            source, "yes" if has_real_translations else "no", list(self._attributes.keys())
         )
 
         return selected_name

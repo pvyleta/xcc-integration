@@ -227,7 +227,7 @@ class XCCSensor(XCCEntity, SensorEntity):
 
             # Initialize parent class (XCCEntity handles the coordinator and entity setup)
             super().__init__(coordinator, entity_id, description)
-            _LOGGER.debug("Successfully initialized XCCSensor for %s", entity_id)
+
 
         except Exception as err:
             _LOGGER.error(
