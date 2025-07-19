@@ -14,7 +14,7 @@
           "ip_address": "IP adresa vašeho XCC regulátoru",
           "username": "Uživatelské jméno pro XCC regulátor (výchozí: xcc)",
           "password": "Heslo pro XCC regulátor (výchozí: xcc)",
-          "scan_interval": "Jak často aktualizovat data z regulátoru (10-3600 sekund)"
+          "scan_interval": "Jak často aktualizovat data z regulátoru v sekundách (10-3600, výchozí: 120)"
         }
       }
     },

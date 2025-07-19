@@ -35,7 +35,7 @@ CONF_LANGUAGE: Final = "language"
 # Default values
 DEFAULT_USERNAME: Final = "xcc"
 DEFAULT_PASSWORD: Final = "xcc"
-DEFAULT_SCAN_INTERVAL: Final = 30  # seconds
+DEFAULT_SCAN_INTERVAL: Final = 120  # seconds (2 minutes)
 DEFAULT_TIMEOUT: Final = 10  # seconds
 
 # Language options
