@@ -63,9 +63,15 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
         self._prop = entity_data.get("prop", "").upper()
         self._entity_config = coordinator.get_entity_config(self._prop)
 
-        # Generate entity ID and unique ID
-        self._attr_unique_id = f"{coordinator.ip_address}_{entity_data['entity_id']}"
-        self.entity_id = f"select.{entity_data['entity_id']}"
+        # Generate entity ID and unique ID with proper xcc_ prefix
+        base_entity_id = entity_data['entity_id']
+
+        # Ensure xcc_ prefix is present
+        if not base_entity_id.startswith('xcc_'):
+            base_entity_id = f"xcc_{base_entity_id}"
+
+        self._attr_unique_id = f"{coordinator.ip_address}_{base_entity_id}"
+        self.entity_id = f"select.{base_entity_id}"
 
         # Set friendly name using coordinator's language-aware method
         friendly_name = coordinator._get_friendly_name(self._entity_config, self._prop)

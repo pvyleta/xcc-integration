@@ -61,11 +61,16 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         self._prop = entity_data.get("prop", "").upper()
         self._entity_config = coordinator.get_entity_config(self._prop)
 
-        # Generate entity ID and unique ID
+        # Generate entity ID and unique ID with proper xcc_ prefix
         # Normalize entity_id to avoid duplicates (replace hyphens with underscores)
-        normalized_entity_id = entity_data['entity_id'].replace('-', '_')
-        self._attr_unique_id = f"{coordinator.ip_address}_{normalized_entity_id}"
-        self.entity_id = f"switch.{normalized_entity_id}"
+        base_entity_id = entity_data['entity_id'].replace('-', '_')
+
+        # Ensure xcc_ prefix is present
+        if not base_entity_id.startswith('xcc_'):
+            base_entity_id = f"xcc_{base_entity_id}"
+
+        self._attr_unique_id = f"{coordinator.ip_address}_{base_entity_id}"
+        self.entity_id = f"switch.{base_entity_id}"
 
         # Set friendly name using coordinator's language-aware method
         friendly_name = coordinator._get_friendly_name(self._entity_config, self._prop)
