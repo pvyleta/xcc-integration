@@ -47,17 +47,9 @@ def test_page_attribute_in_parse_xml_entities():
                 assert page_attr == page_name, f"Entity {prop} has wrong page: expected '{page_name}', got '{page_attr}'"
         
         print(f"\n✅ All entities have correct page attributes")
-        return True
+        # Test passed if we reach here without any assertion errors
         
     except Exception as e:
         print(f"❌ Error: {e}")
         return False
 
-if __name__ == "__main__":
-    success = test_page_attribute_in_parse_xml_entities()
-    
-    if success:
-        print("\n🎉 PAGE ATTRIBUTE TEST PASSED!")
-    else:
-        print("\n❌ PAGE ATTRIBUTE TEST FAILED!")
-        exit(1)

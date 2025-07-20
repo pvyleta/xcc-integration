@@ -98,13 +98,5 @@ def test_language_preference_with_sample_data():
                     assert selected_name == friendly_name_en, f"Should fallback to English name for {prop}"
     
     print(f"\n✅ Language preference test passed with {len(test_entities)} real entities")
-    return True
+    # Test passed if we reach here without any assertion errors
 
-if __name__ == "__main__":
-    success = test_language_preference_with_sample_data()
-    
-    if success:
-        print("\n🎉 LANGUAGE PREFERENCE INTEGRATION TEST PASSED!")
-    else:
-        print("\n❌ LANGUAGE PREFERENCE INTEGRATION TEST FAILED!")
-        exit(1)

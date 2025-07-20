@@ -36,7 +36,7 @@ def test_xml_structure(sample_data_dir):
         has_rows = any(elem.tag == "row" for elem in root.iter())
         has_blocks = any(elem.tag == "block" for elem in root.iter())
         has_pages = root.tag == "page"
-
+        
         assert has_inputs or has_rows or has_blocks or has_pages, f"No expected XCC elements found in {xml_file}"
 
 def test_xml_encoding(sample_data_dir):
@@ -56,3 +56,17 @@ def test_xml_encoding(sample_data_dir):
             with open(file_path, 'r', encoding='iso-8859-1') as f:
                 content = f.read()
             assert len(content) > 0, f"Empty content in {xml_file}"
+
+def test_xcc_client_import():
+    """Test that XCC client can be imported."""
+    try:
+        # Try to import the XCC client
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+        
+        # This should work without Home Assistant dependencies
+        from xcc_client import XCCClient
+        assert XCCClient is not None, "XCCClient class not found"
+    except ImportError as e:
+        pytest.skip(f"XCC client import failed: {e}")

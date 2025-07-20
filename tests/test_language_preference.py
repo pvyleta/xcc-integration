@@ -22,7 +22,7 @@ def test_language_preference_constants():
     assert DEFAULT_LANGUAGE == LANGUAGE_ENGLISH
     
     print("✅ Language preference constants are properly defined")
-    return True
+    # Test passed if we reach here without any assertion errors
 
 def test_friendly_name_selection_english():
     """Test friendly name selection with English preference."""
@@ -51,7 +51,7 @@ def test_friendly_name_selection_english():
     
     assert result == "English temperature"
     print("✅ English preference correctly selects English friendly name")
-    return True
+    # Test passed if we reach here without any assertion errors
 
 def test_friendly_name_selection_czech():
     """Test friendly name selection with Czech preference."""
@@ -80,7 +80,7 @@ def test_friendly_name_selection_czech():
     
     assert result == "Česká teplota"
     print("✅ Czech preference correctly selects Czech friendly name")
-    return True
+    # Test passed if we reach here without any assertion errors
 
 def test_friendly_name_fallback_scenarios():
     """Test fallback scenarios for friendly name selection."""
@@ -138,16 +138,5 @@ def test_friendly_name_fallback_scenarios():
         assert result == case["expected"], f"Failed for {case['name']}: expected '{case['expected']}', got '{result}'"
         print(f"✅ {case['name']}: '{result}'")
     
-    return True
+    # Test passed if we reach here without any assertion errors
 
-if __name__ == "__main__":
-    success1 = test_language_preference_constants()
-    success2 = test_friendly_name_selection_english()
-    success3 = test_friendly_name_selection_czech()
-    success4 = test_friendly_name_fallback_scenarios()
-    
-    if success1 and success2 and success3 and success4:
-        print("\n🎉 ALL LANGUAGE PREFERENCE TESTS PASSED!")
-    else:
-        print("\n❌ SOME LANGUAGE PREFERENCE TESTS FAILED!")
-        exit(1)

@@ -1,0 +1,16 @@
+# Official Home Assistant testing framework
+pytest-homeassistant-custom-component>=0.13.0
+
+# Core testing requirements
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# XCC integration dependencies
+aiohttp>=3.8.0
+lxml>=4.6.0
+
+# Code quality tools
+ruff>=0.1.0
+mypy>=0.991

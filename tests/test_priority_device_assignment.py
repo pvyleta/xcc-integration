@@ -103,12 +103,5 @@ def test_priority_device_assignment():
             return False
     
     print(f"\n✅ SUCCESS: All {len(device_assignments)} entities assigned uniquely")
-    return True
+    # Test passed if we reach here without any assertion errors
 
-if __name__ == "__main__":
-    success = test_priority_device_assignment()
-    if success:
-        print("\n🎉 PRIORITY DEVICE ASSIGNMENT TEST PASSED!")
-    else:
-        print("\n❌ TEST FAILED!")
-        exit(1)

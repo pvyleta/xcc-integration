@@ -96,13 +96,5 @@ def test_entity_name_selection_with_czech_language():
         print(f"   ✅ PASS")
     
     print(f"\n🎉 ALL CZECH LANGUAGE TESTS PASSED!")
-    return True
+    # Test passed if we reach here without any assertion errors
 
-if __name__ == "__main__":
-    success = test_entity_name_selection_with_czech_language()
-    
-    if success:
-        print("\n🎉 CZECH LANGUAGE FIX TEST PASSED!")
-    else:
-        print("\n❌ CZECH LANGUAGE FIX TEST FAILED!")
-        exit(1)

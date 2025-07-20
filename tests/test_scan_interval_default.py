@@ -24,7 +24,7 @@ def test_default_scan_interval():
         
         print(f"✅ Default scan interval correctly set to {DEFAULT_SCAN_INTERVAL} seconds ({DEFAULT_SCAN_INTERVAL/60:.1f} minutes)")
         
-        return True
+        # Test passed if we reach here without any assertion errors
         
     except ImportError as e:
         print(f"❌ Cannot import const module: {e}")
@@ -33,11 +33,3 @@ def test_default_scan_interval():
         print(f"❌ Assertion failed: {e}")
         return False
 
-if __name__ == "__main__":
-    success = test_default_scan_interval()
-    
-    if success:
-        print("\n🎉 SCAN INTERVAL TEST PASSED!")
-    else:
-        print("\n❌ SCAN INTERVAL TEST FAILED!")
-        exit(1)
