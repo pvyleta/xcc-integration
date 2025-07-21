@@ -2,6 +2,8 @@
 
 Home Assistant integration for XCC heat pump controllers with photovoltaic integration. Monitor and control your heat pump system directly from Home Assistant with automatic entity discovery and bilingual support.
 
+Inspired by work in https://github.com/Pdobry/xcc-graph.
+
 ## 🏠 Home Assistant Integration Features
 
 - 🔧 **470+ settable fields** automatically discovered across 6 configuration pages
