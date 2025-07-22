@@ -2,7 +2,6 @@
   "name": "AC Heating XCC Heat Pump Controller",
   "content_in_root": false,
   "country": ["CZ", "SK"],
-  "iot_class": "Local Polling",
   "homeassistant": "2024.1.0",
   "render_readme": true
 }
