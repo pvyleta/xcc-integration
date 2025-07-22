@@ -79,8 +79,9 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         else:
             self._attr_name = entity_data.get("friendly_name", entity_data.get("name", self._prop))
 
-        # Device info
-        self._attr_device_info = coordinator.device_info
+        # Device info - use proper device assignment based on entity's page
+        device_info = coordinator.get_device_info_for_entity(base_entity_id)
+        self._attr_device_info = device_info
 
     @property
     def is_on(self) -> bool | None:

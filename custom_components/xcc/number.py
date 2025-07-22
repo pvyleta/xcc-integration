@@ -119,8 +119,9 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         else:
             self._attr_mode = NumberMode.SLIDER
 
-        # Device info
-        self._attr_device_info = coordinator.device_info
+        # Device info - use proper device assignment based on entity's page
+        device_info = coordinator.get_device_info_for_entity(base_entity_id)
+        self._attr_device_info = device_info
 
     @property
     def native_value(self) -> float | None:
