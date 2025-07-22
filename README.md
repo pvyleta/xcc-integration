@@ -1,6 +1,6 @@
-# XCC Heat Pump Controller Integration
+# AC Heating XCC Heat Pump Controller Integration
 
-Home Assistant integration for XCC heat pump controllers with photovoltaic integration. Monitor and control your heat pump system directly from Home Assistant with automatic entity discovery and bilingual support.
+Home Assistant integration for AC Heating XCC heat pump controllers with photovoltaic integration. Monitor and control your heat pump system directly from Home Assistant with automatic entity discovery and bilingual support.
 
 Inspired by work in https://github.com/Pdobry/xcc-graph.
 
@@ -11,9 +11,7 @@ Inspired by work in https://github.com/Pdobry/xcc-graph.
 - 🌐 **Bilingual support** (English/Czech with auto-detection)
 - 📋 **Organized by device** (heating, PV, hot water, auxiliary source, etc.)
 
-## 📦 Installation
-
-### 🚀 HACS Installation (Recommended)
+## 📦 HACS Installation
 
 1. **Add Custom Repository**:
    - Open HACS in Home Assistant

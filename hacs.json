@@ -1,5 +1,5 @@
 {
-  "name": "XCC Heat Pump Controller",
+  "name": "AC Heating XCC Heat Pump Controller",
   "content_in_root": false,
   "country": ["CZ", "SK"],
   "domains": ["sensor", "binary_sensor", "switch", "number", "select"],
