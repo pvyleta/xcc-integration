@@ -12,5 +12,5 @@
   "quality_scale": "silver",
   "requirements": ["aiohttp>=3.8.0", "lxml>=4.6.0", "aiofiles>=0.8.0"],
   "single_config_entry": false,
-  "version": "1.9.64"
+  "version": "1.9.65"
 }
