@@ -4,6 +4,5 @@
   "country": ["CZ", "SK"],
   "iot_class": "Local Polling",
   "homeassistant": "2024.1.0",
-  "render_readme": true,
-  "icon": "logo.png"
+  "render_readme": true
 }
