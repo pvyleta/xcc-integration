@@ -117,6 +117,53 @@ class XCCClient:
         else:
             _LOGGER.debug("Existing session is valid, skipping authentication")
 
+    def _is_login_page(self, content: str) -> bool:
+        """Check if the given content is a LOGIN page indicating session expiration.
+
+        Args:
+            content: The response content to check
+
+        Returns:
+            True if the content appears to be a LOGIN page, False otherwise
+        """
+        return "<LOGIN>" in content and "USER VALUE" in content
+
+    def _is_session_valid(self, status: int, content: str) -> bool:
+        """Check if a response indicates a valid session.
+
+        Args:
+            status: HTTP response status code
+            content: Response content
+
+        Returns:
+            True if the session appears to be valid, False otherwise
+        """
+        return (
+            status == 200
+            and not self._is_login_page(content)
+            and "500" not in content
+        )
+
+    def _decode_and_sanitize_content(self, raw_bytes: bytes, encoding: str) -> str:
+        """Decode raw bytes and sanitize the content.
+
+        Args:
+            raw_bytes: Raw response bytes
+            encoding: Character encoding to use
+
+        Returns:
+            Decoded and sanitized content string
+        """
+        content = raw_bytes.decode(encoding, errors="replace")
+        # Basic sanitization like the working script
+        content = (
+            content.replace("\u00a0", " ")
+            .replace("\u202f", " ")
+            .replace("\u200b", "")
+            .replace("\ufeff", "")
+        )
+        return content
+
     async def _test_session(self) -> bool:
         """Test if current session is valid."""
         import logging
@@ -129,13 +176,12 @@ class XCCClient:
             async with self.session.get(f"http://{self.ip}/INDEX.XML") as resp:
                 raw = await resp.read()
                 text = raw.decode(resp.get_encoding() or "utf-8")
-                is_valid = (
-                    resp.status == 200 and "<LOGIN>" not in text and "500" not in text
-                )
+                is_valid = self._is_session_valid(resp.status, text)
+
                 _LOGGER.debug(
                     "Session test result: status=%d, contains_login=%s, contains_500=%s, valid=%s",
                     resp.status,
-                    "<LOGIN>" in text,
+                    self._is_login_page(text),
                     "500" in text,
                     is_valid,
                 )
@@ -276,7 +322,8 @@ class XCCClient:
             pass  # Non-critical
 
     async def fetch_page(self, page: str) -> str:
-        """Fetch XML page content with proper encoding detection."""
+        """Fetch XML page content with proper encoding detection and session validation."""
+        import asyncio
         import logging
         import re
 
@@ -300,14 +347,40 @@ class XCCClient:
             _LOGGER.debug("Page %s: detected encoding %s", page, encoding)
 
             try:
-                content = raw_bytes.decode(encoding, errors="replace")
-                # Basic sanitization like the working script
-                content = (
-                    content.replace("\u00a0", " ")
-                    .replace("\u202f", " ")
-                    .replace("\u200b", "")
-                    .replace("\ufeff", "")
-                )
+                content = self._decode_and_sanitize_content(raw_bytes, encoding)
+
+                # Check if we received a LOGIN page instead of data - indicates session expired
+                if self._is_login_page(content):
+                    _LOGGER.warning("Received LOGIN page for %s - session has expired, re-authenticating", page)
+
+                    # Use the same locking mechanism as in connect() to prevent concurrent re-authentication
+                    if self.ip not in _auth_locks:
+                        _auth_locks[self.ip] = asyncio.Lock()
+
+                    async with _auth_locks[self.ip]:
+                        # Test session again in case another request just re-authenticated
+                        if await self._test_session():
+                            _LOGGER.debug("Session became valid while waiting for re-authentication lock")
+                        else:
+                            # Re-authenticate
+                            await self._authenticate()
+
+                    # Retry the same request with new session
+                    async with self.session.get(f"http://{self.ip}/{page}") as retry_resp:
+                        if retry_resp.status != 200:
+                            raise Exception(f"Failed to fetch {page} after re-authentication: {retry_resp.status}")
+
+                        retry_raw_bytes = await retry_resp.read()
+                        retry_content = self._decode_and_sanitize_content(retry_raw_bytes, encoding)
+
+                        # Check if we still get LOGIN page after re-authentication
+                        if self._is_login_page(retry_content):
+                            _LOGGER.error("Still receiving LOGIN page for %s after re-authentication - authentication may have failed", page)
+                            raise Exception(f"Session re-authentication failed for {page}")
+
+                        _LOGGER.info("Successfully re-authenticated and fetched %s", page)
+                        return retry_content
+
                 return content
             except Exception as e:
                 _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
