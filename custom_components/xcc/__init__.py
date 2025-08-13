@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -45,11 +46,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = XCCDataUpdateCoordinator(hass, entry)
 
     # Fetch initial data so we have data when entities subscribe
+    # Use a more resilient approach that doesn't force immediate refresh if data exists
     try:
-        await coordinator.async_config_entry_first_refresh()
+        if coordinator.data is None:
+            _LOGGER.debug("No coordinator data available, performing first refresh")
+            await coordinator.async_config_entry_first_refresh()
+        else:
+            _LOGGER.debug("Coordinator data already available, skipping first refresh")
+    except asyncio.TimeoutError as err:
+        _LOGGER.warning("Timeout during initial data fetch, but continuing setup: %s", err)
+        # Don't raise ConfigEntryNotReady for timeout - let the integration continue
+        # The coordinator will retry on its normal schedule
+    except asyncio.CancelledError as err:
+        _LOGGER.warning("Request cancelled during initial data fetch, but continuing setup: %s", err)
+        # Don't raise ConfigEntryNotReady for cancellation - let the integration continue
     except Exception as err:
         _LOGGER.error("Error during initial data fetch: %s", err)
-        raise ConfigEntryNotReady from err
+        # Only raise ConfigEntryNotReady for actual errors, not timeouts/cancellations
+        if "timeout" not in str(err).lower() and "cancel" not in str(err).lower():
+            raise ConfigEntryNotReady from err
+        else:
+            _LOGGER.warning("Continuing setup despite initial fetch issue: %s", err)
 
     # Store coordinator in hass data
     hass.data.setdefault(DOMAIN, {})
