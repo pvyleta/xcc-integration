@@ -45,10 +45,23 @@ except ImportError:
             """Authenticate with the XCC controller."""
             self.session = aiohttp.ClientSession()
 
-            # Test connection
-            async with self.session.get(f"{self.base_url}/main.xml") as response:
+            # Perform login by posting credentials
+            login_data = {
+                'USER': self.username,
+                'PASS': self.password,
+                'ACER': '0'
+            }
+
+            async with self.session.post(f"{self.base_url}/main.xml", data=login_data) as response:
                 if response.status != 200:
-                    raise Exception(f"Cannot connect to XCC controller at {self.host}")
+                    raise Exception(f"Login failed: HTTP {response.status}")
+
+                # Check if we got a login page back (authentication failed)
+                content = await response.text(encoding='utf-8', errors='replace')
+                if '<LOGIN>' in content:
+                    raise Exception("Authentication failed - check username/password")
+
+                # If we get here, authentication was successful
 
         async def fetch_page(self, page: str) -> str:
             """Fetch a page from the XCC controller."""
@@ -68,54 +81,60 @@ except ImportError:
             try:
                 # Try the full discovery logic first
                 main_content = await self.fetch_page("main.xml")
+                print(f"DEBUG: main.xml content length: {len(main_content)}")
+                print(f"DEBUG: main.xml content preview: {main_content[:500]}")
 
-                # Parse with regex (simplified version)
-                xml_content = f'<PAGE>{main_content}</PAGE>'
-
-                # Find all F elements
-                f_pattern = r'<F[^>]*U="([^"]+)"[^>]*>(.*?)</F>'
-                f_matches = re.findall(f_pattern, xml_content, re.DOTALL)
-
+                # Parse with regex - handle the actual format from your main.xml
                 descriptor_pages = []
+
+                # Find all F elements with U attribute
+                f_pattern = r'<F[^>]*U="([^"]+)"[^>]*>(.*?)</F>'
+                f_matches = re.findall(f_pattern, main_content, re.DOTALL)
+                print(f"DEBUG: Found {len(f_matches)} F elements")
 
                 for page_url, content in f_matches:
                     is_active = False
 
-                    # Method 1: INPUTV with VALUE="1"
-                    if 'INPUTV' in content and 'VALUE="1"' in content:
+                    # Method 1: INPUTV with VALUE="1" (most common for user-configurable pages)
+                    if re.search(r'INPUTV[^>]*VALUE="1"', content):
                         is_active = True
+                        print(f"DEBUG: {page_url} active via INPUTV=1")
 
-                    # Method 2: INPUTI with non-zero VALUE
+                    # Method 2: INPUTI with non-zero VALUE (for system pages like biv.xml)
                     elif not is_active:
-                        inputi_pattern = r'INPUTI[^>]*VALUE="([^"]+)"'
-                        inputi_matches = re.findall(inputi_pattern, content)
+                        inputi_matches = re.findall(r'INPUTI[^>]*VALUE="([^"]+)"', content)
                         for value in inputi_matches:
                             try:
                                 int_value = int(value)
                                 if int_value > 0:
                                     is_active = True
+                                    print(f"DEBUG: {page_url} active via INPUTI={value}")
                                     break
                             except ValueError:
                                 pass
 
-                    # Method 3: Special handling for essential pages
-                    if not is_active and page_url in ['biv.xml', 'bivtuv.xml', 'stavjed.xml']:
-                        if 'INPUTI' in content and 'VALUE=' in content:
+                    # Method 3: Special handling for essential system pages
+                    if not is_active and page_url.split('?')[0] in ['biv.xml', 'bivtuv.xml', 'stavjed.xml']:
+                        if re.search(r'INPUTI[^>]*VALUE="[^"0]', content):
                             is_active = True
+                            print(f"DEBUG: {page_url} active as essential system page")
 
                     if is_active:
                         desc_page = page_url.split('?')[0]
                         if desc_page not in descriptor_pages:
                             descriptor_pages.append(desc_page)
 
-                # Add essential pages that might not be in main.xml
-                essential_pages = ['stavjed.xml', 'okruh.xml', 'tuv1.xml', 'biv.xml', 'fve.xml', 'spot.xml']
+                print(f"DEBUG: Discovered pages from main.xml: {descriptor_pages}")
+
+                # Add essential pages that might not be in main.xml or not detected
+                essential_pages = ['stavjed.xml']
                 for essential_page in essential_pages:
                     if essential_page not in descriptor_pages:
                         try:
                             content = await self.fetch_page(essential_page)
                             if len(content) > 100 and '<LOGIN>' not in content:
                                 descriptor_pages.append(essential_page)
+                                print(f"DEBUG: Added essential page: {essential_page}")
                         except:
                             pass
 
