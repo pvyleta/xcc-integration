@@ -146,8 +146,6 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Parse entities from all pages
             all_entities = []
-            current_data_values = {}  # Collect current data values for visibility checking
-
             for page_name, xml_content in pages_data.items():
                 if not xml_content.startswith("Error:"):
                     entities = parse_xml_entities(xml_content, page_name)
@@ -155,23 +153,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                         "Parsed %d entities from page %s", len(entities), page_name
                     )
                     all_entities.extend(entities)
-
-                    # Collect current data values for visibility checking
-                    for entity in entities:
-                        prop = entity["attributes"].get("field_name")
-                        value = str(entity.get("state", ""))
-                        if prop:
-                            current_data_values[prop] = value
                 else:
                     _LOGGER.warning(
                         "Error fetching page %s: %s", page_name, xml_content
                     )
-
-            # Update descriptor parser with current data values for visibility checking
-            if hasattr(self, 'descriptor_parser') and self.descriptor_parser:
-                self.descriptor_parser.update_data_values(current_data_values)
-                _LOGGER.debug("Updated descriptor parser with %d data values for visibility checking",
-                             len(current_data_values))
 
             # Process entities and organize data
             _LOGGER.debug(

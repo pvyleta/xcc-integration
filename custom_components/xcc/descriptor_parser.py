@@ -10,10 +10,15 @@ _LOGGER = logging.getLogger(__name__)
 class XCCDescriptorParser:
     """Parser for XCC descriptor files to determine entity types and capabilities."""
 
-    def __init__(self):
-        """Initialize the descriptor parser."""
+    def __init__(self, ignore_visibility: bool = False):
+        """Initialize the descriptor parser.
+
+        Args:
+            ignore_visibility: If True, ignore visibility conditions and include all entities
+        """
         self.entity_configs = {}
         self.data_values = {}  # Store current data values for visibility checking
+        self.ignore_visibility = ignore_visibility
 
     def parse_descriptor_files(
         self, descriptor_data: dict[str, str],
@@ -296,10 +301,7 @@ class XCCDescriptorParser:
         if not prop:
             return None
 
-        # Check visibility conditions first
-        if not self._is_element_visible(element):
-            _LOGGER.debug("Skipping entity %s due to visibility condition", prop)
-            return None
+        # ALWAYS LOAD ALL ENTITIES - ignore visibility conditions for maximum coverage
 
         # Check if element is readonly - only skip readonly choice elements
         # All other elements (number, switch, time) should be processed and handled appropriately

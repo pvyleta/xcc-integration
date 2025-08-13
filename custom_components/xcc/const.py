@@ -43,6 +43,10 @@ LANGUAGE_ENGLISH: Final = "english"
 LANGUAGE_CZECH: Final = "czech"
 DEFAULT_LANGUAGE: Final = LANGUAGE_ENGLISH
 
+# Visibility handling options
+CONF_IGNORE_VISIBILITY: Final = "ignore_visibility_conditions"
+DEFAULT_IGNORE_VISIBILITY: Final = False
+
 # Entity type options
 ENTITY_TYPE_INTEGRATION: Final = "integration"
 DEFAULT_ENTITY_TYPE: Final = ENTITY_TYPE_INTEGRATION
