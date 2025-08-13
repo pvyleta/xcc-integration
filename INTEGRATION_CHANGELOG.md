@@ -2,6 +2,84 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.12.1] - 2025-08-13
+
+### 🎯 Feature Release: NAST Page Integration
+
+This release adds the previously undiscovered `nast.xml` page, providing advanced heat pump settings and controls.
+
+### ✨ New Features
+
+#### **NAST Page Integration**
+- **ADDED**: `nast.xml` (Heat Pump Settings) page discovery and integration
+- **ADDED**: 145 additional entities from NAST page (+18.7% increase)
+- **ADDED**: Advanced heat pump configuration capabilities
+- **IMPROVED**: Complete XCC system coverage including professional settings
+
+#### **New Entity Categories**
+- **🌡️ Sensor Corrections**: 12 temperature sensor calibration controls (B0-I, B4-I, etc.)
+- **🏠 Multi-Zone Controls**: 16 zone temperature offset controls (MZO-ZONA0-OFFSET through MZO-ZONA15-OFFSET)
+- **🔧 Power Management**: 22 power restriction controls (global, time-based, external, thermal)
+- **🔄 Heat Pump Controls**: 10 heat pump unit on/off switches (TCODSTAVENI0-9)
+- **💾 System Management**: 10 backup/restore buttons and configuration controls
+- **📋 Circuit Priorities**: Priority settings for heating circuits
+
+### 📊 Impact
+
+#### **Entity Count Improvements**
+- **Before**: ~858 entities (v1.12.0)
+- **After**: ~1,003 entities (v1.12.1)
+- **Improvement**: +145 additional entities
+- **Coverage**: Complete XCC system including advanced settings
+
+#### **New Capabilities**
+- **Sensor Calibration**: Fine-tune temperature sensor accuracy
+- **Power Management**: Control heat pump power consumption limits
+- **Multi-Zone Heating**: Manage temperature offsets for up to 16 zones
+- **Heat Pump Control**: Individual on/off control for multiple heat pump units
+- **System Administration**: Backup and restore system configurations
+
+### 🎯 User Impact
+
+#### **New Entities Available**
+- ✅ `number.xcc_b0_i` - Sensor B0 temperature correction
+- ✅ `number.xcc_offsetbaz` - Pool temperature offset
+- ✅ `number.xcc_mzo_zona0_offset` - Multi-zone 0 temperature offset
+- ✅ `number.xcc_omezenivykonuglobalni` - Global power restriction (%)
+- ✅ `select.xcc_tcodstaveni0` - Heat pump I on/off control
+- ✅ `button.xcc_flash_readwrite` - System backup/restore
+- ✅ And 139 more advanced heat pump settings
+
+#### **Professional Features**
+- ✅ **Sensor Calibration**: Correct temperature readings for optimal performance
+- ✅ **Power Optimization**: Manage electricity consumption and costs
+- ✅ **Multi-Zone Comfort**: Fine-tune heating for different areas
+- ✅ **System Reliability**: Backup and restore configurations
+- ✅ **Advanced Control**: Professional-level heat pump management
+
+### 🔄 Migration
+
+#### **Automatic**
+- No configuration changes required
+- All existing entities remain unchanged
+- New NAST entities appear automatically after restart
+
+#### **Recommended**
+1. **Restart Home Assistant** to discover new NAST entities
+2. **Check Developer Tools → States** for new entities (search for "nast", "offset", "omezeni")
+3. **Review** new advanced controls and add to dashboards as needed
+4. **Configure** sensor corrections and power restrictions as desired
+
+### 🧪 Testing
+
+#### **Comprehensive Validation**
+- **4 new tests** specifically for NAST page integration
+- **All tests PASSING** with real XCC controller data
+- **Entity parsing verified** for all 145 new entities
+- **Integration completeness** confirmed
+
+---
+
 ## [1.12.0] - 2025-08-13
 
 ### 🎉 Major Release: Complete Entity Coverage & Platform Stability
