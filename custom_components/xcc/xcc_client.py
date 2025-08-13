@@ -164,6 +164,267 @@ class XCCClient:
         )
         return content
 
+    async def discover_active_pages(self) -> dict[str, dict]:
+        """Discover active pages from main.xml and return page information.
+
+        Returns:
+            Dictionary with page URLs as keys and page info as values:
+            {
+                'okruh.xml?page=0': {
+                    'name': 'Radiátory',
+                    'active': True,
+                    'type': 'heating_circuit',
+                    'id': 1
+                },
+                ...
+            }
+        """
+        import logging
+        from lxml import etree
+
+        _LOGGER = logging.getLogger(__name__)
+
+        try:
+            # Fetch main page
+            _LOGGER.debug("Fetching main.xml to discover active pages")
+            main_content = await self.fetch_page("main.xml")
+
+            # Parse XML to find active pages
+            pages_info = {}
+
+            # Remove XML declaration and parse
+            import re
+            xml_clean = re.sub(r'<\?xml[^>]*\?>', '', main_content).strip()
+
+            # Wrap in root element if needed
+            if not xml_clean.startswith('<PAGE>'):
+                xml_clean = f'<PAGE>{xml_clean}</PAGE>'
+
+            root = etree.fromstring(xml_clean)
+
+            # Find all F elements (page definitions)
+            for f_elem in root.xpath('.//F'):
+                try:
+                    page_id = f_elem.get('N')
+                    page_url = f_elem.get('U')
+                    zone_id = f_elem.get('Z')  # For mixed zones
+
+                    if not page_url:
+                        continue
+
+                    # Extract page name from INPUTN elements
+                    name_elem = f_elem.xpath('.//INPUTN[@NAME and @VALUE]')
+                    page_name = name_elem[0].get('VALUE') if name_elem else f"Page {page_id}"
+
+                    # Check if page is active (INPUTV with VALUE="1")
+                    active_elem = f_elem.xpath('.//INPUTV[@VALUE="1"]')
+                    is_active = len(active_elem) > 0
+
+                    # Determine page type based on URL
+                    page_type = self._determine_page_type(page_url)
+
+                    pages_info[page_url] = {
+                        'id': int(page_id) if page_id else None,
+                        'name': page_name,
+                        'active': is_active,
+                        'type': page_type,
+                        'zone_id': int(zone_id) if zone_id else None
+                    }
+
+                    _LOGGER.debug(
+                        "Discovered page: %s (%s) - Active: %s, Type: %s",
+                        page_url, page_name, is_active, page_type
+                    )
+
+                except Exception as e:
+                    _LOGGER.warning("Error parsing page element: %s", e)
+                    continue
+
+            _LOGGER.info(
+                "Discovered %d pages, %d active",
+                len(pages_info),
+                sum(1 for p in pages_info.values() if p['active'])
+            )
+
+            return pages_info
+
+        except Exception as e:
+            _LOGGER.error("Failed to discover active pages: %s", e)
+            return {}
+
+    def _determine_page_type(self, page_url: str) -> str:
+        """Determine the type of page based on its URL.
+
+        Args:
+            page_url: The page URL (e.g., 'okruh.xml?page=0')
+
+        Returns:
+            Page type string
+        """
+        url_lower = page_url.lower()
+
+        if 'okruh.xml' in url_lower:
+            return 'heating_circuit'
+        elif 'mzona.xml' in url_lower:
+            return 'mixed_zone'
+        elif 'tuv' in url_lower:
+            return 'hot_water'
+        elif 'bazen' in url_lower or 'bazmist' in url_lower:
+            return 'pool'
+        elif 'fve.xml' in url_lower:
+            return 'photovoltaics'
+        elif 'vzt.xml' in url_lower:
+            return 'ventilation'
+        elif 'biv' in url_lower:
+            return 'bivalent'
+        elif 'solar.xml' in url_lower:
+            return 'solar'
+        elif 'meteo.xml' in url_lower:
+            return 'weather_station'
+        elif 'pocasi.xml' in url_lower:
+            return 'weather_forecast'
+        elif 'elmer.xml' in url_lower:
+            return 'electricity_meter'
+        elif 'spot.xml' in url_lower:
+            return 'spot_pricing'
+        else:
+            return 'other'
+
+    async def discover_data_pages(self, descriptor_pages: list[str]) -> dict[str, list[str]]:
+        """Discover data pages by examining descriptor pages for references.
+
+        Args:
+            descriptor_pages: List of descriptor page URLs to examine
+
+        Returns:
+            Dictionary mapping descriptor pages to their data pages:
+            {
+                'fve.xml': ['FVE4.XML', 'FVE5.XML'],
+                'okruh.xml': ['OKRUH10.XML'],
+                ...
+            }
+        """
+        import logging
+        import re
+
+        _LOGGER = logging.getLogger(__name__)
+
+        data_pages_map = {}
+
+        for desc_page in descriptor_pages:
+            try:
+                _LOGGER.debug("Examining descriptor page %s for data page references", desc_page)
+
+                # Fetch the descriptor page
+                content = await self.fetch_page(desc_page)
+
+                # Look for common patterns that indicate data pages
+                data_pages = []
+
+                # Pattern 1: Look for uppercase XML references (e.g., FVE4.XML)
+                uppercase_refs = re.findall(r'[A-Z][A-Z0-9]*\.XML', content)
+                data_pages.extend(uppercase_refs)
+
+                # Pattern 2: Look for specific data page patterns based on descriptor name
+                base_name = desc_page.replace('.xml', '').upper()
+
+                # Try common data page patterns
+                potential_patterns = [
+                    f"{base_name}1.XML",
+                    f"{base_name}4.XML",
+                    f"{base_name}10.XML",
+                    f"{base_name}11.XML",
+                ]
+
+                for pattern in potential_patterns:
+                    if pattern not in data_pages:
+                        # Test if this page exists by trying to fetch it
+                        try:
+                            test_content = await self.fetch_page(pattern)
+                            if not self._is_login_page(test_content) and len(test_content) > 100:
+                                data_pages.append(pattern)
+                                _LOGGER.debug("Found data page %s for descriptor %s", pattern, desc_page)
+                        except Exception:
+                            # Page doesn't exist or is not accessible
+                            pass
+
+                # Remove duplicates and filter valid pages
+                unique_pages = list(set(data_pages))
+                valid_pages = []
+
+                for page in unique_pages:
+                    try:
+                        # Quick validation - try to fetch the page
+                        test_content = await self.fetch_page(page)
+                        if not self._is_login_page(test_content) and len(test_content) > 50:
+                            valid_pages.append(page)
+                            _LOGGER.debug("Validated data page %s", page)
+                    except Exception as e:
+                        _LOGGER.debug("Data page %s not accessible: %s", page, e)
+
+                if valid_pages:
+                    data_pages_map[desc_page] = valid_pages
+                    _LOGGER.info("Found %d data pages for %s: %s", len(valid_pages), desc_page, valid_pages)
+                else:
+                    _LOGGER.debug("No data pages found for descriptor %s", desc_page)
+
+            except Exception as e:
+                _LOGGER.warning("Error examining descriptor page %s: %s", desc_page, e)
+                continue
+
+        return data_pages_map
+
+    async def auto_discover_all_pages(self) -> tuple[list[str], list[str]]:
+        """Automatically discover all available descriptor and data pages.
+
+        Returns:
+            Tuple of (descriptor_pages, data_pages) lists
+        """
+        import logging
+
+        _LOGGER = logging.getLogger(__name__)
+
+        try:
+            # Step 1: Discover active pages from main.xml
+            _LOGGER.info("Starting automatic page discovery...")
+            pages_info = await self.discover_active_pages()
+
+            # Step 2: Extract descriptor pages from active pages
+            descriptor_pages = []
+            for page_url, info in pages_info.items():
+                if info['active']:
+                    # Convert page URL to descriptor format
+                    # e.g., 'okruh.xml?page=0' -> 'okruh.xml'
+                    desc_page = page_url.split('?')[0]
+                    if desc_page not in descriptor_pages:
+                        descriptor_pages.append(desc_page)
+
+            _LOGGER.info("Found %d active descriptor pages: %s", len(descriptor_pages), descriptor_pages)
+
+            # Step 3: Discover data pages for each descriptor
+            data_pages_map = await self.discover_data_pages(descriptor_pages)
+
+            # Step 4: Flatten data pages list
+            data_pages = []
+            for desc_page, pages in data_pages_map.items():
+                data_pages.extend(pages)
+
+            # Remove duplicates
+            data_pages = list(set(data_pages))
+
+            _LOGGER.info(
+                "Auto-discovery complete: %d descriptor pages, %d data pages",
+                len(descriptor_pages), len(data_pages)
+            )
+
+            return descriptor_pages, data_pages
+
+        except Exception as e:
+            _LOGGER.error("Auto-discovery failed: %s", e)
+            # Return fallback to current static pages
+            from .const import XCC_DESCRIPTOR_PAGES, XCC_DATA_PAGES
+            return XCC_DESCRIPTOR_PAGES, XCC_DATA_PAGES
+
     async def _test_session(self) -> bool:
         """Test if current session is valid."""
         import logging

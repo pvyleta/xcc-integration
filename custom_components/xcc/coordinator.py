@@ -60,6 +60,12 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.descriptor_parser = None  # Parser for entity type detection
         self.entity_configs = {}  # Cached entity configurations
         self._descriptors_loaded = False  # Track if descriptors have been loaded
+
+        # Page discovery attributes
+        self._pages_discovered = False
+        self._discovered_descriptor_pages = []
+        self._discovered_data_pages = []
+
         self._update_lock = asyncio.Lock()  # Prevent concurrent updates
         self._last_update_time = 0  # Track last update time
         self._min_update_interval = 1.0  # Minimum 1 second between updates
@@ -112,19 +118,26 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             client = self._client
 
+            # Discover pages on first run
+            if not self._pages_discovered:
+                await self._discover_pages(client)
+
             # Load descriptors on first run to determine entity types
             if not self._descriptors_loaded:
                 await self._load_descriptors(client)
 
+            # Use discovered data pages or fall back to default
+            data_pages = self._discovered_data_pages if self._discovered_data_pages else XCC_DATA_PAGES
+
             # Fetch only data pages (not descriptors)
             _LOGGER.debug(
-                "Fetching %d XCC data pages: %s", len(XCC_DATA_PAGES), XCC_DATA_PAGES
+                "Fetching %d XCC data pages: %s", len(data_pages), data_pages
             )
             _LOGGER.debug(
                 "Update triggered by: %s", getattr(self, "_update_source", "unknown")
             )
             pages_data = await asyncio.wait_for(
-                client.fetch_pages(XCC_DATA_PAGES),
+                client.fetch_pages(data_pages),
                 timeout=DEFAULT_TIMEOUT,
             )
             _LOGGER.debug(
@@ -699,7 +712,41 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             finally:
                 self._client = None
 
-    async def _load_descriptors(self, client: XCCClient) -> None:
+    async def _discover_pages(self, client) -> None:
+        """Discover active pages and their data pages automatically."""
+        try:
+            _LOGGER.info("Starting automatic page discovery for XCC controller %s", self.ip_address)
+
+            # Use the auto-discovery functionality
+            descriptor_pages, data_pages = await client.auto_discover_all_pages()
+
+            if descriptor_pages and data_pages:
+                self._discovered_descriptor_pages = descriptor_pages
+                self._discovered_data_pages = data_pages
+
+                _LOGGER.info(
+                    "Page discovery successful: %d descriptor pages, %d data pages",
+                    len(descriptor_pages), len(data_pages)
+                )
+                _LOGGER.info("Discovered descriptor pages: %s", descriptor_pages)
+                _LOGGER.info("Discovered data pages: %s", data_pages)
+            else:
+                _LOGGER.warning("Page discovery returned no pages, using defaults")
+                from .const import XCC_DESCRIPTOR_PAGES, XCC_DATA_PAGES
+                self._discovered_descriptor_pages = XCC_DESCRIPTOR_PAGES
+                self._discovered_data_pages = XCC_DATA_PAGES
+
+            self._pages_discovered = True
+
+        except Exception as err:
+            _LOGGER.error("Failed to discover pages: %s", err)
+            _LOGGER.info("Falling back to default page configuration")
+            from .const import XCC_DESCRIPTOR_PAGES, XCC_DATA_PAGES
+            self._discovered_descriptor_pages = XCC_DESCRIPTOR_PAGES
+            self._discovered_data_pages = XCC_DATA_PAGES
+            self._pages_discovered = True  # Don't retry on every update
+
+    async def _load_descriptors(self, client) -> None:
         """Load descriptor files to determine entity types."""
         try:
             import asyncio
@@ -708,9 +755,11 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             _LOGGER.debug("Loading XCC descriptor files for entity type detection")
 
-            # Use the proper descriptor pages from const
+            # Use discovered descriptor pages or fall back to default
+            descriptor_pages = self._discovered_descriptor_pages if self._discovered_descriptor_pages else XCC_DESCRIPTOR_PAGES
+
             descriptor_data = {}
-            for page in XCC_DESCRIPTOR_PAGES:
+            for page in descriptor_pages:
                 try:
                     data = await client.fetch_page(page)
                     if data:

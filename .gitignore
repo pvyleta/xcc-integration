@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.so
 venv/
+test_venv/
 .pytest_cache/
 
 # XCC live data cache (regenerated from controller)
@@ -10,6 +11,10 @@ xcc_data/
 
 # Field database (auto-generated)
 field_database.json
+
+# Log files
+*.log
+homeassistant.log
 
 # IDE and OS
 .vscode/
