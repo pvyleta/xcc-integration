@@ -27,6 +27,7 @@ PLATFORMS_TO_SETUP = [
     Platform.SWITCH,
     Platform.NUMBER,
     Platform.SELECT,
+    Platform.BUTTON,
 ]
 
 
