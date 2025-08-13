@@ -255,29 +255,40 @@ class XCCPageScraper:
             return descriptor_pages, data_pages
 
     async def download_pages(self, pages: list[str], page_type: str) -> dict[str, str]:
-        """Download a list of pages and save them to files."""
+        """Download a list of pages and save them to files using original filenames."""
         downloaded = {}
-        
+
         self.logger.info(f"📥 Downloading {len(pages)} {page_type} pages...")
-        
+
+        # Create subdirectories for organization
+        desc_dir = self.output_dir / "descriptors"
+        data_dir = self.output_dir / "data"
+        desc_dir.mkdir(exist_ok=True)
+        data_dir.mkdir(exist_ok=True)
+
         for page in pages:
             try:
                 self.logger.info(f"   Fetching {page}...")
                 content = await self.client.fetch_page(page)
-                
-                # Save to file
+
+                # Use original filename, handle URL parameters
                 filename = page.replace('?', '_').replace('=', '_')
-                file_path = self.output_dir / f"{page_type}_{filename}"
-                
+
+                # Choose appropriate directory based on page type
+                if page_type == "descriptor":
+                    file_path = desc_dir / filename
+                else:  # data pages
+                    file_path = data_dir / filename
+
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
-                
+
                 downloaded[page] = str(file_path)
                 self.logger.info(f"   ✅ Saved {page} -> {file_path}")
-                
+
             except Exception as e:
                 self.logger.error(f"   ❌ Failed to download {page}: {e}")
-        
+
         return downloaded
 
     async def save_discovery_info(self, descriptor_pages: list[str], data_pages: list[str], 
