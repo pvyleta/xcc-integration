@@ -83,7 +83,7 @@ XCC_DESCRIPTOR_PAGES: Final = [
     "biv.xml",  # Bivalent heating descriptor
     "fve.xml",  # Photovoltaics descriptor
     "spot.xml",  # Spot pricing descriptor
-    "nast.xml",  # Heat pump settings descriptor (sensor corrections, power restrictions, HP controls)
+    # Note: nast.xml (Heat pump settings) is added dynamically if accessible
 ]
 
 # Data files (fetched on every update)
@@ -94,7 +94,7 @@ XCC_DATA_PAGES: Final = [
     "BIV1.XML",  # Bivalent heating data
     "FVE4.XML",  # Photovoltaics data
     "SPOT1.XML",  # Spot pricing data
-    "NAST.XML",  # Heat pump settings data (descriptor-only page with embedded data)
+    # Note: NAST.XML (Heat pump settings) is added dynamically if accessible
 ]
 
 # Legacy combined list (for backward compatibility)

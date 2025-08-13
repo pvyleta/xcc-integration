@@ -730,6 +730,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 _LOGGER.info("Discovered descriptor pages: %s", descriptor_pages)
                 _LOGGER.info("Discovered data pages: %s", data_pages)
+
+                # Check for additional pages that might not be in main.xml discovery
+                await self._check_additional_pages(client)
             else:
                 _LOGGER.warning("Page discovery returned no pages, using defaults")
                 from .const import XCC_DESCRIPTOR_PAGES, XCC_DATA_PAGES
@@ -746,6 +749,50 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             self._discovered_data_pages = XCC_DATA_PAGES
             self._pages_discovered = True  # Don't retry on every update
 
+    async def _check_additional_pages(self, client) -> None:
+        """Check for additional pages that might not be discovered automatically."""
+        try:
+            _LOGGER.debug("Checking for additional pages not found in main.xml discovery")
+
+            # List of additional pages to check
+            additional_pages = [
+                ("nast.xml", "NAST.XML", "Heat pump settings"),
+            ]
+
+            for descriptor_page, data_page, description in additional_pages:
+                try:
+                    # Test if descriptor page is accessible
+                    _LOGGER.debug("Testing accessibility of %s (%s)", descriptor_page, description)
+                    test_data = await client.fetch_page(descriptor_page)
+
+                    if test_data and len(test_data) > 100 and '<LOGIN>' not in test_data:
+                        _LOGGER.info("✅ Found additional page: %s (%s)", descriptor_page, description)
+
+                        # Add to discovered pages
+                        if descriptor_page not in self._discovered_descriptor_pages:
+                            self._discovered_descriptor_pages.append(descriptor_page)
+                            _LOGGER.info("Added %s to descriptor pages", descriptor_page)
+
+                        # For NAST, the descriptor and data are the same file
+                        if data_page not in self._discovered_data_pages:
+                            self._discovered_data_pages.append(data_page)
+                            _LOGGER.info("Added %s to data pages", data_page)
+                    else:
+                        _LOGGER.debug("❌ Additional page %s not accessible or invalid", descriptor_page)
+
+                except asyncio.CancelledError:
+                    _LOGGER.debug("Request cancelled while testing %s", descriptor_page)
+                    continue
+                except asyncio.TimeoutError:
+                    _LOGGER.debug("Timeout while testing %s", descriptor_page)
+                    continue
+                except Exception as e:
+                    _LOGGER.debug("Error testing %s: %s", descriptor_page, e)
+                    continue
+
+        except Exception as e:
+            _LOGGER.warning("Error checking additional pages: %s", e)
+
     async def _load_descriptors(self, client) -> None:
         """Load descriptor files to determine entity types."""
         try:
@@ -761,6 +808,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             descriptor_data = {}
             for page in descriptor_pages:
                 try:
+                    # Check if page is accessible before trying to fetch it
+                    # This prevents errors when pages like nast.xml are in constants but not discovered
+                    _LOGGER.debug("Attempting to load descriptor page: %s", page)
                     data = await client.fetch_page(page)
                     if data:
                         descriptor_data[page] = data
@@ -773,8 +823,15 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     # Small delay between requests
                     await asyncio.sleep(0.1)
 
+                except asyncio.CancelledError:
+                    _LOGGER.warning("Request cancelled while loading descriptor %s - skipping", page)
+                    continue
+                except asyncio.TimeoutError:
+                    _LOGGER.warning("Timeout while loading descriptor %s - skipping", page)
+                    continue
                 except Exception as e:
-                    _LOGGER.error("Error loading descriptor %s: %s", page, e)
+                    _LOGGER.warning("Error loading descriptor %s: %s - skipping", page, e)
+                    continue
 
             # Parse descriptors to determine entity types
             if descriptor_data:
