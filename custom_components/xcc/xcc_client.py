@@ -216,9 +216,35 @@ class XCCClient:
                     name_elem = f_elem.xpath('.//INPUTN[@NAME and @VALUE]')
                     page_name = name_elem[0].get('VALUE') if name_elem else f"Page {page_id}"
 
-                    # Check if page is active (INPUTV with VALUE="1")
-                    active_elem = f_elem.xpath('.//INPUTV[@VALUE="1"]')
-                    is_active = len(active_elem) > 0
+                    # Check if page is active using multiple criteria
+                    is_active = False
+
+                    # Method 1: INPUTV with VALUE="1" (most common for user-configurable pages)
+                    active_elem_v = f_elem.xpath('.//INPUTV[@VALUE="1"]')
+                    if len(active_elem_v) > 0:
+                        is_active = True
+
+                    # Method 2: INPUTI with non-zero VALUE (for system pages like biv.xml)
+                    if not is_active:
+                        active_elem_i = f_elem.xpath('.//INPUTI[@VALUE and @VALUE!="0"]')
+                        if len(active_elem_i) > 0:
+                            # Additional check: some pages have meaningful non-zero values
+                            for elem in active_elem_i:
+                                value = elem.get('VALUE', '0')
+                                try:
+                                    int_value = int(value)
+                                    if int_value > 0:
+                                        is_active = True
+                                        break
+                                except ValueError:
+                                    pass
+
+                    # Method 3: Special handling for essential system pages
+                    if not is_active and page_url in ['biv.xml', 'bivtuv.xml', 'stavjed.xml']:
+                        # These pages are considered active if they have any configuration data
+                        config_elem = f_elem.xpath('.//INPUTI[@VALUE]')
+                        if len(config_elem) > 0:
+                            is_active = True
 
                     # Determine page type based on URL
                     page_type = self._determine_page_type(page_url)
@@ -399,21 +425,17 @@ class XCCClient:
                     if desc_page not in descriptor_pages:
                         descriptor_pages.append(desc_page)
 
-            # Step 3: Add essential system pages regardless of active status
-            # These pages contain critical system information that should always be loaded
-            essential_pages = ['stavjed.xml', 'biv.xml']
-            for essential_page in essential_pages:
-                if essential_page not in descriptor_pages:
-                    # Check if the page exists and is accessible
-                    try:
-                        test_content = await self.fetch_page(essential_page)
-                        if not self._is_login_page(test_content) and len(test_content) > 100:
-                            descriptor_pages.append(essential_page)
-                            _LOGGER.info("Added essential system page: %s", essential_page)
-                    except Exception as e:
-                        _LOGGER.debug("Essential page %s not accessible: %s", essential_page, e)
+            # Step 3: Add stavjed.xml if not discovered (it's essential for system status)
+            if 'stavjed.xml' not in descriptor_pages:
+                try:
+                    test_content = await self.fetch_page('stavjed.xml')
+                    if not self._is_login_page(test_content) and len(test_content) > 100:
+                        descriptor_pages.append('stavjed.xml')
+                        _LOGGER.info("Added essential system status page: stavjed.xml")
+                except Exception as e:
+                    _LOGGER.debug("Essential page stavjed.xml not accessible: %s", e)
 
-            _LOGGER.info("Found %d descriptor pages (including essential): %s", len(descriptor_pages), descriptor_pages)
+            _LOGGER.info("Found %d descriptor pages: %s", len(descriptor_pages), descriptor_pages)
 
             # Step 4: Discover data pages for each descriptor
             data_pages_map = await self.discover_data_pages(descriptor_pages)
