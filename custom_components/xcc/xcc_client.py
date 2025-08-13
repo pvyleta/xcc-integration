@@ -399,12 +399,26 @@ class XCCClient:
                     if desc_page not in descriptor_pages:
                         descriptor_pages.append(desc_page)
 
-            _LOGGER.info("Found %d active descriptor pages: %s", len(descriptor_pages), descriptor_pages)
+            # Step 3: Add essential system pages regardless of active status
+            # These pages contain critical system information that should always be loaded
+            essential_pages = ['stavjed.xml', 'biv.xml']
+            for essential_page in essential_pages:
+                if essential_page not in descriptor_pages:
+                    # Check if the page exists and is accessible
+                    try:
+                        test_content = await self.fetch_page(essential_page)
+                        if not self._is_login_page(test_content) and len(test_content) > 100:
+                            descriptor_pages.append(essential_page)
+                            _LOGGER.info("Added essential system page: %s", essential_page)
+                    except Exception as e:
+                        _LOGGER.debug("Essential page %s not accessible: %s", essential_page, e)
 
-            # Step 3: Discover data pages for each descriptor
+            _LOGGER.info("Found %d descriptor pages (including essential): %s", len(descriptor_pages), descriptor_pages)
+
+            # Step 4: Discover data pages for each descriptor
             data_pages_map = await self.discover_data_pages(descriptor_pages)
 
-            # Step 4: Flatten data pages list
+            # Step 5: Flatten data pages list
             data_pages = []
             for desc_page, pages in data_pages_map.items():
                 data_pages.extend(pages)
