@@ -28,28 +28,66 @@ async def async_setup_entry(
     """Set up XCC number entities from a config entry."""
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Wait for first data update to ensure descriptors are loaded
-    await coordinator.async_config_entry_first_refresh()
+    _LOGGER.info("🚀 Setting up XCC number platform")
 
-    # Create number entities for all writable number properties
-    numbers = []
-    for entity_data in coordinator.data.get("entities", []):
-        prop = entity_data.get("prop", "").upper()
-        entity_type = coordinator.get_entity_type(prop)
+    # NEVER wait for first refresh to avoid ConfigEntryNotReady timeout issues
+    # Instead, create entities immediately if data is available, or set up listener for later
 
-        if entity_type == "number" and coordinator.is_writable(prop):
-            number = XCCNumber(coordinator, entity_data)
-            numbers.append(number)
-            _LOGGER.info(
-                "🏗️ NUMBER: %s -> '%s' | ID:%s | Range:[%s-%s] Step:%s Unit:%s | Value:%s",
-                prop, number.name, getattr(number, 'entity_id', 'not_set').split('.')[-1],
-                number.native_min_value, number.native_max_value, number.native_step,
-                number.native_unit_of_measurement or "none", number.native_value
-            )
+    def _create_number_entities():
+        """Create number entities from coordinator data."""
+        if not coordinator.data:
+            _LOGGER.debug("No coordinator data available yet")
+            return []
+
+        numbers_data = coordinator.data.get("numbers", {})
+        _LOGGER.info("📊 Found %d number entities in coordinator data", len(numbers_data))
+
+        if not numbers_data:
+            _LOGGER.warning("❌ No number data in coordinator - check entity processing")
+            return []
+
+        numbers = []
+        for entity_key, entity_data in numbers_data.items():
+            try:
+                prop = entity_data.get("prop", "").upper()
+                entity_type = coordinator.get_entity_type(prop)
+
+                if entity_type == "number" and coordinator.is_writable(prop):
+                    number = XCCNumber(coordinator, entity_data)
+                    numbers.append(number)
+                    _LOGGER.info(
+                        "🏗️ NUMBER: %s -> '%s' | Range:[%s-%s] Step:%s Unit:%s | Value:%s",
+                        prop, number.name,
+                        number.native_min_value, number.native_max_value, number.native_step,
+                        number.native_unit_of_measurement or "none", number.native_value
+                    )
+                else:
+                    _LOGGER.debug("Skipping %s: type=%s, writable=%s", prop, entity_type, coordinator.is_writable(prop))
+            except Exception as e:
+                _LOGGER.error("❌ Error creating number entity for %s: %s", entity_key, e)
+
+        return numbers
+
+    # Try to create entities immediately
+    numbers = _create_number_entities()
 
     if numbers:
         async_add_entities(numbers)
-        _LOGGER.info("Added %d XCC number entities", len(numbers))
+        _LOGGER.info("✅ Successfully added %d XCC number entities", len(numbers))
+    else:
+        _LOGGER.warning("⚠️  No number entities created yet - will retry when data becomes available")
+
+        # Set up listener for future coordinator updates
+        def _on_coordinator_update():
+            """Handle coordinator data updates."""
+            new_numbers = _create_number_entities()
+            if new_numbers:
+                async_add_entities(new_numbers)
+                _LOGGER.info("✅ Added %d XCC number entities after coordinator update", len(new_numbers))
+
+        # Register the update listener
+        coordinator.async_add_listener(_on_coordinator_update)
+        _LOGGER.info("📡 Registered listener for future coordinator updates")
 
 
 class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
