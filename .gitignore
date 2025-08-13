@@ -4,6 +4,7 @@ __pycache__/
 *.so
 venv/
 test_venv/
+scraper_venv/
 .pytest_cache/
 
 # XCC live data cache (regenerated from controller)

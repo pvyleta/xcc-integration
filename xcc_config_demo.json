@@ -1,0 +1,6 @@
+{
+  "host": "192.168.0.50",
+  "username": "xcc",
+  "password": "UPDATE_THIS_WITH_YOUR_PASSWORD",
+  "output_dir": "./xcc_data_demo"
+}

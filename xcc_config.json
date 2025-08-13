@@ -1,0 +1,6 @@
+{
+  "host": "192.168.1.100",
+  "username": "xcc",
+  "password": "your_password_here",
+  "output_dir": "./xcc_data"
+}

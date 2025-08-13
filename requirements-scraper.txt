@@ -1,0 +1,4 @@
+# Requirements for XCC Page Scraper CLI tool
+aiohttp>=3.8.0
+lxml>=4.6.0
+aiofiles>=0.8.0
