@@ -64,64 +64,113 @@ except ImportError:
                 return content
 
         async def auto_discover_all_pages(self) -> tuple[list[str], list[str]]:
-            """Discover all pages using simplified logic."""
-            # Fetch main.xml
-            main_content = await self.fetch_page("main.xml")
+            """Discover all pages using the same logic as the integration."""
+            try:
+                # Try the full discovery logic first
+                main_content = await self.fetch_page("main.xml")
 
-            # Parse with regex (simplified version)
-            xml_content = f'<PAGE>{main_content}</PAGE>'
+                # Parse with regex (simplified version)
+                xml_content = f'<PAGE>{main_content}</PAGE>'
 
-            # Find all F elements
-            f_pattern = r'<F[^>]*U="([^"]+)"[^>]*>(.*?)</F>'
-            f_matches = re.findall(f_pattern, xml_content, re.DOTALL)
+                # Find all F elements
+                f_pattern = r'<F[^>]*U="([^"]+)"[^>]*>(.*?)</F>'
+                f_matches = re.findall(f_pattern, xml_content, re.DOTALL)
 
-            descriptor_pages = []
+                descriptor_pages = []
 
-            for page_url, content in f_matches:
-                is_active = False
+                for page_url, content in f_matches:
+                    is_active = False
 
-                # Check for active indicators
-                if ('INPUTV' in content and 'VALUE="1"' in content) or \
-                   ('INPUTI' in content and any(f'VALUE="{i}"' in content for i in range(1, 100))):
-                    is_active = True
+                    # Method 1: INPUTV with VALUE="1"
+                    if 'INPUTV' in content and 'VALUE="1"' in content:
+                        is_active = True
 
-                # Special handling for essential pages
-                if page_url in ['biv.xml', 'bivtuv.xml', 'stavjed.xml'] and 'INPUTI' in content:
-                    is_active = True
+                    # Method 2: INPUTI with non-zero VALUE
+                    elif not is_active:
+                        inputi_pattern = r'INPUTI[^>]*VALUE="([^"]+)"'
+                        inputi_matches = re.findall(inputi_pattern, content)
+                        for value in inputi_matches:
+                            try:
+                                int_value = int(value)
+                                if int_value > 0:
+                                    is_active = True
+                                    break
+                            except ValueError:
+                                pass
 
-                if is_active:
-                    desc_page = page_url.split('?')[0]
-                    if desc_page not in descriptor_pages:
-                        descriptor_pages.append(desc_page)
+                    # Method 3: Special handling for essential pages
+                    if not is_active and page_url in ['biv.xml', 'bivtuv.xml', 'stavjed.xml']:
+                        if 'INPUTI' in content and 'VALUE=' in content:
+                            is_active = True
 
-            # Add stavjed.xml if not found
-            if 'stavjed.xml' not in descriptor_pages:
-                try:
-                    await self.fetch_page('stavjed.xml')
-                    descriptor_pages.append('stavjed.xml')
-                except:
-                    pass
+                    if is_active:
+                        desc_page = page_url.split('?')[0]
+                        if desc_page not in descriptor_pages:
+                            descriptor_pages.append(desc_page)
 
-            # Generate data pages
-            data_pages = []
-            for desc_page in descriptor_pages:
-                base_name = desc_page.replace('.xml', '').upper()
-                potential_data = [
-                    f"{base_name}1.XML",
-                    f"{base_name}4.XML",
-                    f"{base_name}10.XML",
-                    f"{base_name}11.XML"
-                ]
+                # Add essential pages that might not be in main.xml
+                essential_pages = ['stavjed.xml', 'okruh.xml', 'tuv1.xml', 'biv.xml', 'fve.xml', 'spot.xml']
+                for essential_page in essential_pages:
+                    if essential_page not in descriptor_pages:
+                        try:
+                            content = await self.fetch_page(essential_page)
+                            if len(content) > 100 and '<LOGIN>' not in content:
+                                descriptor_pages.append(essential_page)
+                        except:
+                            pass
 
-                for data_page in potential_data:
-                    try:
-                        content = await self.fetch_page(data_page)
-                        if len(content) > 100:
-                            data_pages.append(data_page)
-                    except:
-                        pass
+                # Generate data pages using the same patterns as the integration
+                data_pages = []
 
-            return descriptor_pages, data_pages
+                # Use the same data page mapping as the integration
+                data_page_mapping = {
+                    'stavjed.xml': ['STAVJED1.XML'],
+                    'okruh.xml': ['OKRUH10.XML'],
+                    'tuv1.xml': ['TUV11.XML'],
+                    'biv.xml': ['BIV1.XML'],
+                    'fve.xml': ['FVE4.XML'],
+                    'spot.xml': ['SPOT1.XML'],
+                }
+
+                # Add mapped data pages
+                for desc_page in descriptor_pages:
+                    if desc_page in data_page_mapping:
+                        for data_page in data_page_mapping[desc_page]:
+                            try:
+                                content = await self.fetch_page(data_page)
+                                if len(content) > 100 and '<LOGIN>' not in content:
+                                    data_pages.append(data_page)
+                            except:
+                                pass
+
+                # Also try common patterns for discovered pages
+                for desc_page in descriptor_pages:
+                    if desc_page not in data_page_mapping:
+                        base_name = desc_page.replace('.xml', '').upper()
+                        potential_data = [
+                            f"{base_name}1.XML",
+                            f"{base_name}4.XML",
+                            f"{base_name}10.XML",
+                            f"{base_name}11.XML"
+                        ]
+
+                        for data_page in potential_data:
+                            if data_page not in data_pages:
+                                try:
+                                    content = await self.fetch_page(data_page)
+                                    if len(content) > 100 and '<LOGIN>' not in content:
+                                        data_pages.append(data_page)
+                                except:
+                                    pass
+
+                return descriptor_pages, data_pages
+
+            except Exception as e:
+                # Fallback to integration defaults if discovery fails
+                print(f"Discovery failed, using integration defaults: {e}")
+                default_descriptors = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml"]
+                default_data = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+                return default_descriptors, default_data
 
         async def close(self):
             """Close the session."""
@@ -171,19 +220,39 @@ class XCCPageScraper:
         """Discover all available pages using the integration's discovery logic."""
         try:
             self.logger.info("🔍 Starting automatic page discovery...")
-            
+
             # Use the integration's auto-discovery functionality
             descriptor_pages, data_pages = await self.client.auto_discover_all_pages()
-            
+
             self.logger.info(f"📋 Discovery complete:")
             self.logger.info(f"   Descriptor pages: {len(descriptor_pages)}")
             self.logger.info(f"   Data pages: {len(data_pages)}")
-            
+
+            # If discovery found nothing, use integration defaults
+            if not descriptor_pages and not data_pages:
+                self.logger.warning("🔄 Discovery found no pages, using integration defaults...")
+                descriptor_pages = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml"]
+                data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+
+                self.logger.info(f"📋 Using defaults:")
+                self.logger.info(f"   Descriptor pages: {len(descriptor_pages)}")
+                self.logger.info(f"   Data pages: {len(data_pages)}")
+
             return descriptor_pages, data_pages
-            
+
         except Exception as e:
             self.logger.error(f"❌ Page discovery failed: {e}")
-            return [], []
+            self.logger.warning("🔄 Falling back to integration defaults...")
+
+            # Use the same defaults as the integration
+            descriptor_pages = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml"]
+            data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+
+            self.logger.info(f"📋 Fallback defaults:")
+            self.logger.info(f"   Descriptor pages: {len(descriptor_pages)}")
+            self.logger.info(f"   Data pages: {len(data_pages)}")
+
+            return descriptor_pages, data_pages
 
     async def download_pages(self, pages: list[str], page_type: str) -> dict[str, str]:
         """Download a list of pages and save them to files."""
