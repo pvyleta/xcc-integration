@@ -81,8 +81,7 @@ except ImportError:
             try:
                 # Try the full discovery logic first
                 main_content = await self.fetch_page("main.xml")
-                print(f"DEBUG: main.xml content length: {len(main_content)}")
-                print(f"DEBUG: main.xml content preview: {main_content[:500]}")
+
 
                 # Parse with regex - handle the actual format from your main.xml
                 descriptor_pages = []
@@ -90,7 +89,6 @@ except ImportError:
                 # Find all F elements with U attribute
                 f_pattern = r'<F[^>]*U="([^"]+)"[^>]*>(.*?)</F>'
                 f_matches = re.findall(f_pattern, main_content, re.DOTALL)
-                print(f"DEBUG: Found {len(f_matches)} F elements")
 
                 for page_url, content in f_matches:
                     is_active = False
@@ -98,7 +96,6 @@ except ImportError:
                     # Method 1: INPUTV with VALUE="1" (most common for user-configurable pages)
                     if re.search(r'INPUTV[^>]*VALUE="1"', content):
                         is_active = True
-                        print(f"DEBUG: {page_url} active via INPUTV=1")
 
                     # Method 2: INPUTI with non-zero VALUE (for system pages like biv.xml)
                     elif not is_active:
@@ -108,7 +105,6 @@ except ImportError:
                                 int_value = int(value)
                                 if int_value > 0:
                                     is_active = True
-                                    print(f"DEBUG: {page_url} active via INPUTI={value}")
                                     break
                             except ValueError:
                                 pass
@@ -117,14 +113,11 @@ except ImportError:
                     if not is_active and page_url.split('?')[0] in ['biv.xml', 'bivtuv.xml', 'stavjed.xml']:
                         if re.search(r'INPUTI[^>]*VALUE="[^"0]', content):
                             is_active = True
-                            print(f"DEBUG: {page_url} active as essential system page")
 
                     if is_active:
                         desc_page = page_url.split('?')[0]
                         if desc_page not in descriptor_pages:
                             descriptor_pages.append(desc_page)
-
-                print(f"DEBUG: Discovered pages from main.xml: {descriptor_pages}")
 
                 # Add essential pages that might not be in main.xml or not detected
                 essential_pages = ['stavjed.xml']
@@ -134,7 +127,6 @@ except ImportError:
                             content = await self.fetch_page(essential_page)
                             if len(content) > 100 and '<LOGIN>' not in content:
                                 descriptor_pages.append(essential_page)
-                                print(f"DEBUG: Added essential page: {essential_page}")
                         except:
                             pass
 
