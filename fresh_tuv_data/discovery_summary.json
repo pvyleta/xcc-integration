@@ -1,0 +1,79 @@
+{
+  "discovery_timestamp": 11282.2887131,
+  "xcc_controller": {
+    "host": "liskovaxcc.vyleta.com",
+    "username": "xcc"
+  },
+  "discovery_results": {
+    "descriptor_pages": {
+      "count": 13,
+      "pages": [
+        "okruh.xml",
+        "tuv1.xml",
+        "tuv2.xml",
+        "bazen1.xml",
+        "bazen2.xml",
+        "bazmist.xml",
+        "biv.xml",
+        "bivtuv.xml",
+        "solar.xml",
+        "aku.xml",
+        "fve.xml",
+        "pocasi.xml",
+        "stavjed.xml"
+      ],
+      "downloaded": 13,
+      "files": {
+        "okruh.xml": "fresh_tuv_data\\descriptors\\okruh.xml",
+        "tuv1.xml": "fresh_tuv_data\\descriptors\\tuv1.xml",
+        "tuv2.xml": "fresh_tuv_data\\descriptors\\tuv2.xml",
+        "bazen1.xml": "fresh_tuv_data\\descriptors\\bazen1.xml",
+        "bazen2.xml": "fresh_tuv_data\\descriptors\\bazen2.xml",
+        "bazmist.xml": "fresh_tuv_data\\descriptors\\bazmist.xml",
+        "biv.xml": "fresh_tuv_data\\descriptors\\biv.xml",
+        "bivtuv.xml": "fresh_tuv_data\\descriptors\\bivtuv.xml",
+        "solar.xml": "fresh_tuv_data\\descriptors\\solar.xml",
+        "aku.xml": "fresh_tuv_data\\descriptors\\aku.xml",
+        "fve.xml": "fresh_tuv_data\\descriptors\\fve.xml",
+        "pocasi.xml": "fresh_tuv_data\\descriptors\\pocasi.xml",
+        "stavjed.xml": "fresh_tuv_data\\descriptors\\stavjed.xml"
+      }
+    },
+    "data_pages": {
+      "count": 13,
+      "pages": [
+        "OKRUH10.XML",
+        "TUV11.XML",
+        "BIV1.XML",
+        "FVE4.XML",
+        "STAVJED1.XML",
+        "TUV21.XML",
+        "BAZEN11.XML",
+        "BAZEN21.XML",
+        "BAZMIST1.XML",
+        "BIVTUV1.XML",
+        "SOLAR1.XML",
+        "AKU1.XML",
+        "POCASI1.XML"
+      ],
+      "downloaded": 13,
+      "files": {
+        "OKRUH10.XML": "fresh_tuv_data\\data\\OKRUH10.XML",
+        "TUV11.XML": "fresh_tuv_data\\data\\TUV11.XML",
+        "BIV1.XML": "fresh_tuv_data\\data\\BIV1.XML",
+        "FVE4.XML": "fresh_tuv_data\\data\\FVE4.XML",
+        "STAVJED1.XML": "fresh_tuv_data\\data\\STAVJED1.XML",
+        "TUV21.XML": "fresh_tuv_data\\data\\TUV21.XML",
+        "BAZEN11.XML": "fresh_tuv_data\\data\\BAZEN11.XML",
+        "BAZEN21.XML": "fresh_tuv_data\\data\\BAZEN21.XML",
+        "BAZMIST1.XML": "fresh_tuv_data\\data\\BAZMIST1.XML",
+        "BIVTUV1.XML": "fresh_tuv_data\\data\\BIVTUV1.XML",
+        "SOLAR1.XML": "fresh_tuv_data\\data\\SOLAR1.XML",
+        "AKU1.XML": "fresh_tuv_data\\data\\AKU1.XML",
+        "POCASI1.XML": "fresh_tuv_data\\data\\POCASI1.XML"
+      }
+    }
+  },
+  "total_pages": 26,
+  "total_downloaded": 26
+}

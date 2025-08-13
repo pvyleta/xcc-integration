@@ -13,6 +13,7 @@ class XCCDescriptorParser:
     def __init__(self):
         """Initialize the descriptor parser."""
         self.entity_configs = {}
+        self.data_values = {}  # Store current data values for visibility checking
 
     def parse_descriptor_files(
         self, descriptor_data: dict[str, str],
@@ -293,6 +294,11 @@ class XCCDescriptorParser:
         """Determine the entity configuration from an XML element."""
         prop = element.get("prop")
         if not prop:
+            return None
+
+        # Check visibility conditions first
+        if not self._is_element_visible(element):
+            _LOGGER.debug("Skipping entity %s due to visibility condition", prop)
             return None
 
         # Check if element is readonly - only skip readonly choice elements
@@ -930,3 +936,56 @@ class XCCDescriptorParser:
         """Check if a property is writable."""
         config = self.entity_configs.get(prop, {})
         return config.get("writable", False)
+
+    def _parse_visibility_condition(self, vis_data: str) -> list[tuple[str, str]]:
+        """Parse visData string into list of (property, expected_value) tuples.
+
+        Format: "count;property1;value1;property2;value2;..."
+        Example: "1;TUVSCHOVANITEPLOT;0" -> [("TUVSCHOVANITEPLOT", "0")]
+        """
+        if not vis_data:
+            return []
+
+        parts = vis_data.split(';')
+        if len(parts) < 1:
+            return []
+
+        try:
+            count = int(parts[0])
+            conditions = []
+
+            for i in range(count):
+                prop_idx = 1 + (i * 2)
+                val_idx = 2 + (i * 2)
+
+                if prop_idx < len(parts) and val_idx < len(parts):
+                    conditions.append((parts[prop_idx], parts[val_idx]))
+
+            return conditions
+        except (ValueError, IndexError):
+            return []
+
+    def _check_visibility_conditions(self, conditions: list[tuple[str, str]]) -> bool:
+        """Check if all visibility conditions are met based on current data values."""
+        if not conditions:
+            return True  # No conditions means always visible
+
+        for prop, expected_value in conditions:
+            actual_value = self.data_values.get(prop)
+            if actual_value != expected_value:
+                return False
+
+        return True
+
+    def _is_element_visible(self, element: ET.Element) -> bool:
+        """Check if an element should be visible based on its visData attribute."""
+        vis_data = element.get("visData")
+        if not vis_data:
+            return True  # No visibility condition means always visible
+
+        conditions = self._parse_visibility_condition(vis_data)
+        return self._check_visibility_conditions(conditions)
+
+    def update_data_values(self, data_values: dict[str, str]):
+        """Update the current data values for visibility checking."""
+        self.data_values = data_values or {}
