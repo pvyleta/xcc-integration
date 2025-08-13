@@ -65,17 +65,21 @@ python xcc_scraper.py --config xcc_config.json --verbose
 
 ```
 xcc_data/
-├── descriptor_fve.xml              # Photovoltaics descriptor
-├── descriptor_okruh.xml            # Heating circuits descriptor
-├── descriptor_tuv1.xml             # Hot water descriptor
-├── descriptor_biv.xml              # Bivalent heating descriptor
-├── descriptor_pocasi.xml           # Weather forecast descriptor
-├── data_FVE4.XML                   # Photovoltaics data
-├── data_OKRUH10.XML                # Heating circuits data
-├── data_TUV11.XML                  # Hot water data
-├── data_BIV1.XML                   # Bivalent heating data
-├── data_POCASI1.XML                # Weather data
-└── discovery_summary.json          # Discovery and download summary
+├── descriptors/                    # Configuration pages
+│   ├── stavjed.xml                # System status config
+│   ├── okruh.xml                  # Heating circuits config
+│   ├── tuv1.xml                   # Hot water config
+│   ├── biv.xml                    # Bivalent heating config
+│   ├── fve.xml                    # Photovoltaics config
+│   └── spot.xml                   # Spot pricing config
+├── data/                          # Real-time data pages
+│   ├── STAVJED1.XML               # System status data
+│   ├── OKRUH10.XML                # Heating circuits data
+│   ├── TUV11.XML                  # Hot water data
+│   ├── BIV1.XML                   # Bivalent heating data
+│   ├── FVE4.XML                   # Photovoltaics data
+│   └── SPOT1.XML                  # Spot pricing data
+└── discovery_summary.json         # Discovery and download summary
 ```
 
 ## 📊 Discovery Summary
@@ -93,17 +97,17 @@ The `discovery_summary.json` file contains:
       "count": 8,
       "pages": ["okruh.xml", "tuv1.xml", "fve.xml", "biv.xml", ...],
       "downloaded": 8,
-      "files": {"okruh.xml": "./xcc_data/descriptor_okruh.xml", ...}
+      "files": {"okruh.xml": "./xcc_data/descriptors/okruh.xml", ...}
     },
     "data_pages": {
-      "count": 10,
+      "count": 6,
       "pages": ["OKRUH10.XML", "TUV11.XML", "FVE4.XML", ...],
-      "downloaded": 10,
-      "files": {"OKRUH10.XML": "./xcc_data/data_OKRUH10.XML", ...}
+      "downloaded": 6,
+      "files": {"OKRUH10.XML": "./xcc_data/data/OKRUH10.XML", ...}
     }
   },
-  "total_pages": 18,
-  "total_downloaded": 18
+  "total_pages": 12,
+  "total_downloaded": 12
 }
 ```
 
