@@ -225,7 +225,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         entities_list = []
 
         # Priority-based device assignment: each entity appears only once
-        # Priority order (highest to lowest): SPOT, FVE, BIV, OKRUH, TUV1, STAVJED, XCC_HIDDEN_SETTINGS
+        # Priority order (highest to lowest): SPOT, FVE, BIV, OKRUH, TUV1, STAVJED, NAST, XCC_HIDDEN_SETTINGS
         device_priority = [
             "SPOT",
             "FVE",
@@ -233,6 +233,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "OKRUH",
             "TUV1",
             "STAVJED",
+            "NAST",  # Heat pump settings from NAST.XML
             "XCC_HIDDEN_SETTINGS"  # Special device for entities without descriptors
         ]
 
@@ -251,11 +252,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             page = entity["attributes"].get("page", "unknown")
             has_descriptor = prop in self.entity_configs
 
+            # Special handling for NAST entities - treat them as having descriptors
+            is_nast_entity = page.upper() == "NAST.XML"
+
             # Track stats by page
             if page not in descriptor_stats_by_page:
                 descriptor_stats_by_page[page] = {"with": [], "without": []}
 
-            if has_descriptor:
+            if has_descriptor or is_nast_entity:
                 entities_with_descriptors.append(entity)
                 descriptor_stats_by_page[page]["with"].append(prop)
             else:
@@ -282,7 +286,11 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             page = entity["attributes"].get("page", "unknown").upper()
             prop = entity["attributes"]["field_name"]
             # Normalize page names (remove numbers and .XML extension)
-            page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
+            # Special handling for NAST.XML - keep as NAST
+            if page == "NAST.XML":
+                page_normalized = "NAST"
+            else:
+                page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
 
             # Track normalization stats
             if page not in page_normalization_stats:
@@ -348,6 +356,18 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Get descriptor information for this entity
                 descriptor_config = self.entity_configs.get(prop, {})
+
+                # Special handling for NAST entities - create synthetic descriptor config
+                if entity["attributes"].get("page", "").upper() == "NAST.XML" and not descriptor_config:
+                    # Use the attributes from the NAST entity itself
+                    entity_attrs = entity.get("attributes", {})
+                    descriptor_config = {
+                        "friendly_name": entity_attrs.get("friendly_name", prop.replace("-", " ").title()),
+                        "friendly_name_en": entity_attrs.get("friendly_name", prop.replace("-", " ").title()),
+                        "unit": entity_attrs.get("unit_of_measurement", ""),
+                        "element_type": entity.get("entity_type", "sensor"),
+                        "source": "NAST",
+                    }
 
                 # Use descriptor friendly name based on language preference
                 friendly_name = self._get_friendly_name(descriptor_config, prop)
@@ -492,6 +512,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
                 "TUV1": {"name": "Hot Water System", "model": "Domestic Hot Water"},
                 "STAVJED": {"name": "Unit Status", "model": "System Status Monitor"},
+                "NAST": {"name": "Heat Pump Settings", "model": "HP Configuration & Calibration"},
                 "XCC_HIDDEN_SETTINGS": {"name": "Hidden Settings", "model": "Advanced Configuration"},
             }
         else:
@@ -503,6 +524,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "OKRUH": {"name": "Topné okruhy", "model": "Regulátor topných zón"},
                 "TUV1": {"name": "Systém teplé vody", "model": "Teplá užitková voda"},
                 "STAVJED": {"name": "Stav jednotky", "model": "Monitor stavu systému"},
+                "NAST": {"name": "Nastavení TČ", "model": "Konfigurace a kalibrace TČ"},
                 "XCC_HIDDEN_SETTINGS": {"name": "Skrytá nastavení", "model": "Pokročilá konfigurace"},
             }
 
