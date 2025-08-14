@@ -1093,6 +1093,12 @@ def parse_xml_entities(
         "Found %d elements with prop attributes and text content", len(prop_elements)
     )
 
+    # Format 3: NAST-style descriptor format (prop attributes without text, self-closing)
+    nast_elements = root.xpath(".//*[@prop and not(text())]")
+    _LOGGER.debug(
+        "Found %d NAST-style elements with prop attributes but no text content", len(nast_elements)
+    )
+
     if prop_elements:
         _LOGGER.debug("Processing prop elements for %s", page_name)
 
@@ -1139,6 +1145,103 @@ def parse_xml_entities(
                 "state": value,
                 "attributes": attributes,
             }
+        )
+
+    # Format 3: NAST-style descriptor format (elements with prop but no text content)
+    if nast_elements:
+        _LOGGER.debug("Processing NAST-style elements for %s", page_name)
+        nast_processed = 0
+
+        for elem in nast_elements:
+            prop = elem.get("prop")
+            if not prop:
+                continue
+
+            entity_id = f"{entity_prefix}_{prop.lower().replace('-', '_')}"
+
+            # Determine entity type based on element tag and attributes
+            entity_type = "sensor"  # default
+            attributes = {
+                "source_page": page_name,
+                "field_name": prop,
+                "friendly_name": prop.replace("-", " ").title(),
+            }
+
+            # Map element types to Home Assistant entity types
+            if elem.tag == "number":
+                entity_type = "number"
+                # Add number-specific attributes
+                if elem.get("min"):
+                    try:
+                        attributes["min_value"] = float(elem.get("min"))
+                    except ValueError:
+                        pass
+                if elem.get("max"):
+                    try:
+                        attributes["max_value"] = float(elem.get("max"))
+                    except ValueError:
+                        pass
+                if elem.get("unit"):
+                    attributes["unit_of_measurement"] = elem.get("unit")
+                    attributes["device_class"] = _get_device_class(elem.get("unit"))
+                if elem.get("digits"):
+                    try:
+                        attributes["step"] = 10 ** (-int(elem.get("digits")))
+                    except ValueError:
+                        attributes["step"] = 1.0
+                else:
+                    attributes["step"] = 1.0
+
+            elif elem.tag == "choice":
+                entity_type = "select"
+                # Extract options from choice element
+                options = []
+                for option in elem.xpath(".//option"):
+                    option_text = option.get("text_en") or option.get("text", "")
+                    if option_text:
+                        options.append(option_text)
+                if options:
+                    attributes["options"] = options
+
+            elif elem.tag == "button":
+                entity_type = "button"
+                # Add button-specific attributes
+                if elem.get("text_en"):
+                    attributes["friendly_name"] = elem.get("text_en")
+                elif elem.get("text"):
+                    attributes["friendly_name"] = elem.get("text")
+                if elem.get("value"):
+                    attributes["button_value"] = elem.get("value")
+
+            elif elem.tag == "text":
+                entity_type = "text"
+                # Text input entity
+
+            # Set default state for NAST entities (they don't have current values)
+            state = None
+            if entity_type == "select" and attributes.get("options"):
+                state = attributes["options"][0]  # Default to first option
+            elif entity_type == "number":
+                state = 0  # Default number value
+            elif entity_type == "button":
+                state = "unknown"  # Buttons don't have persistent state
+            elif entity_type == "text":
+                state = ""  # Default empty text
+
+            entities.append(
+                {
+                    "entity_id": entity_id,
+                    "entity_type": entity_type,
+                    "state": state,
+                    "attributes": attributes,
+                }
+            )
+            nast_processed += 1
+
+        _LOGGER.debug(
+            "NAST processing complete: %d processed, %d total entities",
+            nast_processed,
+            len(entities),
         )
 
     _LOGGER.debug(
