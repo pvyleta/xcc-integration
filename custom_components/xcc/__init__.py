@@ -81,6 +81,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info("Setting up platforms: %s", [p.value for p in PLATFORMS_TO_SETUP])
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
 
+    # Force an immediate data refresh after platform setup to populate entity values
+    # This ensures entities have values immediately instead of waiting for the next scheduled update
+    try:
+        _LOGGER.debug("Forcing immediate data refresh after platform setup")
+        await coordinator.async_request_refresh()
+        _LOGGER.info("✅ Immediate data refresh completed - entities should have values now")
+    except Exception as err:
+        _LOGGER.warning("⚠️  Immediate data refresh failed, entities will update on next schedule: %s", err)
+
     return True
 
 

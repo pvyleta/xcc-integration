@@ -47,7 +47,7 @@ async def async_setup_entry(
                 entity_type = coordinator.get_entity_type(prop)
 
                 if entity_type == "button":
-                    button = XCCButton(coordinator, entity_data)
+                    button = XCCButton(coordinator, entity_key)
                     buttons.append(button)
                     _LOGGER.info(
                         "🏗️ BUTTON: %s -> '%s' | Action: %s",
