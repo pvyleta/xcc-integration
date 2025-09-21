@@ -80,7 +80,7 @@ def test_descriptor_parser_with_visibility():
     print(f"TUVSCHOVANITEPLOT current value: {tuvschovaniteplot_value}")
     
     # Test assertions
-    assert tuvminimalni_without_visibility, "TUVMINIMALNI should be included when no visibility data is provided"
+    assert not tuvminimalni_without_visibility, "TUVMINIMALNI should be excluded when no visibility data is provided (can't evaluate condition)"
     assert tuvminimalni_with_visibility_met, "TUVMINIMALNI should be included when visibility condition is met"
     assert not tuvminimalni_with_visibility_not_met, "TUVMINIMALNI should be excluded when visibility condition is not met"
     assert tuvschovaniteplot_value == "0", "TUVSCHOVANITEPLOT should be 0 for condition to be met"

@@ -305,7 +305,9 @@ class XCCDescriptorParser:
         if not prop:
             return None
 
-        # ALWAYS LOAD ALL ENTITIES - ignore visibility conditions for maximum coverage
+        # Check visibility conditions unless explicitly ignored
+        if not self.ignore_visibility and not self._is_element_visible(element):
+            return None  # Skip elements that don't meet visibility conditions
 
         # Check if element is readonly - only skip readonly choice elements
         # All other elements (number, switch, time) should be processed and handled appropriately

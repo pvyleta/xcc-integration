@@ -16,7 +16,7 @@ def test_czech_english_translations_comprehensive():
     with patch('custom_components.xcc.descriptor_parser._LOGGER') as mock_logger:
         from custom_components.xcc.descriptor_parser import XCCDescriptorParser
         
-        parser = XCCDescriptorParser()
+        parser = XCCDescriptorParser(ignore_visibility=True)  # Test all entities regardless of visibility
         
         # Test entities that should have Czech translations - covering both code paths
         test_cases = [

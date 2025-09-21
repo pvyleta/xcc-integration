@@ -77,7 +77,7 @@ def test_nast_device_assignment_code_changes():
         return False
     
     print("\n🎉 ALL NAST DEVICE ASSIGNMENT TESTS PASSED!")
-    return True
+    # All checks passed - test succeeds
 
 
 def test_nast_device_assignment_expected_results():
@@ -119,8 +119,8 @@ def test_nast_device_assignment_expected_results():
     print("  🏷️  Proper naming: Czech/English device names")
     print("  📊 Clear separation: Settings vs operational data")
     print("  🛠️  Professional appearance: Like other XCC devices")
-    
-    return True
+
+    # Test passes by completing successfully
 
 
 def test_nast_device_assignment_validation():
@@ -172,10 +172,9 @@ def test_nast_device_assignment_validation():
     
     if passed_checks == len(implementation_checks):
         print("🎉 All implementation checks passed!")
-        return True
     else:
         print("❌ Some implementation checks failed")
-        return False
+        assert False, f"Only {passed_checks}/{len(implementation_checks)} implementation checks passed"
 
 
 if __name__ == "__main__":

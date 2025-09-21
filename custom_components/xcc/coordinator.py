@@ -225,9 +225,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         entities_list = []
 
         # Priority-based device assignment: each entity appears only once
-        # Priority order (highest to lowest): SPOT, FVE, BIV, OKRUH, TUV1, STAVJED, NAST, XCC_HIDDEN_SETTINGS
+        # Priority order (highest to lowest): SPOT, FVEINV, FVE, BIV, OKRUH, TUV1, STAVJED, NAST, XCC_HIDDEN_SETTINGS
         device_priority = [
             "SPOT",
+            "FVEINV",  # PV Inverter (higher priority than FVE for inverter-specific entities)
             "FVE",
             "BIV",
             "OKRUH",
@@ -507,6 +508,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         if self.language == LANGUAGE_ENGLISH:
             device_configs = {
                 "SPOT": {"name": "Spot Prices", "model": "Energy Market Data"},
+                "FVEINV": {"name": "PV Inverter", "model": "Solar Inverter Monitor"},
                 "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
                 "BIV": {"name": "Heat Pump", "model": "Bivalent Heat Pump"},
                 "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
@@ -519,6 +521,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Czech language
             device_configs = {
                 "SPOT": {"name": "Spotové ceny", "model": "Data energetického trhu"},
+                "FVEINV": {"name": "FV Měnič", "model": "Monitor solárního měniče"},
                 "FVE": {"name": "Fotovoltaický systém", "model": "Fotovoltaický regulátor"},
                 "BIV": {"name": "Tepelné čerpadlo", "model": "Bivalentní tepelné čerpadlo"},
                 "OKRUH": {"name": "Topné okruhy", "model": "Regulátor topných zón"},
@@ -858,7 +861,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Parse descriptors to determine entity types
             if descriptor_data:
-                self.descriptor_parser = XCCDescriptorParser()
+                self.descriptor_parser = XCCDescriptorParser(ignore_visibility=True)
                 self.entity_configs = self.descriptor_parser.parse_descriptor_files(
                     descriptor_data
                 )
