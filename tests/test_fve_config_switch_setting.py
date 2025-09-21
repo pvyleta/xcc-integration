@@ -10,10 +10,10 @@ def test_fve_config_page_selection():
     
     # Test the page selection logic for FVE-CONFIG entities
     test_cases = [
-        ("FVE-CONFIG-MENICECONFIG-READONLY", "fveinv.xml"),
-        ("FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT", "fveinv.xml"),
-        ("FVESTATS-DEMANDCHRGCURR", "fveinv.xml"),
-        ("FVESTATS-MENIC-BATTERY-SOC", "fveinv.xml"),
+        ("FVE-CONFIG-MENICECONFIG-READONLY", "FVEINV10.XML"),
+        ("FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT", "FVEINV10.XML"),
+        ("FVESTATS-DEMANDCHRGCURR", "FVEINV10.XML"),
+        ("FVESTATS-MENIC-BATTERY-SOC", "FVEINV10.XML"),
         ("FVE-SOMETHING-ELSE", "FVE4.XML"),  # Regular FVE entities should still go to FVE4.XML
         ("TUV-TEPLOTA", "TUV11.XML"),
         ("OKRUH-CIRCUIT", "OKRUH10.XML"),
@@ -24,7 +24,7 @@ def test_fve_config_page_selection():
         
         # Simulate the page selection logic from XCCClient.set_value
         if prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
-            page_to_fetch = "fveinv.xml"
+            page_to_fetch = "FVEINV10.XML"
         elif any(tuv_word in prop_upper for tuv_word in ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]):
             page_to_fetch = "TUV11.XML"
         elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):

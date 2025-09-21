@@ -740,6 +740,11 @@ class XCCClient:
         try:
             _LOGGER.info("🔧 Setting XCC property %s to value %s", prop, value)
 
+            # Ensure we're authenticated before attempting to set values
+            if not await self._ensure_authenticated():
+                _LOGGER.error("❌ Authentication failed before setting property %s", prop)
+                return False
+
             # First, try to get the internal NAME for this property by fetching the current page
             internal_name = None
             page_to_fetch = None
@@ -754,8 +759,8 @@ class XCCClient:
                 page_to_fetch = "TUV11.XML"
                 _LOGGER.debug("🎯 Property contains TUV/DHW keywords, using TUV11.XML")
             elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
-                page_to_fetch = "fveinv.xml"  # FVE-CONFIG and FVESTATS entities are on FVEINV page
-                _LOGGER.debug("🎯 Property is FVE-CONFIG or FVESTATS, using fveinv.xml")
+                page_to_fetch = "FVEINV10.XML"  # FVE-CONFIG and FVESTATS entities use FVEINV data page for setting
+                _LOGGER.debug("🎯 Property is FVE-CONFIG or FVESTATS, using FVEINV10.XML")
             elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
                 page_to_fetch = "FVE4.XML"
                 _LOGGER.debug("🎯 Property contains FVE/SOLAR/PV keywords, using FVE4.XML")
@@ -828,30 +833,49 @@ class XCCClient:
                 )
 
             # Add fallback methods using property name
-            endpoints_to_try.extend(
-                [
-                    # Method 3: Direct property setting via GET
+            fallback_endpoints = [
+                # Method 3: Direct property setting via GET
+                {
+                    "method": "GET",
+                    "url": f"http://{self.ip}/{page_to_fetch}?{prop}={value}",
+                    "description": "Property name GET",
+                },
+                # Method 4: Property setting via POST to property page
+                {
+                    "method": "POST",
+                    "url": f"http://{self.ip}/{page_to_fetch}",
+                    "data": {prop: value},
+                    "description": "Property name POST",
+                },
+            ]
+
+            # Special handling for FVE-CONFIG HTML switches
+            if prop_upper.startswith("FVE-CONFIG-"):
+                fallback_endpoints.extend([
+                    # Method 5: HTML switch via descriptor page GET
                     {
                         "method": "GET",
-                        "url": f"http://{self.ip}/{page_to_fetch}?{prop}={value}",
-                        "description": "Property name GET",
+                        "url": f"http://{self.ip}/fveinv.xml?{prop}={value}",
+                        "description": "HTML switch descriptor GET",
                     },
-                    # Method 4: Property setting via POST to property page
+                    # Method 6: HTML switch via descriptor page POST
                     {
                         "method": "POST",
-                        "url": f"http://{self.ip}/{page_to_fetch}",
+                        "url": f"http://{self.ip}/fveinv.xml",
                         "data": {prop: value},
-                        "description": "Property name POST",
+                        "description": "HTML switch descriptor POST",
                     },
-                    # Method 5: Generic RPC endpoint
-                    {
-                        "method": "POST",
-                        "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
-                        "data": {prop: value},
-                        "description": "Generic RPC POST",
-                    },
-                ]
-            )
+                ])
+
+            # Add generic RPC endpoint
+            fallback_endpoints.append({
+                "method": "POST",
+                "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
+                "data": {prop: value},
+                "description": "Generic RPC POST",
+            })
+
+            endpoints_to_try.extend(fallback_endpoints)
 
             for i, endpoint in enumerate(endpoints_to_try, 1):
                 try:
@@ -934,7 +958,10 @@ class XCCClient:
                                 return True
 
                 except Exception as endpoint_err:
-                    _LOGGER.warning("⚠️ Endpoint %d failed: %s", i, endpoint_err)
+                    _LOGGER.warning("⚠️ Endpoint %d (%s) failed: %s", i, endpoint["description"], endpoint_err)
+                    _LOGGER.debug("   URL: %s", endpoint["url"])
+                    if endpoint["method"] == "POST" and "data" in endpoint:
+                        _LOGGER.debug("   Data: %s", endpoint["data"])
                     continue
 
             _LOGGER.error(
