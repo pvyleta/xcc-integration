@@ -753,6 +753,9 @@ class XCCClient:
             if any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
                 _LOGGER.debug("🎯 Property contains TUV/DHW keywords, using TUV11.XML")
+            elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
+                page_to_fetch = "fveinv.xml"  # FVE-CONFIG and FVESTATS entities are on FVEINV page
+                _LOGGER.debug("🎯 Property is FVE-CONFIG or FVESTATS, using fveinv.xml")
             elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
                 page_to_fetch = "FVE4.XML"
                 _LOGGER.debug("🎯 Property contains FVE/SOLAR/PV keywords, using FVE4.XML")
@@ -879,6 +882,12 @@ class XCCClient:
                             _LOGGER.info("📡 GET response: status=%d", resp.status)
 
                             if resp.status == 200:
+                                # Check response content for error indicators
+                                response_lower = response_text.lower()
+                                if any(error_word in response_lower for error_word in ['error', 'failed', 'invalid', 'denied']):
+                                    _LOGGER.warning("⚠️ GET request returned 200 but response contains error: %s", response_text[:200])
+                                    continue
+
                                 _LOGGER.info(
                                     "✅ Successfully set XCC property %s to %s via GET",
                                     prop,
@@ -910,10 +919,13 @@ class XCCClient:
 
                             _LOGGER.info("📡 POST response: status=%d", resp.status)
 
-                            if (
-                                resp.status == 200
-                                and "ERROR" not in response_text.upper()
-                            ):
+                            if resp.status == 200:
+                                # Enhanced error detection for POST responses
+                                response_lower = response_text.lower()
+                                if any(error_word in response_lower for error_word in ['error', 'failed', 'invalid', 'denied', 'forbidden']):
+                                    _LOGGER.warning("⚠️ POST request returned 200 but response contains error: %s", response_text[:200])
+                                    continue
+
                                 _LOGGER.info(
                                     "✅ Successfully set XCC property %s to %s via POST",
                                     prop,

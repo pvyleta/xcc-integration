@@ -33,10 +33,11 @@ def test_fve_config_meniceconfig_readonly_discovery():
     
     # Verify the configuration
     config = configs[target]
-    assert config['entity_type'] == 'sensor', "Should be a sensor entity"
+    assert config['entity_type'] == 'switch', "Should be a switch entity (controls read-only mode)"
     assert config['friendly_name'] == 'Read-only Mode', "Should have correct friendly name"
     assert config['icon'] == 'mdi:lock', "Should have lock icon"
     assert config['page'] == 'pv_inverter', "Should be on pv_inverter page"
+    assert config.get('writable', False) == True, "Should be writable (can be toggled)"
 
     print(f"✅ Successfully found {target} with config: {config}")
 
@@ -144,12 +145,14 @@ def test_fve_config_entity_properties():
         'FVE-CONFIG-MENICECONFIG-READONLY': {
             'friendly_name': 'Read-only Mode',
             'icon': 'mdi:lock',
-            'entity_type': 'sensor',
+            'entity_type': 'switch',  # This is a switch to control read-only mode
+            'writable': True,
         },
         'FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT': {
             'friendly_name': 'Communication Enabled',
             'icon': 'mdi:network',
-            'entity_type': 'sensor',
+            'entity_type': 'switch',  # This is a switch to enable/disable communication
+            'writable': True,
         }
     }
 
@@ -159,6 +162,6 @@ def test_fve_config_entity_properties():
             for prop, expected_value in expected_props.items():
                 actual_value = config.get(prop)
                 assert actual_value == expected_value, f"Entity {entity_name} property {prop}: expected {expected_value}, got {actual_value}"
-            print(f"✅ {entity_name} has correct properties")
+            print(f"✅ {entity_name}: {config['friendly_name']} ({config['entity_type']}) - writable: {config.get('writable', False)}")
         else:
             print(f"⚠️  {entity_name} not found in configs")

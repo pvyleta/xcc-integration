@@ -1073,21 +1073,23 @@ class XCCDescriptorParser:
         if entity_name.startswith('FVE-CONFIG-'):
             if 'readonly' in entity_lower:
                 config.update({
-                    "entity_type": "sensor",
+                    "entity_type": "switch",  # This is a switch to control read-only mode, not a read-only sensor
                     "unit": "",
                     "device_class": None,
                     "state_class": None,
                     "icon": "mdi:lock",
                     "friendly_name": "Read-only Mode",
+                    "writable": True,  # This switch can be toggled
                 })
             elif 'komunikovat' in entity_lower:
                 config.update({
-                    "entity_type": "sensor",
+                    "entity_type": "switch",  # This is also a switch to enable/disable communication
                     "unit": "",
                     "device_class": None,
                     "state_class": None,
                     "icon": "mdi:network",
                     "friendly_name": "Communication Enabled",
+                    "writable": True,  # This switch can be toggled
                 })
             elif 'pocetstringu' in entity_lower:
                 config.update({
