@@ -58,6 +58,10 @@ class XCCDescriptorParser:
         self, xml_content: str, page_name: str,
     ) -> dict[str, dict[str, Any]]:
         """Parse a single descriptor XML file."""
+        # Check if this is an HTML-based descriptor (like FVEINV.XML)
+        if xml_content.strip().startswith('<!DOCTYPE html') or '<html' in xml_content[:200]:
+            return self._parse_html_descriptor(xml_content, page_name)
+
         try:
             root = ET.fromstring(xml_content)
             # Store root for parent row lookup
@@ -991,3 +995,186 @@ class XCCDescriptorParser:
     def update_data_values(self, data_values: dict[str, str]):
         """Update the current data values for visibility checking."""
         self.data_values = data_values or {}
+
+    def _parse_html_descriptor(
+        self, html_content: str, page_name: str,
+    ) -> dict[str, dict[str, Any]]:
+        """Parse HTML-based descriptor files like FVEINV.XML."""
+        import re
+
+        entity_configs = {}
+
+        # Extract CSS class names that look like entity identifiers
+        # Look for patterns like FVESTATS-MENIC-TOTALGENERATED, FVESTATS-MENIC-BATTERY-SOC, etc.
+        class_pattern = r'class="([^"]*FVESTATS-[^"]*)"'
+        class_matches = re.findall(class_pattern, html_content, re.IGNORECASE)
+
+        # Also look for id attributes with similar patterns
+        id_pattern = r'id="([^"]*FVESTATS-[^"]*)"'
+        id_matches = re.findall(id_pattern, html_content, re.IGNORECASE)
+
+        # Combine all matches
+        all_matches = class_matches + id_matches
+
+        for match in all_matches:
+            # Split by spaces to get individual class names
+            class_names = match.split()
+
+            for class_name in class_names:
+                if 'FVESTATS-' in class_name.upper():
+                    entity_name = class_name.upper()
+
+                    # Skip if already processed
+                    if entity_name in entity_configs:
+                        continue
+
+                    # Determine entity properties based on name patterns
+                    config = self._determine_html_entity_config(entity_name, html_content)
+                    if config:
+                        entity_configs[entity_name] = config
+
+        # Also look for direct text patterns that might indicate entities
+        # Look for patterns in the HTML content itself
+        text_pattern = r'(FVESTATS-[A-Z0-9-]+)'
+        text_matches = re.findall(text_pattern, html_content, re.IGNORECASE)
+
+        for match in text_matches:
+            entity_name = match.upper()
+            if entity_name not in entity_configs:
+                config = self._determine_html_entity_config(entity_name, html_content)
+                if config:
+                    entity_configs[entity_name] = config
+
+        _LOGGER.debug("Found %d entity configurations in HTML descriptor %s", len(entity_configs), page_name)
+        return entity_configs
+
+    def _determine_html_entity_config(
+        self, entity_name: str, html_content: str,
+    ) -> dict[str, Any] | None:
+        """Determine entity configuration for HTML-based entities."""
+        # Default configuration
+        config = {
+            "entity_type": "sensor",
+            "friendly_name": self._generate_friendly_name_from_entity_name(entity_name),
+            "unit": "",
+            "device_class": None,
+            "state_class": None,
+            "icon": None,
+            "entity_category": None,
+            "page": "pv_inverter",
+        }
+
+        # Determine properties based on entity name patterns
+        entity_lower = entity_name.lower()
+
+        # Battery related entities
+        if "battery" in entity_lower:
+            if "soc" in entity_lower:
+                config.update({
+                    "unit": "%",
+                    "device_class": "battery",
+                    "state_class": "measurement",
+                    "icon": "mdi:battery",
+                })
+            elif "power" in entity_lower:
+                config.update({
+                    "unit": "W",
+                    "device_class": "power",
+                    "state_class": "measurement",
+                    "icon": "mdi:battery-charging",
+                })
+            elif "voltage" in entity_lower:
+                config.update({
+                    "unit": "V",
+                    "device_class": "voltage",
+                    "state_class": "measurement",
+                })
+            elif "current" in entity_lower:
+                config.update({
+                    "unit": "A",
+                    "device_class": "current",
+                    "state_class": "measurement",
+                })
+
+        # Power related entities
+        elif "power" in entity_lower:
+            config.update({
+                "unit": "W",
+                "device_class": "power",
+                "state_class": "measurement",
+                "icon": "mdi:flash",
+            })
+
+        # Energy related entities
+        elif "generated" in entity_lower or "energy" in entity_lower:
+            if "today" in entity_lower:
+                config.update({
+                    "unit": "kWh",
+                    "device_class": "energy",
+                    "state_class": "total_increasing",
+                    "icon": "mdi:solar-power",
+                })
+            else:
+                config.update({
+                    "unit": "kWh",
+                    "device_class": "energy",
+                    "state_class": "total_increasing",
+                    "icon": "mdi:solar-power",
+                })
+
+        # Voltage entities
+        elif "voltage" in entity_lower or "volt" in entity_lower:
+            config.update({
+                "unit": "V",
+                "device_class": "voltage",
+                "state_class": "measurement",
+            })
+
+        # Current entities
+        elif "current" in entity_lower or "amp" in entity_lower:
+            config.update({
+                "unit": "A",
+                "device_class": "current",
+                "state_class": "measurement",
+            })
+
+        # Frequency entities
+        elif "freq" in entity_lower:
+            config.update({
+                "unit": "Hz",
+                "device_class": "frequency",
+                "state_class": "measurement",
+            })
+
+        # Temperature entities
+        elif "temp" in entity_lower:
+            config.update({
+                "unit": "°C",
+                "device_class": "temperature",
+                "state_class": "measurement",
+            })
+
+        return config
+
+    def _generate_friendly_name_from_entity_name(self, entity_name: str) -> str:
+        """Generate a friendly name from entity name."""
+        # Remove common prefixes
+        name = entity_name.replace("FVESTATS-MENIC-", "").replace("FVESTATS-", "")
+
+        # Split by dashes and capitalize
+        parts = name.split("-")
+        friendly_parts = []
+
+        for part in parts:
+            if part.lower() == "soc":
+                friendly_parts.append("SOC")
+            elif part.lower() == "pv":
+                friendly_parts.append("PV")
+            elif part.lower() == "ac":
+                friendly_parts.append("AC")
+            elif part.lower() == "dc":
+                friendly_parts.append("DC")
+            else:
+                friendly_parts.append(part.capitalize())
+
+        return " ".join(friendly_parts)

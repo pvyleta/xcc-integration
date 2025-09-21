@@ -82,6 +82,7 @@ XCC_DESCRIPTOR_PAGES: Final = [
     "tuv1.xml",  # Hot water descriptor
     "biv.xml",  # Bivalent heating descriptor
     "fve.xml",  # Photovoltaics descriptor
+    "fveinv.xml",  # PV Inverter descriptor
     "spot.xml",  # Spot pricing descriptor
     # Note: nast.xml (Heat pump settings) is added dynamically if accessible
 ]
@@ -93,6 +94,7 @@ XCC_DATA_PAGES: Final = [
     "TUV11.XML",  # Hot water data
     "BIV1.XML",  # Bivalent heating data
     "FVE4.XML",  # Photovoltaics data
+    "FVEINV10.XML",  # PV Inverter data
     "SPOT1.XML",  # Spot pricing data
     # Note: NAST.XML (Heat pump settings) is added dynamically if accessible
 ]

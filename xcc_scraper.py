@@ -140,6 +140,7 @@ except ImportError:
                     'tuv1.xml': ['TUV11.XML'],
                     'biv.xml': ['BIV1.XML'],
                     'fve.xml': ['FVE4.XML'],
+                    'fveinv.xml': ['FVEINV10.XML'],
                     'spot.xml': ['SPOT1.XML'],
                 }
 

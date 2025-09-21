@@ -299,6 +299,8 @@ class XCCClient:
             return 'pool'
         elif 'fve.xml' in url_lower:
             return 'photovoltaics'
+        elif 'fveinv.xml' in url_lower:
+            return 'pv_inverter'
         elif 'vzt.xml' in url_lower:
             return 'ventilation'
         elif 'biv' in url_lower:

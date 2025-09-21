@@ -1,0 +1,1231 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 STRICT//EN">
+<html xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title text_en="PVE Inverter">FVE Měnič</title>
+        <meta content="FVE Měnič" name="Title">
+        <meta content="width=device-width, initial-scale=1.0, user-scalable=no" name="viewport">
+        <link href="FAVICON.ICO" rel="shortcut icon" type="image/x-icon">
+        <link href="font.css" rel="stylesheet" type="text/css">
+        <link href="style.css" rel="stylesheet" type="text/css">
+        <link href="ovladani.css" rel="stylesheet" type="text/css">
+        <link href="_mobile.css" rel="stylesheet" type="text/css">
+        <link href="fve.css" rel="stylesheet" type="text/css">
+        <script language="JavaScript" src="js/jquery.js" type="text/javascript"></script>
+        <script charset="UTF-8" language="JavaScript" src="main.js?V=74600"></script>
+        <link href="compact.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <div id="infoLine"></div>
+        <div data-indexes="0-1" data-verxml="74600" data-verxsl="74600" help="FVE2" id="page" indexpage="" calc1="d['FVE-CONFIG-MENICECONFIG-POCETSTRINGU'] &gt; '0' " calc1prop="ST1" calc2="d['FVE-CONFIG-MENICECONFIG-POCETSTRINGU'] &gt; '1' " calc2prop="ST2" calc3="d['FVE-CONFIG-MENICECONFIG-POCETSTRINGU'] &gt; '2' " calc3prop="ST3" calc4="d['FVE-CONFIG-MENICECONFIG-POCETSTRINGU'] &gt; '3' " calc4prop="ST4" calc5="d['FVE-CONFIG-MENICECONFIG-POCETSTRINGU'] &gt; '4' " calc5prop="ST5" calc6="d['FVE-CONFIG-MENICECONFIG-POCETSTRINGU'] &gt; '5' " calc6prop="ST6">
+            <div id="page_in">
+                <div id="header" class="fix">
+                    <a href="main.xml">
+                        <img alt="" border="0" hspace="0" id="logoTop" src="img/logoTop.png" vspace="0">
+                    </a>
+                    <a class="btOnOff disabalbe SZAPNUTO" href="vypnuti.xml"></a>
+                    <a class="btInfo" href="#"></a>
+                    <a class="btHelp" href="#"></a>
+                    <a class="btMsg disabalbe SCHYBA" href="diag.xml"></a>
+                    <a class="btBack" href="#" onclick="history.back(); return false;"></a>
+                    <a class="btMenu" href="#" onclick="$('.btnZalZalozky').parent().toggleClass('btnZalZalozkyHide'); return false;"></a>
+                    <a class="btArrL dis" href="#" id="slPrev" onclick="return false;"></a>
+                    <a class="btArrR dis" href="#" id="slNext" onclick="return false;"></a>
+                </div>
+                <div class="sl20"></div>
+                <div class="sl20 fix">
+                    <h1 class="aktSekce editText PAGENAME">
+                        <t1 text_en="PVE Inverter">FVE Měnič</t1>
+                        <span class="icon ICONNO btIco9" data-icon="55"></span>
+                        <t2 id="lineBlockName1" text_en="Status">Stav</t2>
+                        <t2 id="lineBlockName2" text_en="Settings">Nastavení</t2>
+                        <t2 id="lineBlockName3" text_en="Diagnostics">Diagnostika</t2>
+                    </h1>
+                    <br>
+                    <a class="btnZalTop"></a>
+                    <div class="btnZalZalozky">
+                        <a class="btnZal ZswBlok   " data-file="FVEINV1" data-vis="" href="#" id="ZswBlok1" onclick="swBlok(1); $('.btnZalZalozky').parent().toggleClass('btnZalZalozkyHide'); return false;" tabIndex="-1">
+                            <t1 text_en="Status">Stav</t1>
+                            <span></span>
+                        </a>
+                        <a class="btnZal ZswBlok   " data-file="FVEINV1" data-vis="" href="#" id="ZswBlok2" onclick="swBlok(2); $('.btnZalZalozky').parent().toggleClass('btnZalZalozkyHide'); return false;" tabIndex="-1">
+                            <t1 text_en="Settings">Nastavení</t1>
+                            <span></span>
+                        </a>
+                        <a class="btnZal ZswBlok   " data-file="FVEINV1" data-vis="" href="#" id="ZswBlok3" onclick="swBlok(3); $('.btnZalZalozky').parent().toggleClass('btnZalZalozkyHide'); return false;" tabIndex="-1">
+                            <t1 text_en="Diagnostics">Diagnostika</t1>
+                            <span></span>
+                        </a>
+                    </div>
+                    <a class="btnZalBot"></a>
+                </div>
+                <div class="sl80">
+                    <div class="swBlok" id="swBlok1">
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-TOTALGENERATED readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">kWh</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV Energy - Total">PV výroba - Celkem</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-TODAYGENERATED readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">kWh</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV Energy - Today">PV Výroba - dnes</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-TOTALINVPOWER readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="Inverter total power">Celkový výkon měniče</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  slBlokTop" data-vis="">
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="Power">Výkon</b>
+                            </div>
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="Current">Proud</b>
+                            </div>
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="Voltage">Napětí</b>
+                            </div>
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="SOC">SOC</b>
+                            </div>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP0-POWER readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP0-CURRENT readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP0-VOLTAGE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="Backup phase 1">Backup fáze 1</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP1-POWER readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP1-CURRENT readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP1-VOLTAGE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="Backup phase 2">Backup fáze 2</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP2-POWER readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP2-CURRENT readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BACKUP2-VOLTAGE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="Backup phase 3">Backup fáze 3</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-TOTALBACKUPLOAD readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="Total inverter backup load">Celkový výkon na backup výstupu</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  slBlokTop" data-vis="">
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="Power">Výkon</b>
+                            </div>
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="Current">Proud</b>
+                            </div>
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="Voltage">Napětí</b>
+                            </div>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;ST1;true">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS0-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS0-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS0-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV1">PV1</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;ST2;true">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS1-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS1-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS1-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV2">PV2</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;ST3;true">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS2-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS2-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS2-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV3">PV3</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;ST4;true">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS3-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS3-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS3-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV4">PV4</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;ST5;true">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS4-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS4-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS4-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV5">PV5</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;ST6;true">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS5-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS5-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-STRINGS5-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w3">
+                                <b class="lineText   ">
+                                    <t1 text_en="PV6">PV6</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib slBlokTop" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG0-ENABLED;1">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-SOC readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">%</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w4">
+                                <b class="lineText   ">
+                                    <t1 text_en="Battery">Baterie</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib slBlokTop" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG1-ENABLED;1">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY2-POWER readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY2-CURRENT readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY2-VOLTAGE readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">V</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY2-SOC readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">%</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w4">
+                                <b class="lineText   ">
+                                    <t1 text_en="Battery">Baterie 2</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  slBlokTop" data-vis="">
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="">Bat1</b>
+                            </div>
+                            <div class="label1 right   " data-vis="">
+                                <b text_en="">Bat2</b>
+                            </div>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-CURRENTBATTERYSETTINGS-CHARGEIMAX readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-CURRENTBATTERYSETTINGS2-CHARGEIMAX readonly visib" data-digits="" data-max="" data-min="" data-multi="" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG1-ENABLED;1">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w2">
+                                <b class="lineText   ">
+                                    <t1 text_en="Actual max charge currurent">Aktuální max. nab. proud</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-BMSCHARGEIMAX readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY2-BMSCHARGEIMAX readonly visib" data-digits="" data-max="" data-min="" data-multi="" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG1-ENABLED;1">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w2">
+                                <b class="lineText   ">
+                                    <t1 text_en="Actual max charge currurent of BMS">Aktuální max. nab. proud BMS</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-CURRENTBATTERYSETTINGS-DISCHARGEIMAX readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-CURRENTBATTERYSETTINGS2-DISCHARGEIMAX readonly visib" data-digits="" data-max="" data-min="" data-multi="" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG1-ENABLED;1">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w2">
+                                <b class="lineText   ">
+                                    <t1 text_en="Actual max discharge curr.">Aktuální max. vyb. proud</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-BMSDISCHARGEIMAX readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY2-BMSDISCHARGEIMAX readonly visib" data-digits="" data-max="" data-min="" data-multi="" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG1-ENABLED;1">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">A</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w2">
+                                <b class="lineText   ">
+                                    <t1 text_en="Actual max discharge curr. of BMS">Aktuální max. vyb. proud BMS</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-CURRENTBATTERYSETTINGS-SOCUNDERMIN readonly " data-digits="" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">%</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-CURRENTBATTERYSETTINGS2-SOCUNDERMIN readonly visib" data-digits="" data-max="" data-min="" data-multi="" data-vis="1;FVE-CONFIG-MENICECONFIG-BATTERYCONFIG1-ENABLED;1">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">%</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w2">
+                                <b class="lineText   ">
+                                    <t1 text_en="Actual minimal SOC">Aktuální minimum SOC</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok  " data-vis="">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-FEEDLIMIT-LIMITVALUE readonly visib" data-digits="0" data-max="" data-min="" data-multi="" data-vis="1;FVESTATS-MENIC-FEEDLIMIT-ENABLED;1">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en="">W</u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <div class="label1 right FVESTATS-MENIC-FEEDLIMIT-ENABLED  " data-vis="" option1cs="Zapnuto" option1en="Enabled" option0cs="Vypnuto" option0en="Disabled">
+                                <b text_en=""></b>
+                            </div>
+                            <i class="w2">
+                                <b class="lineText   ">
+                                    <t1 text_en="Feed to grid limit">Omezení přetoku</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="swBlok" id="swBlok2">
+                        <div class="setLine slBlok visib " data-vis="1;FVE-ENABLED;1">
+                            <div class="switch1 right FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT">
+                                <img alt="" border="0" hspace="0" src="img/bgSwitch.png" vspace="0">
+                                <br>
+                                <span class="off">
+                                    <img alt="" border="0" hspace="0" src="img/switchIn.png" vspace="0">
+                                    <br>
+                                    <b>OFF</b>
+                                </span>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="Communication with inverter">Zapnout komunikaci se střídačem</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;FVE-ENABLED;1">
+                            <div class="switch1 right FVE-CONFIG-MENICECONFIG-READONLY">
+                                <img alt="" border="0" hspace="0" src="img/bgSwitch.png" vspace="0">
+                                <br>
+                                <span class="off">
+                                    <img alt="" border="0" hspace="0" src="img/switchIn.png" vspace="0">
+                                    <br>
+                                    <b>OFF</b>
+                                </span>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="Read only mode">Režim pouze pro čtení</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="swBlok" id="swBlok3">
+                        <div class="setLine slBlok visib " data-vis="2;FVESTATS-MENIC-ERROR;0;FVESTATS-MENIC-WARNING;0">
+                            <i class="w0">
+                                <b class="lineText   ">
+                                    <t1 text_en="Inverter OK">Měnič bez chyby</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;FVESTATS-MENIC-ERROR;1">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-ERRORCODE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en=""></u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="Inverter Error">Chyba měniče</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;FVESTATS-MENIC-WARNING;1">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-WARNINGCODE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en=""></u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="Inverter warning">Varování měniče</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="2;FVESTATS-MENIC-BATTERY-BMSERROR;0;FVESTATS-MENIC-BATTERY-BMSWARNING;0">
+                            <i class="w0">
+                                <b class="lineText   ">
+                                    <t1 text_en="BMS OK">BMS bez chyby</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;FVESTATS-MENIC-BATTERY-BMSERROR;1">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-BMSERRORCODE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en=""></u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="BMS Error">Chyba BMS</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                        <div class="setLine slBlok visib " data-vis="1;FVESTATS-MENIC-BATTERY-BMSWARNING;1">
+                            <div class="switch3 pluMinComp right FVESTATS-MENIC-BATTERY-BMSWARNINGCODE readonly " data-digits="0" data-max="" data-min="" data-multi="" data-vis="">
+                                <br>
+                                <span>
+                                    <b class="selected">-</b>
+                                    <u text_en=""></u>
+                                </span>
+                                <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <i class="w1">
+                                <b class="lineText   ">
+                                    <t1 text_en="BMS warning">Varování BMS</t1>
+                                    <br>
+                                    <u text_en=""></u>
+                                </b>
+                            </i>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="clb"></div>
+                <div class="modalOver" id="topTools">
+                    <div class="modCenter">
+                        <div class="modCenterIn">
+                            <a class="close" href="#"></a>
+                            <div class="setLineSmall half">
+                                <a class="button1 right" href="vypnuti.xml">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b text_en="Switch">Vypínač</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <div class="label1 right SZAPNUTO" option0cs="VYPNUT" option0en="OFF" option1cs="ZAPNUT" option1en="ON">
+                                    <b>ZAPNUT</b>
+                                </div>
+                                <i>
+                                    <b text_en="System">Systém</b>
+                                </i>
+                            </div>
+                            <div class="setLineSmall half">
+                                <div class="switch3 pluMinComp right   readonly SVYKON" data-digits="">
+                                    <span>
+                                        <b class="selected">0</b>
+                                        <u>%</u>
+                                    </span>
+                                    <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                    <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                                </div>
+                                <p class="labelIco right visib" data-vis="1;SCHLAZENI;1">
+                                    <img alt="" border="0" hspace="0" src="ico/ico2.png" vspace="0">
+                                </p>
+                                <i>
+                                    <b text_en="HP power">Výkon TČ</b>
+                                </i>
+                            </div>
+                            <div class="setLineSmall half">
+                                <div class="switch3 pluMinComp right   readonly SAKTTEP" data-digits="">
+                                    <span>
+                                        <b class="selected">0</b>
+                                        <u>°C</u>
+                                    </span>
+                                    <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                    <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                                </div>
+                                <i>
+                                    <b class="lineText SCHLAZENI" option0cs="Aktuální teplota topné vody" option0en="Actual heat water temperature" option1cs="Aktuální teplota chladicí vody" option1en="Actual cool water temperature">
+                                        <t1 text_en="Actual heat water temperature">Aktuální teplota topné vody</t1>
+                                    </b>
+                                </i>
+                            </div>
+                            <div class="setLineSmall half">
+                                <div class="switch3 pluMinComp right   readonly SPOZTEP" data-digits="">
+                                    <span>
+                                        <b class="selected">0</b>
+                                        <u>°C</u>
+                                    </span>
+                                    <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                    <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                                </div>
+                                <i>
+                                    <b class="lineText SCHLAZENI" option0cs="Požadovaná teplota topné vody" option0en="Requested heat water temperature" option1cs="Požadovaná teplota chladicí vody" option1en="Requested cool water temperature">
+                                        <t1 text_en="Requested heat water temperature">Požadovaná teplota topné vody</t1>
+                                    </b>
+                                </i>
+                            </div>
+                            <div class="setLineSmall half">
+                                <div class="visib" data-vis="1;STEPTUV;1">
+                                    <div class="switch3 pluMinComp right   readonly SAKTTEPTUV" data-digits="">
+                                        <span>
+                                            <b class="selected">0</b>
+                                            <u>°C</u>
+                                        </span>
+                                        <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                        <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                                    </div>
+                                    <i>
+                                        <b text_en="Actual DHW heat water temperature">Aktuální teplota topné vody pro TUV</b>
+                                    </i>
+                                </div>
+                            </div>
+                            <div class="setLineSmall half">
+                                <div class="switch3 pluMinComp right   readonly SVENKU" data-digits="">
+                                    <span>
+                                        <b class="selected">0</b>
+                                        <u>°C</u>
+                                    </span>
+                                    <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                    <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                                </div>
+                                <i>
+                                    <b text_en="Outside temperature">Venkovní teplota</b>
+                                </i>
+                            </div>
+                            <div class="setLineSmall half">
+                                <i>
+                                    <b text_en="Ignore LRT under outdoor temperature">Ignorovat HDO pod venkovní teplotu</b>
+                                </i>
+                                <div class="switch3 pluMinComp right   SHDOLOWT" data-digits="">
+                                    <span>
+                                        <b class="selected">0</b>
+                                        <u>°C</u>
+                                    </span>
+                                    <a class="btPlus hide" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                    <a class="btMinus hide" href="#" onclick="return false;" tabIndex="-1">-</a>
+                                </div>
+                            </div>
+                            <div class="setLineSmall half">
+                                <div class="switchBig right SHDOIGNORE" data-count="2" data-value="0">
+                                    <span class="valSel">
+                                        <u>
+                                            <b text_en="respect">respektovat</b>
+                                        </u>
+                                    </span>
+                                    <span class="val" data-value="0">
+                                        <b text_en="respect">respektovat</b>
+                                    </span>
+                                    <span class="val" data-value="1">
+                                        <b text_en="ignore">ignorovat</b>
+                                    </span>
+                                </div>
+                                <i>
+                                    <b class="lineText SHDOSTAV" text_en="LRT">HDO</b>
+                                </i>
+                                <span class="stat"></span>
+                            </div>
+                            <div class="setLineSmall">
+                                <div class="switchGo right visib SOBEH9RUN" data-vis="1;SOBEH9VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH8RUN" data-vis="1;SOBEH8VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH7RUN" data-vis="1;SOBEH7VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH6RUN" data-vis="1;SOBEH6VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH5RUN" data-vis="1;SOBEH5VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH4RUN" data-vis="1;SOBEH4VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH3RUN" data-vis="1;SOBEH3VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH2RUN" data-vis="1;SOBEH2VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH1RUN" data-vis="1;SOBEH1VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <div class="switchGo right visib SOBEH0RUN" data-vis="1;SOBEH0VIS;1">
+                                    <img alt="" border="0" hspace="0" src="img/switch.png" vspace="0">
+                                    <br>
+                                    <span class="stop"></span>
+                                </div>
+                                <i>
+                                    <b text_en="Circulation pumps">Oběhová čerpadla</b>
+                                </i>
+                            </div>
+                            <div class="setLineSmall">
+                                <a class="button1 right" href="logout.xml">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b text_en="Logout">Odhlásit</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <a class="button1 right localeBT localeen" data-action="selectEn" data-level="0" href="">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b>English</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <a class="button1 right localeBT localecs" data-action="selectCz" data-level="0" href="">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b>Česky</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <a class="button1 left" href="nast.xml">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b text_en="System settings">Systémové nastavení</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <a class="button1 left" href="nastuz.xml">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b text_en="User settings">Uživatelské nastavení</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <a class="button1 left visib" data-vis="1;SSTAVJEDNOTKY;1" href="stavjed.xml">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b text_en="Outdoor units states">Stavy jednotek</b>
+                                        </u>
+                                    </span>
+                                </a>
+                                <a class="button1 left visib" data-vis="1;SSTAVKOTLU;1" href="stavpk.xml">
+                                    <img alt="" border="0" hspace="0" src="img/bgValSel.png" vspace="0">
+                                    <br>
+                                    <span>
+                                        <u>
+                                            <b text_en="Boiler states">Stavy kotlů</b>
+                                        </u>
+                                    </span>
+                                </a>
+                            </div>
+                            <div class="clb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modalOver" id="editText">
+                    <div class="modCenter">
+                        <div class="modCenterIn">
+                            <a class="close" href="#"></a>
+                            <br>
+                            <input class="editT" id="editT" type="text" value="">
+                            <br>
+                            <a class="set" href="#" id="closeText"></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="modalOver" id="editVal">
+                    <div class="modCenter">
+                        <div class="modCenterIn">
+                            <a class="close" href="#"></a>
+                            <br>
+                            <div class="pluMinComp btnAlways" id="editComp">
+                                <span>
+                                    <b>0</b>
+                                    <u>°C</u>
+                                </span>
+                                <a class="btPlus" href="#" onclick="return false;" tabIndex="-1">+</a>
+                                <a class="btMinus" href="#" onclick="return false;" tabIndex="-1">-</a>
+                            </div>
+                            <a class="set" href="#" id="closeEdit"></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="modalOver" id="selWin">
+                    <div class="modCenter">
+                        <div class="modCenterIn">
+                            <div class="setLineSmall">
+                                <i class="header">
+                                    <b>Nadpis</b>
+                                </i>
+                            </div>
+                            <a class="close" href="#"></a>
+                            <br>
+                            <div id="selWinContent" style="height: 60vh; overflow: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modalOver" id="loadingWin"></div>
+            </div>
+            <div id="foot">
+                <img alt="" border="0" hspace="0" id="logoBot" src="img/logoxcc2.png" vspace="0">
+                <span id="zakaznik">
+                    <t2 class="editText SNAZEV1">
+                        <t1></t1>
+                    </t2>
+                    <br>
+                    <i class="editText SNAZEV2">
+                        <t1></t1>
+                    </i>
+                </span>
+                <span id="footInfo">
+                    <a href="nastuz.xml?tab=5">
+                        <span id="clock"></span>
+                    </a>
+                    <br>
+                    <i>
+                        <t1 text_en="Actual outside temperature ">Aktuální venkovní teplota </t1>
+                        <t2 class="editText SVENKU readonly">
+                            <t1>14</t1>
+                        </t2>
+                        °C
+                    </i>
+                </span>
+            </div>
+        </div>
+        <div class="contextMenu" id="ctxM1">
+            <div class="contextMenuIn">
+                něco 1<br>
+            </div>
+        </div>
+    </body>
+</html>
