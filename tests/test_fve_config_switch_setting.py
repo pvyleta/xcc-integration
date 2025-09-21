@@ -177,25 +177,40 @@ async def test_fve_config_internal_name_mapping():
     # Mock XCC client
     client = XCCClient("192.168.1.100", "xcc", "xcc")
 
-    # Test the known mapping for FVE-CONFIG-MENICECONFIG-READONLY
-    test_xml_content = '''<?xml version="1.0" encoding="UTF-8"?>
-<DATA>
-    <INPUT P="FVE-CONFIG-MENICECONFIG-READONLY" NAME="__R69297.1_BOOL_i" VALUE="0"/>
-    <INPUT P="FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT" NAME="__R12345.0_BOOL_i" VALUE="1"/>
-    <INPUT P="FVESTATS-MENIC-TOTALGENERATED" NAME="__R54321_REAL_.1f" VALUE="12345"/>
-</DATA>'''
+    # Test using the actual corrected sample data
+    try:
+        with open("tests/sample_data/FVEINV10.XML", "r", encoding="utf-8") as f:
+            fveinv_content = f.read()
+    except UnicodeDecodeError:
+        # Fallback to windows-1250 if UTF-8 fails
+        with open("tests/sample_data/FVEINV10.XML", "r", encoding="windows-1250", errors="ignore") as f:
+            fveinv_content = f.read()
 
-    # Test XML parsing
-    name_mapping = client._extract_name_mapping_from_xml(test_xml_content)
+    # Test XML parsing with real data
+    name_mapping = client._extract_name_mapping_from_xml(fveinv_content)
 
     assert "FVE-CONFIG-MENICECONFIG-READONLY" in name_mapping
     assert name_mapping["FVE-CONFIG-MENICECONFIG-READONLY"] == "__R69297.1_BOOL_i"
     assert "FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT" in name_mapping
-    assert name_mapping["FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT"] == "__R12345.0_BOOL_i"
+    assert name_mapping["FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT"] == "__R69297.0_BOOL_i"
 
     print("✅ FVE-CONFIG internal NAME mapping test passed")
     print(f"   - READONLY: {name_mapping['FVE-CONFIG-MENICECONFIG-READONLY']}")
     print(f"   - KOMUNIKOVAT: {name_mapping['FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT']}")
+
+    # Also test that we can find TUVMINIMALNI in TUV data for comparison
+    try:
+        with open("tests/sample_data/TUV11.XML", "r", encoding="utf-8") as f:
+            tuv_content = f.read()
+    except UnicodeDecodeError:
+        with open("tests/sample_data/TUV11.XML", "r", encoding="windows-1250", errors="ignore") as f:
+            tuv_content = f.read()
+
+    tuv_mapping = client._extract_name_mapping_from_xml(tuv_content)
+    if "TUVMINIMALNI" in tuv_mapping:
+        print(f"   - TUVMINIMALNI (for comparison): {tuv_mapping['TUVMINIMALNI']}")
+    else:
+        print("   - TUVMINIMALNI not found in TUV11.XML")
 
 
 if __name__ == "__main__":
