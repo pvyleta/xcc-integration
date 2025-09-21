@@ -770,11 +770,6 @@ class XCCClient:
         try:
             _LOGGER.info("🔧 Setting XCC property %s to value %s", prop, value)
 
-            # Ensure we're authenticated before attempting to set values
-            if not await self._ensure_authenticated():
-                _LOGGER.error("❌ Authentication failed before setting property %s", prop)
-                return False
-
             # First, try to get the internal NAME for this property by fetching the current page
             internal_name = None
             page_to_fetch = None
