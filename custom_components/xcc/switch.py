@@ -159,7 +159,13 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
 
             if success:
                 _LOGGER.info("Successfully set switch %s to %s", self.name, "ON" if state else "OFF")
-                # Request immediate data refresh to update state
+
+                # IMMEDIATE STATE UPDATE: Update the entity's internal state immediately
+                # This ensures the UI reflects the change instantly, regardless of coordinator refresh timing
+                self._attr_is_on = state
+                self.async_write_ha_state()  # Force Home Assistant to update the UI immediately
+
+                # Request background data refresh to sync with device (non-blocking)
                 await self.coordinator.async_request_refresh()
             else:
                 _LOGGER.error("Failed to set switch %s to %s", self.name, "ON" if state else "OFF")
