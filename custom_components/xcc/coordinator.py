@@ -779,6 +779,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # List of additional pages to check
             additional_pages = [
                 ("nast.xml", "NAST.XML", "Heat pump settings"),
+                ("fveinv.xml", "FVEINV10.XML", "PV Inverter details"),
             ]
 
             for descriptor_page, data_page, description in additional_pages:
