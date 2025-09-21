@@ -92,11 +92,11 @@ async def test_fveinv_entity_creation():
     data_entities = parse_xml_entities(data_content, "FVEINV10.XML")
     data_dict = {e["attributes"]["field_name"]: e for e in data_entities}
     
-    # Test specific entities
+    # Test specific entities (using actual values from corrected sample data)
     test_entities = [
-        ("FVESTATS-MENIC-TOTALGENERATED", "12345", "kWh", "energy"),
-        ("FVESTATS-MENIC-BATTERY-SOC", "85", "%", "battery"),
-        ("FVESTATS-MENIC-BATTERY-POWER", "-500", "W", "power"),
+        ("FVESTATS-MENIC-TOTALGENERATED", "11701", "kWh", "energy"),
+        ("FVESTATS-MENIC-BATTERY-SOC", "95", "%", "battery"),
+        ("FVESTATS-MENIC-BATTERY-POWER", "-321.0", "W", "power"),
     ]
     
     for entity_name, expected_value, expected_unit, expected_device_class in test_entities:

@@ -69,15 +69,15 @@ def test_fveinv_data_parsing():
     # Check for specific entities with expected values
     entity_dict = {e["attributes"]["field_name"]: e for e in entities}
     
-    # Verify some key values
+    # Verify some key values (using actual values from corrected sample data)
     assert "FVESTATS-MENIC-TOTALGENERATED" in entity_dict
-    assert entity_dict["FVESTATS-MENIC-TOTALGENERATED"]["state"] == "12345"
-    
+    assert entity_dict["FVESTATS-MENIC-TOTALGENERATED"]["state"] == "11701"
+
     assert "FVESTATS-MENIC-BATTERY-SOC" in entity_dict
-    assert entity_dict["FVESTATS-MENIC-BATTERY-SOC"]["state"] == "85"
+    assert entity_dict["FVESTATS-MENIC-BATTERY-SOC"]["state"] == "95"
     
     assert "FVESTATS-MENIC-BATTERY-POWER" in entity_dict
-    assert entity_dict["FVESTATS-MENIC-BATTERY-POWER"]["state"] == "-500"
+    assert entity_dict["FVESTATS-MENIC-BATTERY-POWER"]["state"] == "-321.0"
     
     print(f"Found {len(entities)} entities in FVEINV data file")
     print(f"Sample entities: {list(entity_dict.keys())[:5]}")
@@ -121,7 +121,7 @@ def test_fveinv_combined_parsing():
     assert len(battery_soc_entities) > 0, "Should find battery SOC entity"
     
     battery_soc = battery_soc_entities[0]
-    assert battery_soc["state"] == "85", "Battery SOC should have correct value"
+    assert battery_soc["state"] == "95", "Battery SOC should have correct value"
     assert battery_soc["attributes"]["unit"] == "%", "Battery SOC should have % unit"
     
     print(f"Successfully combined {len(combined_entities)} entities")
