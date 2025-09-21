@@ -293,7 +293,11 @@ class XCCClient:
             return 'heating_circuit'
         elif 'mzona.xml' in url_lower:
             return 'mixed_zone'
-        elif 'tuv' in url_lower:
+        elif 'bivtuv.xml' in url_lower:  # Check specific bivalent hot water first
+            return 'bivalent'
+        elif 'biv' in url_lower:  # Then general bivalent
+            return 'bivalent'
+        elif 'tuv' in url_lower:  # Then general hot water
             return 'hot_water'
         elif 'bazen' in url_lower or 'bazmist' in url_lower:
             return 'pool'
@@ -303,8 +307,6 @@ class XCCClient:
             return 'pv_inverter'
         elif 'vzt.xml' in url_lower:
             return 'ventilation'
-        elif 'biv' in url_lower:
-            return 'bivalent'
         elif 'solar.xml' in url_lower:
             return 'solar'
         elif 'meteo.xml' in url_lower:
