@@ -1005,12 +1005,12 @@ class XCCDescriptorParser:
         entity_configs = {}
 
         # Extract CSS class names that look like entity identifiers
-        # Look for patterns like FVESTATS-MENIC-TOTALGENERATED, FVESTATS-MENIC-BATTERY-SOC, etc.
-        class_pattern = r'class="([^"]*FVESTATS-[^"]*)"'
+        # Look for patterns like FVESTATS-MENIC-TOTALGENERATED, FVESTATS-MENIC-BATTERY-SOC, FVE-CONFIG-MENICECONFIG-READONLY, etc.
+        class_pattern = r'class="([^"]*(?:FVESTATS-|FVE-CONFIG-)[^"]*)"'
         class_matches = re.findall(class_pattern, html_content, re.IGNORECASE)
 
         # Also look for id attributes with similar patterns
-        id_pattern = r'id="([^"]*FVESTATS-[^"]*)"'
+        id_pattern = r'id="([^"]*(?:FVESTATS-|FVE-CONFIG-)[^"]*)"'
         id_matches = re.findall(id_pattern, html_content, re.IGNORECASE)
 
         # Combine all matches
@@ -1021,7 +1021,7 @@ class XCCDescriptorParser:
             class_names = match.split()
 
             for class_name in class_names:
-                if 'FVESTATS-' in class_name.upper():
+                if 'FVESTATS-' in class_name.upper() or 'FVE-CONFIG-' in class_name.upper():
                     entity_name = class_name.upper()
 
                     # Skip if already processed
@@ -1035,7 +1035,7 @@ class XCCDescriptorParser:
 
         # Also look for direct text patterns that might indicate entities
         # Look for patterns in the HTML content itself
-        text_pattern = r'(FVESTATS-[A-Z0-9-]+)'
+        text_pattern = r'((?:FVESTATS-|FVE-CONFIG-)[A-Z0-9-]+)'
         text_matches = re.findall(text_pattern, html_content, re.IGNORECASE)
 
         for match in text_matches:
@@ -1066,6 +1066,45 @@ class XCCDescriptorParser:
 
         # Determine properties based on entity name patterns
         entity_lower = entity_name.lower()
+
+        # Configuration entities (FVE-CONFIG-*)
+        if entity_name.startswith('FVE-CONFIG-'):
+            if 'readonly' in entity_lower:
+                config.update({
+                    "entity_type": "sensor",
+                    "unit": "",
+                    "device_class": None,
+                    "state_class": None,
+                    "icon": "mdi:lock",
+                    "friendly_name": "Read-only Mode",
+                })
+            elif 'komunikovat' in entity_lower:
+                config.update({
+                    "entity_type": "sensor",
+                    "unit": "",
+                    "device_class": None,
+                    "state_class": None,
+                    "icon": "mdi:network",
+                    "friendly_name": "Communication Enabled",
+                })
+            elif 'pocetstringu' in entity_lower:
+                config.update({
+                    "entity_type": "sensor",
+                    "unit": "",
+                    "device_class": None,
+                    "state_class": None,
+                    "icon": "mdi:counter",
+                    "friendly_name": "Number of Strings",
+                })
+            elif 'batteryconfig' in entity_lower and 'enabled' in entity_lower:
+                config.update({
+                    "entity_type": "sensor",
+                    "unit": "",
+                    "device_class": None,
+                    "state_class": None,
+                    "icon": "mdi:battery-check",
+                    "friendly_name": f"Battery {entity_name.split('-')[-2]} Enabled" if len(entity_name.split('-')) > 2 else "Battery Config Enabled",
+                })
 
         # Battery related entities
         if "battery" in entity_lower:
@@ -1159,7 +1198,7 @@ class XCCDescriptorParser:
     def _generate_friendly_name_from_entity_name(self, entity_name: str) -> str:
         """Generate a friendly name from entity name."""
         # Remove common prefixes
-        name = entity_name.replace("FVESTATS-MENIC-", "").replace("FVESTATS-", "")
+        name = entity_name.replace("FVESTATS-MENIC-", "").replace("FVESTATS-", "").replace("FVE-CONFIG-MENICECONFIG-", "").replace("FVE-CONFIG-", "")
 
         # Split by dashes and capitalize
         parts = name.split("-")
@@ -1174,6 +1213,16 @@ class XCCDescriptorParser:
                 friendly_parts.append("AC")
             elif part.lower() == "dc":
                 friendly_parts.append("DC")
+            elif part.lower() == "readonly":
+                friendly_parts.append("Read-only")
+            elif part.lower() == "komunikovat":
+                friendly_parts.append("Communication")
+            elif part.lower() == "pocetstringu":
+                friendly_parts.append("String Count")
+            elif part.lower() == "batteryconfig0":
+                friendly_parts.append("Battery 1 Config")
+            elif part.lower() == "batteryconfig1":
+                friendly_parts.append("Battery 2 Config")
             else:
                 friendly_parts.append(part.capitalize())
 
