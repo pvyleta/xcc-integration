@@ -47,7 +47,7 @@ async def async_setup_entry(
                 entity_type = coordinator.get_entity_type(prop)
 
                 if entity_type == "button":
-                    button = XCCButton(coordinator, entity_key)
+                    button = XCCButton(coordinator, entity_data)
                     buttons.append(button)
                     _LOGGER.info(
                         "🏗️ BUTTON: %s -> '%s' | Action: %s",
@@ -87,11 +87,19 @@ class XCCButton(XCCEntity, ButtonEntity):
 
     def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]) -> None:
         """Initialize the XCC button."""
-        super().__init__(coordinator, entity_data)
-        
+        # Extract entity_id from entity_data for XCCEntity base class
+        entity_id = entity_data.get("entity_id", "")
+        if not entity_id:
+            raise ValueError(f"Button entity_data missing entity_id: {entity_data}")
+
+        super().__init__(coordinator, entity_id)
+
+        # Store entity_data for button-specific functionality
+        self._entity_data = entity_data
+
         # Button-specific attributes
         self._attr_entity_category = None  # Buttons are typically configuration entities
-        
+
         # Get button action value if specified
         self._button_value = entity_data.get("value")
         
