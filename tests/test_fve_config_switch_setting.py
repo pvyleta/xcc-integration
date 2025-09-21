@@ -168,19 +168,50 @@ def test_switch_value_conversion():
     print("✅ All switch value conversion tests passed")
 
 
+@pytest.mark.asyncio
+async def test_fve_config_internal_name_mapping():
+    """Test that FVE-CONFIG entities get correct internal NAME mapping."""
+
+    from custom_components.xcc.xcc_client import XCCClient
+
+    # Mock XCC client
+    client = XCCClient("192.168.1.100", "xcc", "xcc")
+
+    # Test the known mapping for FVE-CONFIG-MENICECONFIG-READONLY
+    test_xml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<DATA>
+    <INPUT P="FVE-CONFIG-MENICECONFIG-READONLY" NAME="__R69297.1_BOOL_i" VALUE="0"/>
+    <INPUT P="FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT" NAME="__R12345.0_BOOL_i" VALUE="1"/>
+    <INPUT P="FVESTATS-MENIC-TOTALGENERATED" NAME="__R54321_REAL_.1f" VALUE="12345"/>
+</DATA>'''
+
+    # Test XML parsing
+    name_mapping = client._extract_name_mapping_from_xml(test_xml_content)
+
+    assert "FVE-CONFIG-MENICECONFIG-READONLY" in name_mapping
+    assert name_mapping["FVE-CONFIG-MENICECONFIG-READONLY"] == "__R69297.1_BOOL_i"
+    assert "FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT" in name_mapping
+    assert name_mapping["FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT"] == "__R12345.0_BOOL_i"
+
+    print("✅ FVE-CONFIG internal NAME mapping test passed")
+    print(f"   - READONLY: {name_mapping['FVE-CONFIG-MENICECONFIG-READONLY']}")
+    print(f"   - KOMUNIKOVAT: {name_mapping['FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT']}")
+
+
 if __name__ == "__main__":
     import asyncio
-    
+
     def run_sync_tests():
         test_fve_config_page_selection()
         test_switch_value_conversion()
         print("\n🎉 All synchronous tests passed!")
-    
+
     async def run_async_tests():
         await test_xcc_client_error_detection()
         await test_fve_config_switch_entity_creation()
+        await test_fve_config_internal_name_mapping()
         print("\n🎉 All asynchronous tests passed!")
-    
+
     run_sync_tests()
     asyncio.run(run_async_tests())
     print("\n🎉 All FVE-CONFIG switch setting tests passed!")

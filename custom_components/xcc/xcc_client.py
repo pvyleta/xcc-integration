@@ -731,6 +731,36 @@ class XCCClient:
 
         return name_mapping
 
+    def _extract_name_mapping_from_html(self, html_content: str) -> dict[str, str]:
+        """Extract the mapping of property names to internal NAME attributes from HTML-based pages like FVEINV."""
+        import re
+        import logging
+
+        _LOGGER = logging.getLogger(__name__)
+        name_mapping = {}
+
+        try:
+            # Look for script tags or embedded data that might contain the mapping
+            # Pattern 1: Look for JavaScript object definitions with mappings
+            mapping_pattern = r'"([^"]+)":\s*"(__R[^"]+)"'
+            matches = re.findall(mapping_pattern, html_content)
+            for prop, internal_name in matches:
+                name_mapping[prop] = internal_name
+                _LOGGER.debug("Found HTML mapping: %s -> %s", prop, internal_name)
+
+            # Pattern 2: Look for data attributes in HTML elements
+            data_attr_pattern = r'class="[^"]*([A-Z][A-Z0-9-]+)[^"]*"[^>]*data-name="(__R[^"]+)"'
+            matches = re.findall(data_attr_pattern, html_content)
+            for prop, internal_name in matches:
+                name_mapping[prop] = internal_name
+                _LOGGER.debug("Found HTML data-name mapping: %s -> %s", prop, internal_name)
+
+        except Exception as e:
+            _LOGGER.warning("Error parsing HTML for name mapping: %s", e)
+
+        _LOGGER.debug("Extracted %d HTML name mappings", len(name_mapping))
+        return name_mapping
+
     async def set_value(self, prop: str, value: str) -> bool:
         """Set a value on the XCC controller."""
         import logging
@@ -782,7 +812,22 @@ class XCCClient:
                     prop,
                 )
                 page_content = await self.fetch_page(page_to_fetch)
-                name_mapping = self._extract_name_mapping_from_xml(page_content)
+
+                # Use appropriate parsing method based on page type
+                if page_to_fetch.lower().endswith('.xml') and 'fveinv' in page_to_fetch.lower():
+                    # For FVEINV pages, try both XML and HTML parsing methods
+                    name_mapping = self._extract_name_mapping_from_xml(page_content)
+                    if not name_mapping:
+                        # If no XML mappings found, try HTML parsing on the descriptor page
+                        try:
+                            descriptor_content = await self.fetch_page("fveinv.xml")
+                            name_mapping = self._extract_name_mapping_from_html(descriptor_content)
+                        except Exception as desc_err:
+                            _LOGGER.warning("Could not fetch FVEINV descriptor for HTML parsing: %s", desc_err)
+                else:
+                    # Standard XML parsing for other pages
+                    name_mapping = self._extract_name_mapping_from_xml(page_content)
+
                 internal_name = name_mapping.get(prop)
                 if internal_name:
                     _LOGGER.info(
@@ -796,6 +841,14 @@ class XCCClient:
                         prop,
                         page_to_fetch,
                     )
+
+                    # For FVE-CONFIG entities, try to use a known mapping as fallback
+                    if prop == "FVE-CONFIG-MENICECONFIG-READONLY":
+                        internal_name = "__R69297.1_BOOL_i"  # From your network capture
+                        _LOGGER.info("🔧 Using known internal NAME for %s: %s", prop, internal_name)
+                    elif prop == "FVE-CONFIG-MENICECONFIG-KOMUNIKOVAT":
+                        # This is likely a similar pattern, but we'd need to capture the actual value
+                        _LOGGER.info("⚠️ No known internal NAME for %s, will try property name", prop)
             except Exception as fetch_err:
                 _LOGGER.warning(
                     "⚠️ Could not fetch page %s: %s", page_to_fetch, fetch_err
