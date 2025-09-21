@@ -736,7 +736,7 @@ class XCCClient:
 
 
     async def set_value(self, prop: str, value: str) -> bool:
-        """Set a value on the XCC controller."""
+        """Set a value on the XCC controller using the same approach as TUVMINIMALNI and other working entities."""
         import logging
 
         _LOGGER = logging.getLogger(__name__)
@@ -744,237 +744,55 @@ class XCCClient:
         try:
             _LOGGER.info("🔧 Setting XCC property %s to value %s", prop, value)
 
-            # First, try to get the internal NAME for this property by fetching the current page
-            internal_name = None
+            # Determine which page this property is on based on common patterns
+            prop_upper = prop.upper()
             page_to_fetch = None
 
-            # Determine which page this property might be on based on common patterns
-            prop_upper = prop.upper()
-            _LOGGER.debug("🔍 Analyzing property %s for page selection", prop)
-
             # Check for TUV/DHW related properties (including Czech terms)
-            tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]  # Added Czech DHW-related terms
+            tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]
             if any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
-                _LOGGER.debug("🎯 Property contains TUV/DHW keywords, using TUV11.XML")
             elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
-                page_to_fetch = "FVEINV10.XML"  # FVE-CONFIG and FVESTATS entities use FVEINV data page for setting
-                _LOGGER.debug("🎯 Property is FVE-CONFIG or FVESTATS, using FVEINV10.XML")
+                page_to_fetch = "FVEINV10.XML"  # FVE-CONFIG and FVESTATS entities use FVEINV data page
             elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
                 page_to_fetch = "FVE4.XML"
-                _LOGGER.debug("🎯 Property contains FVE/SOLAR/PV keywords, using FVE4.XML")
             elif any(okruh_word in prop_upper for okruh_word in ["OKRUH", "CIRCUIT"]):
                 page_to_fetch = "OKRUH10.XML"
-                _LOGGER.debug("🎯 Property contains OKRUH/CIRCUIT keywords, using OKRUH10.XML")
             elif any(biv_word in prop_upper for biv_word in ["BIV", "BIVALENCE"]):
                 page_to_fetch = "BIV1.XML"
-                _LOGGER.debug("🎯 Property contains BIV/BIVALENCE keywords, using BIV1.XML")
             else:
                 page_to_fetch = "STAVJED1.XML"  # Default page
-                _LOGGER.debug("🎯 Property doesn't match known patterns, using default STAVJED1.XML")
 
-            # Try to fetch the page and extract NAME mapping
-            try:
-                _LOGGER.info(
-                    "🔍 Fetching %s to find internal NAME for property %s",
-                    page_to_fetch,
-                    prop,
-                )
-                page_content = await self.fetch_page(page_to_fetch)
+            _LOGGER.info("🎯 Using page %s for property %s", page_to_fetch, prop)
 
-                # All pages use standard XML parsing - same approach for all entities
-                name_mapping = self._extract_name_mapping_from_xml(page_content)
+            # Fetch the page and extract NAME mapping using standard XML parsing
+            page_content = await self.fetch_page(page_to_fetch)
+            name_mapping = self._extract_name_mapping_from_xml(page_content)
+            internal_name = name_mapping.get(prop)
 
-                internal_name = name_mapping.get(prop)
-                if internal_name:
-                    _LOGGER.info(
-                        "✅ Found internal NAME: %s for property %s",
-                        internal_name,
-                        prop,
-                    )
+            if not internal_name:
+                _LOGGER.error("❌ Could not find internal NAME for property %s in %s", prop, page_to_fetch)
+                return False
+
+            # Use the same simple approach as TUVMINIMALNI and other working entities
+            # POST the internal NAME to the data page with form-encoded data
+            url = f"http://{self.ip}/{page_to_fetch}"
+            data = {internal_name: value}
+
+            _LOGGER.info("🔄 Setting %s=%s via POST to %s", internal_name, value, page_to_fetch)
+
+            async with self.session.post(url, data=data) as resp:
+                _LOGGER.info("📡 POST response: status=%d", resp.status)
+
+                if resp.status == 200:
+                    _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
+                    return True
                 else:
-                    _LOGGER.warning(
-                        "⚠️ Could not find internal NAME for property %s in %s",
-                        prop,
-                        page_to_fetch,
-                    )
-            except Exception as fetch_err:
-                _LOGGER.warning(
-                    "⚠️ Could not fetch page %s: %s", page_to_fetch, fetch_err
-                )
-
-            # XCC devices use different API patterns depending on the model and firmware
-            # Let's try multiple approaches in order of likelihood
-
-            endpoints_to_try = []
-
-            # If we have the internal NAME, try using it first
-            if internal_name:
-                endpoints_to_try.extend(
-                    [
-                        # Method 1: Using internal NAME via POST with proper headers (confirmed working)
-                        {
-                            "method": "POST",
-                            "url": f"http://{self.ip}/{page_to_fetch}",
-                            "data": {internal_name: value},
-                            "headers": {
-                                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                                "X-Requested-With": "XMLHttpRequest",
-                                "Accept": "application/xml, text/xml, */*; q=0.01",
-                                "Referer": f"http://{self.ip}/{page_to_fetch.lower().replace('.xml', '1.xml')}?tab=1",
-                            },
-                            "description": f"Internal NAME POST to {page_to_fetch} (confirmed format)",
-                        },
-                        # Method 2: Using internal NAME via GET
-                        {
-                            "method": "GET",
-                            "url": f"http://{self.ip}/{page_to_fetch}?{internal_name}={value}",
-                            "description": f"Internal NAME GET to {page_to_fetch}",
-                        },
-                    ]
-                )
-
-            # Add fallback methods using property name
-            fallback_endpoints = [
-                # Method 3: Direct property setting via GET
-                {
-                    "method": "GET",
-                    "url": f"http://{self.ip}/{page_to_fetch}?{prop}={value}",
-                    "description": "Property name GET",
-                },
-                # Method 4: Property setting via POST to property page
-                {
-                    "method": "POST",
-                    "url": f"http://{self.ip}/{page_to_fetch}",
-                    "data": {prop: value},
-                    "description": "Property name POST",
-                },
-            ]
-
-            # Special handling for FVE-CONFIG HTML switches
-            if prop_upper.startswith("FVE-CONFIG-"):
-                fallback_endpoints.extend([
-                    # Method 5: HTML switch via descriptor page GET
-                    {
-                        "method": "GET",
-                        "url": f"http://{self.ip}/fveinv.xml?{prop}={value}",
-                        "description": "HTML switch descriptor GET",
-                    },
-                    # Method 6: HTML switch via descriptor page POST
-                    {
-                        "method": "POST",
-                        "url": f"http://{self.ip}/fveinv.xml",
-                        "data": {prop: value},
-                        "description": "HTML switch descriptor POST",
-                    },
-                ])
-
-            # Add generic RPC endpoint
-            fallback_endpoints.append({
-                "method": "POST",
-                "url": f"http://{self.ip}/RPC/WEBSES/set.asp",
-                "data": {prop: value},
-                "description": "Generic RPC POST",
-            })
-
-            endpoints_to_try.extend(fallback_endpoints)
-
-            for i, endpoint in enumerate(endpoints_to_try, 1):
-                try:
-                    _LOGGER.info(
-                        "🔄 Attempt %d/%d: %s",
-                        i,
-                        len(endpoints_to_try),
-                        endpoint["description"],
-                    )
-
-                    if endpoint["method"] == "GET":
-                        async with self.session.get(endpoint["url"]) as resp:
-                            # Handle encoding issues like we do for XML parsing
-                            try:
-                                response_text = await resp.text()
-                            except UnicodeDecodeError:
-                                # Try with different encodings if UTF-8 fails
-                                response_bytes = await resp.read()
-                                for encoding in ['windows-1250', 'iso-8859-2', 'utf-8']:
-                                    try:
-                                        response_text = response_bytes.decode(encoding)
-                                        break
-                                    except UnicodeDecodeError:
-                                        continue
-                                else:
-                                    response_text = response_bytes.decode('utf-8', errors='ignore')
-
-                            _LOGGER.info("📡 GET response: status=%d", resp.status)
-
-                            if resp.status == 200:
-                                # Check response content for error indicators
-                                response_lower = response_text.lower()
-                                if any(error_word in response_lower for error_word in ['error', 'failed', 'invalid', 'denied']):
-                                    _LOGGER.warning("⚠️ GET request returned 200 but response contains error: %s", response_text[:200])
-                                    continue
-
-                                _LOGGER.info(
-                                    "✅ Successfully set XCC property %s to %s via GET",
-                                    prop,
-                                    value,
-                                )
-                                return True
-                    else:
-                        # Use custom headers if provided
-                        headers = endpoint.get("headers", {})
-                        async with self.session.post(
-                            endpoint["url"],
-                            data=endpoint.get("data", {}),
-                            headers=headers,
-                        ) as resp:
-                            # Handle encoding issues like we do for XML parsing
-                            try:
-                                response_text = await resp.text()
-                            except UnicodeDecodeError:
-                                # Try with different encodings if UTF-8 fails
-                                response_bytes = await resp.read()
-                                for encoding in ['windows-1250', 'iso-8859-2', 'utf-8']:
-                                    try:
-                                        response_text = response_bytes.decode(encoding)
-                                        break
-                                    except UnicodeDecodeError:
-                                        continue
-                                else:
-                                    response_text = response_bytes.decode('utf-8', errors='ignore')
-
-                            _LOGGER.info("📡 POST response: status=%d", resp.status)
-
-                            if resp.status == 200:
-                                # Enhanced error detection for POST responses
-                                response_lower = response_text.lower()
-                                if any(error_word in response_lower for error_word in ['error', 'failed', 'invalid', 'denied', 'forbidden']):
-                                    _LOGGER.warning("⚠️ POST request returned 200 but response contains error: %s", response_text[:200])
-                                    continue
-
-                                _LOGGER.info(
-                                    "✅ Successfully set XCC property %s to %s via POST",
-                                    prop,
-                                    value,
-                                )
-                                return True
-
-                except Exception as endpoint_err:
-                    _LOGGER.warning("⚠️ Endpoint %d (%s) failed: %s", i, endpoint["description"], endpoint_err)
-                    _LOGGER.debug("   URL: %s", endpoint["url"])
-                    if endpoint["method"] == "POST" and "data" in endpoint:
-                        _LOGGER.debug("   Data: %s", endpoint["data"])
-                    continue
-
-            _LOGGER.error(
-                "❌ All endpoints failed for setting XCC property %s to %s", prop, value
-            )
-            return False
+                    _LOGGER.error("❌ POST failed with status %d", resp.status)
+                    return False
 
         except Exception as err:
-            _LOGGER.error(
-                "❌ Error setting XCC property %s to %s: %s", prop, value, err
-            )
+            _LOGGER.error("❌ Error setting XCC property %s to %s: %s", prop, value, err)
             return False
 
     async def close(self):
