@@ -133,12 +133,13 @@ class XCCButton(XCCEntity, ButtonEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        # Buttons are available if coordinator is available and the property exists
+        # Buttons are available if coordinator is available and the entity data exists
         if not self.coordinator.last_update_success:
             return False
-        
-        prop = self._entity_data.get("prop", "").upper()
-        return self.coordinator.has_property(prop)
+
+        # Check if the entity exists in coordinator data using entity_id
+        entity_id = self._entity_data.get("entity_id", "")
+        return self.coordinator.get_entity_data(entity_id) is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
