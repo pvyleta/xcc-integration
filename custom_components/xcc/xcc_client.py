@@ -752,16 +752,23 @@ class XCCClient:
             tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]
             if any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
+                _LOGGER.debug("🔍 Matched TUV keywords for %s", prop)
             elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
                 page_to_fetch = "FVEINV10.XML"  # FVE-CONFIG and FVESTATS entities use FVEINV data page
+                _LOGGER.debug("🔍 Matched FVE-CONFIG/FVESTATS for %s", prop)
             elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
                 page_to_fetch = "FVE4.XML"
-            elif any(okruh_word in prop_upper for okruh_word in ["OKRUH", "CIRCUIT"]):
+                _LOGGER.debug("🔍 Matched FVE keywords for %s", prop)
+            elif any(okruh_word in prop_upper for okruh_word in ["OKRUH", "CIRCUIT", "TO-"]):
+                # TO- properties (room temperature) are in OKRUH pages
                 page_to_fetch = "OKRUH10.XML"
+                _LOGGER.debug("🔍 Matched OKRUH keywords (including TO-) for %s", prop)
             elif any(biv_word in prop_upper for biv_word in ["BIV", "BIVALENCE"]):
                 page_to_fetch = "BIV1.XML"
+                _LOGGER.debug("🔍 Matched BIV keywords for %s", prop)
             else:
                 page_to_fetch = "STAVJED1.XML"  # Default page
+                _LOGGER.debug("🔍 No specific match, using default STAVJED1.XML for %s", prop)
 
             _LOGGER.info("🎯 Using page %s for property %s", page_to_fetch, prop)
 
