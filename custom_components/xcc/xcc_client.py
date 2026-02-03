@@ -630,62 +630,90 @@ class XCCClient:
 
         _LOGGER = logging.getLogger(__name__)
 
-        async with self.session.get(f"http://{self.ip}/{page}") as resp:
-            if resp.status != 200:
-                raise Exception(f"Failed to fetch {page}: {resp.status}")
+        try:
+            async with self.session.get(f"http://{self.ip}/{page}") as resp:
+                if resp.status != 200:
+                    raise Exception(f"Failed to fetch {page}: {resp.status}")
 
-            # Use proper encoding detection like the working script
-            raw_bytes = await resp.read()
+                # Use proper encoding detection like the working script
+                try:
+                    raw_bytes = await resp.read()
+                except asyncio.CancelledError:
+                    _LOGGER.warning("Request cancelled while reading %s", page)
+                    raise
+                except asyncio.TimeoutError:
+                    _LOGGER.warning("Timeout while reading %s", page)
+                    raise
 
-            # Extract declared encoding from XML header
-            encoding = "utf-8"  # default
-            match = re.search(
-                rb'<\?xml[^>]+encoding=["\']([^"\']+)["\']', raw_bytes[:200]
-            )
-            if match:
-                encoding = match.group(1).decode("ascii", errors="replace").lower()
+                # Extract declared encoding from XML header
+                encoding = "utf-8"  # default
+                match = re.search(
+                    rb'<\?xml[^>]+encoding=["\']([^"\']+)["\']', raw_bytes[:200]
+                )
+                if match:
+                    encoding = match.group(1).decode("ascii", errors="replace").lower()
 
-            _LOGGER.debug("Page %s: detected encoding %s", page, encoding)
+                _LOGGER.debug("Page %s: detected encoding %s", page, encoding)
 
-            try:
-                content = self._decode_and_sanitize_content(raw_bytes, encoding)
+                try:
+                    content = self._decode_and_sanitize_content(raw_bytes, encoding)
 
-                # Check if we received a LOGIN page instead of data - indicates session expired
-                if self._is_login_page(content):
-                    _LOGGER.warning("Received LOGIN page for %s - session has expired, re-authenticating", page)
+                    # Check if we received a LOGIN page instead of data - indicates session expired
+                    if self._is_login_page(content):
+                        _LOGGER.warning("Received LOGIN page for %s - session has expired, re-authenticating", page)
 
-                    # Use the same locking mechanism as in connect() to prevent concurrent re-authentication
-                    if self.ip not in _auth_locks:
-                        _auth_locks[self.ip] = asyncio.Lock()
+                        # Use the same locking mechanism as in connect() to prevent concurrent re-authentication
+                        if self.ip not in _auth_locks:
+                            _auth_locks[self.ip] = asyncio.Lock()
 
-                    async with _auth_locks[self.ip]:
-                        # Test session again in case another request just re-authenticated
-                        if await self._test_session():
-                            _LOGGER.debug("Session became valid while waiting for re-authentication lock")
-                        else:
-                            # Re-authenticate
-                            await self._authenticate()
+                        async with _auth_locks[self.ip]:
+                            # Test session again in case another request just re-authenticated
+                            if await self._test_session():
+                                _LOGGER.debug("Session became valid while waiting for re-authentication lock")
+                            else:
+                                # Re-authenticate
+                                await self._authenticate()
 
-                    # Retry the same request with new session
-                    async with self.session.get(f"http://{self.ip}/{page}") as retry_resp:
-                        if retry_resp.status != 200:
-                            raise Exception(f"Failed to fetch {page} after re-authentication: {retry_resp.status}")
+                        # Retry the same request with new session
+                        async with self.session.get(f"http://{self.ip}/{page}") as retry_resp:
+                            if retry_resp.status != 200:
+                                raise Exception(f"Failed to fetch {page} after re-authentication: {retry_resp.status}")
 
-                        retry_raw_bytes = await retry_resp.read()
-                        retry_content = self._decode_and_sanitize_content(retry_raw_bytes, encoding)
+                            try:
+                                retry_raw_bytes = await retry_resp.read()
+                            except asyncio.CancelledError:
+                                _LOGGER.warning("Request cancelled while reading %s (retry)", page)
+                                raise
+                            except asyncio.TimeoutError:
+                                _LOGGER.warning("Timeout while reading %s (retry)", page)
+                                raise
 
-                        # Check if we still get LOGIN page after re-authentication
-                        if self._is_login_page(retry_content):
-                            _LOGGER.error("Still receiving LOGIN page for %s after re-authentication - authentication may have failed", page)
-                            raise Exception(f"Session re-authentication failed for {page}")
+                            retry_content = self._decode_and_sanitize_content(retry_raw_bytes, encoding)
 
-                        _LOGGER.info("Successfully re-authenticated and fetched %s", page)
-                        return retry_content
+                            # Check if we still get LOGIN page after re-authentication
+                            if self._is_login_page(retry_content):
+                                _LOGGER.error("Still receiving LOGIN page for %s after re-authentication - authentication may have failed", page)
+                                raise Exception(f"Session re-authentication failed for {page}")
 
-                return content
-            except Exception as e:
-                _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
-                return raw_bytes.decode("utf-8", errors="replace")
+                            _LOGGER.info("Successfully re-authenticated and fetched %s", page)
+                            return retry_content
+
+                    return content
+                except asyncio.CancelledError:
+                    # Re-raise cancellation errors
+                    raise
+                except asyncio.TimeoutError:
+                    # Re-raise timeout errors
+                    raise
+                except Exception as e:
+                    _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
+                    return raw_bytes.decode("utf-8", errors="replace")
+        except asyncio.CancelledError:
+            _LOGGER.warning("Request cancelled for %s", page)
+            raise
+        except asyncio.TimeoutError:
+            _LOGGER.warning("Timeout fetching %s", page)
+            raise
 
     async def fetch_pages(self, pages: list[str]) -> dict[str, str]:
         """Fetch multiple pages with delays to avoid overwhelming XCC controller."""
@@ -705,6 +733,13 @@ class XCCClient:
                 _LOGGER.debug(
                     "Successfully fetched page %s (%d/%d)", page, i + 1, len(pages)
                 )
+            except asyncio.CancelledError:
+                _LOGGER.warning("Request cancelled while fetching page %s (%d/%d)", page, i + 1, len(pages))
+                # Don't continue fetching if cancelled
+                raise
+            except asyncio.TimeoutError:
+                _LOGGER.warning("Timeout fetching page %s (%d/%d)", page, i + 1, len(pages))
+                results[page] = f"Error: Timeout"
             except Exception as e:
                 _LOGGER.warning("Error fetching page %s: %s", page, e)
                 results[page] = f"Error: {e}"

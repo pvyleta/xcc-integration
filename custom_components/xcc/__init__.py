@@ -36,6 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up XCC Heat Pump Controller from a config entry."""
     # Log integration version for debugging
     from .const import VERSION
+    from homeassistant.helpers import device_registry as dr
 
     _LOGGER.info(
         "Setting up XCC integration v%s for %s", VERSION, entry.data.get("ip_address")
@@ -45,50 +46,63 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create data update coordinator
     coordinator = XCCDataUpdateCoordinator(hass, entry)
 
-    # Fetch initial data so we have data when entities subscribe
-    # Use a more resilient approach that doesn't force immediate refresh if data exists
-    try:
-        if coordinator.data is None:
-            _LOGGER.debug("No coordinator data available, performing first refresh")
-            await coordinator.async_config_entry_first_refresh()
-        else:
-            _LOGGER.debug("Coordinator data already available, skipping first refresh")
-    except asyncio.TimeoutError as err:
-        _LOGGER.warning("Timeout during initial data fetch, but continuing setup: %s", err)
-        # Don't raise ConfigEntryNotReady for timeout - let the integration continue
-        # The coordinator will retry on its normal schedule
-    except asyncio.CancelledError as err:
-        _LOGGER.warning("Request cancelled during initial data fetch, but continuing setup: %s", err)
-        # Don't raise ConfigEntryNotReady for cancellation - let the integration continue
-    except Exception as err:
-        _LOGGER.error("Error during initial data fetch: %s", err)
-        # Only raise ConfigEntryNotReady for actual errors, not timeouts/cancellations
-        if "timeout" not in str(err).lower() and "cancel" not in str(err).lower():
-            raise ConfigEntryNotReady from err
-        else:
-            _LOGGER.warning("Continuing setup despite initial fetch issue: %s", err)
-
-    # Store coordinator in hass data
+    # Store coordinator in hass data BEFORE first refresh
+    # This allows the coordinator to be accessed during setup
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    # Fetch initial data BEFORE setting up platforms
+    # This ensures data is available when entities are created
+    # If this fails, we raise ConfigEntryNotReady to retry later
+    try:
+        _LOGGER.debug("Performing initial data fetch before platform setup")
+        await coordinator.async_config_entry_first_refresh()
+        _LOGGER.info("✅ Initial data fetch successful")
+    except asyncio.TimeoutError as err:
+        _LOGGER.error("Timeout during initial data fetch: %s", err)
+        # Clean up coordinator from hass data
+        hass.data[DOMAIN].pop(entry.entry_id)
+        raise ConfigEntryNotReady(f"Timeout fetching initial data: {err}") from err
+    except asyncio.CancelledError as err:
+        _LOGGER.error("Request cancelled during initial data fetch: %s", err)
+        # Clean up coordinator from hass data
+        hass.data[DOMAIN].pop(entry.entry_id)
+        raise ConfigEntryNotReady(f"Request cancelled during initial data fetch: {err}") from err
+    except Exception as err:
+        _LOGGER.error("Error during initial data fetch: %s", err)
+        # Clean up coordinator from hass data
+        hass.data[DOMAIN].pop(entry.entry_id)
+        raise ConfigEntryNotReady(f"Error fetching initial data: {err}") from err
+
+    # Register the main XCC controller device BEFORE setting up platforms
+    # This ensures the device exists when sub-devices try to reference it via via_device
+    device_registry = dr.async_get(hass)
+    if coordinator.device_info:
+        _LOGGER.debug("Registering main XCC controller device in device registry")
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers=coordinator.device_info["identifiers"],
+            name=coordinator.device_info["name"],
+            manufacturer=coordinator.device_info["manufacturer"],
+            model=coordinator.device_info["model"],
+            sw_version=coordinator.device_info.get("sw_version"),
+            configuration_url=coordinator.device_info.get("configuration_url"),
+        )
+        _LOGGER.info("✅ Main XCC controller device registered")
+    else:
+        _LOGGER.warning("⚠️  Coordinator device_info not available, device registration skipped")
 
     # Get entity type preference from config
     entity_type = entry.data.get(CONF_ENTITY_TYPE, DEFAULT_ENTITY_TYPE)
     _LOGGER.info("XCC integration configured for %s entities", entity_type)
 
     # Set up integration platforms (sensors, binary_sensors, etc.)
+    # Only do this AFTER we have successfully fetched initial data AND registered the main device
     _LOGGER.debug("Setting up integration entities")
     _LOGGER.info("Setting up platforms: %s", [p.value for p in PLATFORMS_TO_SETUP])
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS_TO_SETUP)
 
-    # Force an immediate data refresh after platform setup to populate entity values
-    # This ensures entities have values immediately instead of waiting for the next scheduled update
-    try:
-        _LOGGER.debug("Forcing immediate data refresh after platform setup")
-        await coordinator.async_request_refresh()
-        _LOGGER.info("✅ Immediate data refresh completed - entities should have values now")
-    except Exception as err:
-        _LOGGER.warning("⚠️  Immediate data refresh failed, entities will update on next schedule: %s", err)
+    _LOGGER.info("✅ XCC integration setup complete for %s", entry.data.get("ip_address"))
 
     return True
 
