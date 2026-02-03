@@ -55,12 +55,9 @@ async def async_setup_entry(
                 if entity_type == "number" and coordinator.is_writable(prop):
                     number = XCCNumber(coordinator, entity_data)
                     numbers.append(number)
-                    _LOGGER.info(
-                        "🏗️ NUMBER: %s -> '%s' | Range:[%s-%s] Step:%s Unit:%s | Value:%s",
-                        prop, number.name,
-                        number.native_min_value, number.native_max_value, number.native_step,
-                        number.native_unit_of_measurement or "none", number.native_value
-                    )
+                    _LOGGER.info("✅ Number: %s | Range:[%s-%s] | Unit:%s | Value:%s",
+                        number.name, number.native_min_value, number.native_max_value,
+                        number.native_unit_of_measurement or "none", number.native_value)
                 else:
                     _LOGGER.debug("Skipping %s: type=%s, writable=%s", prop, entity_type, coordinator.is_writable(prop))
             except Exception as e:

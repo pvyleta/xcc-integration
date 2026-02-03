@@ -49,10 +49,7 @@ async def async_setup_entry(
                 if entity_type == "button":
                     button = XCCButton(coordinator, entity_data)
                     buttons.append(button)
-                    _LOGGER.info(
-                        "🏗️ BUTTON: %s -> '%s' | Action: %s",
-                        prop, button.name, entity_data.get("value", "N/A")
-                    )
+                    _LOGGER.info("✅ Button: %s | Action:%s", button.name, entity_data.get("value", "N/A"))
                 else:
                     _LOGGER.debug("Skipping %s: type=%s", prop, entity_type)
             except Exception as e:

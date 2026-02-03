@@ -37,9 +37,7 @@ async def async_setup_entry(
         if entity_type == "switch" and coordinator.is_writable(prop):
             switch = XCCSwitch(coordinator, entity_data)
             switches.append(switch)
-            _LOGGER.info("🏗️ SWITCH ENTITY CREATION: %s", prop)
-            _LOGGER.info("   📝 Friendly Name: '%s'", switch.name)
-            _LOGGER.info("   🔧 Entity ID: %s", getattr(switch, 'entity_id', 'not_set'))
+            _LOGGER.info("✅ Switch: %s | ID:%s", switch.name, getattr(switch, 'entity_id', 'not_set').split('.')[-1] if '.' in getattr(switch, 'entity_id', '') else prop.lower())
 
     if switches:
         async_add_entities(switches)

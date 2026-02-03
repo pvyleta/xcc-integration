@@ -146,22 +146,19 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Parse entities from all pages
             all_entities = []
+            page_counts = []
             for page_name, xml_content in pages_data.items():
                 if not xml_content.startswith("Error:"):
                     entities = parse_xml_entities(xml_content, page_name)
-                    _LOGGER.debug(
-                        "Parsed %d entities from page %s", len(entities), page_name
-                    )
+                    page_counts.append(f"{page_name}:{len(entities)}")
                     all_entities.extend(entities)
                 else:
                     _LOGGER.warning(
                         "Error fetching page %s: %s", page_name, xml_content
                     )
 
-            # Process entities and organize data
-            _LOGGER.debug(
-                "Processing %d total entities from all pages", len(all_entities)
-            )
+            # Log consolidated parsing results
+            _LOGGER.debug("📄 Parsed %d entities from %d pages: %s", len(all_entities), len(page_counts), ", ".join(page_counts))
             processed_data = self._process_entities(all_entities)
 
             # Log summary of processed data
@@ -267,17 +264,20 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 entities_without_descriptors.append(entity)
                 descriptor_stats_by_page[page]["without"].append(prop)
 
-        # Log consolidated descriptor stats by page
-        _LOGGER.debug("📊 DESCRIPTOR STATS: %d total entities, %d configs available", len(entities), len(self.entity_configs))
+        # Log consolidated descriptor stats in a single line
+        page_stats = []
         for page, stats in descriptor_stats_by_page.items():
             with_count = len(stats["with"])
             without_count = len(stats["without"])
             if with_count > 0 and without_count > 0:
-                _LOGGER.debug("📄 %s: ✅%d WITH | ❌%d WITHOUT descriptors", page, with_count, without_count)
+                page_stats.append(f"{page}(✅{with_count}/❌{without_count})")
             elif with_count > 0:
-                _LOGGER.debug("📄 %s: ✅%d WITH descriptors", page, with_count)
+                page_stats.append(f"{page}(✅{with_count})")
             elif without_count > 0:
-                _LOGGER.debug("📄 %s: ❌%d WITHOUT descriptors", page, without_count)
+                page_stats.append(f"{page}(❌{without_count})")
+
+        if page_stats:
+            _LOGGER.debug("📊 Descriptors: %d entities, %d configs | %s", len(entities), len(self.entity_configs), " | ".join(page_stats))
 
         # Group entities with descriptors by page/device for priority processing
         entities_by_page = {}
@@ -302,19 +302,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 entities_by_page[page_normalized] = []
             entities_by_page[page_normalized].append(entity)
 
-        # Log consolidated page normalization results
-        _LOGGER.debug("🔍 PAGE NORMALIZATION:")
-        for page, stats in page_normalization_stats.items():
-            _LOGGER.debug("   %s -> %s (%d entities)", page, stats["normalized"], stats["count"])
-
         # Add entities without descriptors to hidden settings device
         if entities_without_descriptors:
             entities_by_page["XCC_HIDDEN_SETTINGS"] = entities_without_descriptors
-            _LOGGER.debug("   XCC_HIDDEN_SETTINGS (%d entities without descriptors)", len(entities_without_descriptors))
 
-        _LOGGER.debug("📊 PAGE GROUPING RESULTS:")
-        for page_name, page_entities in entities_by_page.items():
-            _LOGGER.debug("   %s: %d entities", page_name, len(page_entities))
+        # Log consolidated page grouping in a single line
+        page_groups = [f"{page}:{len(ents)}" for page, ents in entities_by_page.items()]
+        _LOGGER.debug("📊 Page grouping: %s", " | ".join(page_groups))
 
         _LOGGER.info("🏗️ PRIORITY-BASED DEVICE ASSIGNMENT")
         _LOGGER.info("   Device priority order: %s", " > ".join(device_priority))

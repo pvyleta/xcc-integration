@@ -37,11 +37,7 @@ async def async_setup_entry(
         if entity_type == "select" and coordinator.is_writable(prop):
             select = XCCSelect(coordinator, entity_data)
             selects.append(select)
-            _LOGGER.info(
-                "🏗️ SELECT: %s -> '%s' | ID:%s | Options:%s | Value:%s",
-                prop, select.name, getattr(select, 'entity_id', 'not_set').split('.')[-1],
-                select.options, select.current_option
-            )
+            _LOGGER.info("✅ Select: %s | Options:%d | Value:%s", select.name, len(select.options), select.current_option)
 
     if selects:
         async_add_entities(selects)
