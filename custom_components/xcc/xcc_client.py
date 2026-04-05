@@ -278,6 +278,102 @@ class XCCClient:
             _LOGGER.error("Failed to discover active pages: %s", e)
             return {}
 
+    def parse_main_xml_config_entities(self, main_xml_content: str) -> list[dict]:
+        """Parse system configuration entities from main.xml.
+
+        Extracts INPUTV (feature visibility switches), INPUTD (device flags),
+        and INPUTMZ (mixed-zone flags) as settable entities.
+
+        Args:
+            main_xml_content: Raw XML content of main.xml
+
+        Returns:
+            List of entity dictionaries with the same structure as parse_xml_entities()
+        """
+        entities = []
+
+        try:
+            from lxml import etree
+            parser = etree.XMLParser(recover=True)
+            root = etree.fromstring(main_xml_content.encode("utf-8", errors="replace"), parser)
+
+            # Parse per-feature INPUTV (visibility switches) inside <F> elements
+            for f_elem in root.xpath(".//F[@N and @U]"):
+                page_id = f_elem.get("N", "")
+                page_url = f_elem.get("U", "")
+
+                # Get page name from INPUTN for friendly naming
+                name_elems = f_elem.xpath(".//INPUTN[@VALUE]")
+                page_name = name_elems[0].get("VALUE") if name_elems else f"Page {page_id}"
+
+                # INPUTV: feature visibility switch
+                for v_elem in f_elem.xpath(".//INPUTV[@NAME and @VALUE]"):
+                    name_attr = v_elem.get("NAME", "")
+                    value = v_elem.get("VALUE", "0")
+                    prop = f"SYSCONFIG-PAGE{page_id}-VISIBLE"
+
+                    entities.append({
+                        "entity_type": "switch",
+                        "state": value,
+                        "attributes": {
+                            "field_name": prop,
+                            "value": value,
+                            "page": "main.xml",
+                            "internal_name": name_attr,
+                            "data_type": "boolean",
+                            "friendly_name": f"{page_name} Visible",
+                            "page_url": page_url,
+                        },
+                    })
+
+            # Parse top-level INPUTD (device flags)
+            for d_elem in root.xpath(".//INPUTD[@NAME and @VALUE]"):
+                name_attr = d_elem.get("NAME", "")
+                value = d_elem.get("VALUE", "0")
+                # Derive prop from NAME: __R38552.4_BOOL_i → SYSCONFIG-DEVICE-FLAG-38552-4
+                prop = f"SYSCONFIG-DEVICE-FLAG"
+
+                entities.append({
+                    "entity_type": "switch",
+                    "state": value,
+                    "attributes": {
+                        "field_name": prop,
+                        "value": value,
+                        "page": "main.xml",
+                        "internal_name": name_attr,
+                        "data_type": "boolean",
+                        "friendly_name": "Device Flag",
+                    },
+                })
+
+            # Parse top-level INPUTMZ (mixed-zone flag)
+            for mz_elem in root.xpath(".//INPUTMZ[@NAME and @VALUE]"):
+                name_attr = mz_elem.get("NAME", "")
+                value = mz_elem.get("VALUE", "0")
+                prop = "SYSCONFIG-MIXED-ZONE"
+
+                entities.append({
+                    "entity_type": "switch",
+                    "state": value,
+                    "attributes": {
+                        "field_name": prop,
+                        "value": value,
+                        "page": "main.xml",
+                        "internal_name": name_attr,
+                        "data_type": "boolean",
+                        "friendly_name": "Mixed Zone Enabled",
+                    },
+                })
+
+            _LOGGER.info(
+                "Parsed %d system config entities from main.xml", len(entities)
+            )
+
+        except Exception as e:
+            _LOGGER.error("Failed to parse main.xml config entities: %s", e)
+
+        return entities
+
     def _determine_page_type(self, page_url: str) -> str:
         """Determine the type of page based on its URL.
 
@@ -770,8 +866,15 @@ class XCCClient:
 
 
 
-    async def set_value(self, prop: str, value: str) -> bool:
-        """Set a value on the XCC controller using the same approach as TUVMINIMALNI and other working entities."""
+    async def set_value(self, prop: str, value: str, internal_name: str | None = None) -> bool:
+        """Set a value on the XCC controller using the same approach as TUVMINIMALNI and other working entities.
+
+        Args:
+            prop: Property name (e.g., "TUVMINIMALNI", "SYSCONFIG-PAGE1-VISIBLE")
+            value: Value to set (e.g., "45", "1")
+            internal_name: Optional pre-resolved internal NAME (e.g., "__R44907.0_BOOL_i").
+                           If provided, skips the page fetch + NAME lookup.
+        """
         import logging
 
         _LOGGER = logging.getLogger(__name__)
@@ -783,34 +886,29 @@ class XCCClient:
             prop_upper = prop.upper()
             page_to_fetch = None
 
-            # Check for TUV/DHW related properties (including Czech terms)
             tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]
-            if any(tuv_word in prop_upper for tuv_word in tuv_keywords):
+            if prop_upper.startswith("SYSCONFIG-"):
+                page_to_fetch = "main.xml"
+            elif any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
-                _LOGGER.debug("🔍 Matched TUV keywords for %s", prop)
             elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
-                page_to_fetch = "FVEINV10.XML"  # FVE-CONFIG and FVESTATS entities use FVEINV data page
-                _LOGGER.debug("🔍 Matched FVE-CONFIG/FVESTATS for %s", prop)
+                page_to_fetch = "FVEINV10.XML"
             elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
                 page_to_fetch = "FVE4.XML"
-                _LOGGER.debug("🔍 Matched FVE keywords for %s", prop)
             elif any(okruh_word in prop_upper for okruh_word in ["OKRUH", "CIRCUIT", "TO-"]):
-                # TO- properties (room temperature) are in OKRUH pages
                 page_to_fetch = "OKRUH10.XML"
-                _LOGGER.debug("🔍 Matched OKRUH keywords (including TO-) for %s", prop)
             elif any(biv_word in prop_upper for biv_word in ["BIV", "BIVALENCE"]):
                 page_to_fetch = "BIV1.XML"
-                _LOGGER.debug("🔍 Matched BIV keywords for %s", prop)
             else:
-                page_to_fetch = "STAVJED1.XML"  # Default page
-                _LOGGER.debug("🔍 No specific match, using default STAVJED1.XML for %s", prop)
+                page_to_fetch = "STAVJED1.XML"
 
             _LOGGER.info("🎯 Using page %s for property %s", page_to_fetch, prop)
 
-            # Fetch the page and extract NAME mapping using standard XML parsing
-            page_content = await self.fetch_page(page_to_fetch)
-            name_mapping = self._extract_name_mapping_from_xml(page_content)
-            internal_name = name_mapping.get(prop)
+            # If internal_name not provided, fetch page and look it up
+            if not internal_name:
+                page_content = await self.fetch_page(page_to_fetch)
+                name_mapping = self._extract_name_mapping_from_xml(page_content)
+                internal_name = name_mapping.get(prop)
 
             if not internal_name:
                 _LOGGER.error("❌ Could not find internal NAME for property %s in %s", prop, page_to_fetch)

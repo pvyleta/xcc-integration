@@ -157,6 +157,20 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                         "Error fetching page %s: %s", page_name, xml_content
                     )
 
+            # Parse system configuration entities from main.xml
+            try:
+                main_xml = await asyncio.wait_for(
+                    client.fetch_page("main.xml"),
+                    timeout=DEFAULT_TIMEOUT,
+                )
+                if main_xml and not main_xml.startswith("Error:"):
+                    sysconfig_entities = client.parse_main_xml_config_entities(main_xml)
+                    if sysconfig_entities:
+                        all_entities.extend(sysconfig_entities)
+                        page_counts.append(f"main.xml(sysconfig):{len(sysconfig_entities)}")
+            except Exception as main_err:
+                _LOGGER.debug("Could not parse main.xml config entities: %s", main_err)
+
             # Log consolidated parsing results
             _LOGGER.debug("📄 Parsed %d entities from %d pages: %s", len(all_entities), len(page_counts), ", ".join(page_counts))
             processed_data = self._process_entities(all_entities)
@@ -224,6 +238,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Priority-based device assignment: each entity appears only once
         # Priority order (highest to lowest): SPOT, FVEINV, FVE, BIV, OKRUH, TUV1, STAVJED, NAST, XCC_HIDDEN_SETTINGS
         device_priority = [
+            "SYSCONFIG",  # System configuration from main.xml (highest priority for SYSCONFIG-* entities)
             "SPOT",
             "FVEINV",  # PV Inverter (higher priority than FVE for inverter-specific entities)
             "FVE",
@@ -253,11 +268,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Special handling for NAST entities - treat them as having descriptors
             is_nast_entity = page.upper() == "NAST.XML"
 
+            # Special handling for SYSCONFIG entities from main.xml
+            is_sysconfig_entity = prop.startswith("SYSCONFIG-")
+
             # Track stats by page
             if page not in descriptor_stats_by_page:
                 descriptor_stats_by_page[page] = {"with": [], "without": []}
 
-            if has_descriptor or is_nast_entity:
+            if has_descriptor or is_nast_entity or is_sysconfig_entity:
                 entities_with_descriptors.append(entity)
                 descriptor_stats_by_page[page]["with"].append(prop)
             else:
@@ -287,9 +305,11 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             page = entity["attributes"].get("page", "unknown").upper()
             prop = entity["attributes"]["field_name"]
             # Normalize page names (remove numbers and .XML extension)
-            # Special handling for NAST.XML - keep as NAST
+            # Special handling for known page types
             if page == "NAST.XML":
                 page_normalized = "NAST"
+            elif page == "MAIN.XML" or prop.startswith("SYSCONFIG-"):
+                page_normalized = "SYSCONFIG"
             else:
                 page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
 
@@ -509,6 +529,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Device names and descriptions with language support
         if self.language == LANGUAGE_ENGLISH:
             device_configs = {
+                "SYSCONFIG": {"name": "System Configuration", "model": "Feature & Page Settings"},
                 "SPOT": {"name": "Spot Prices", "model": "Energy Market Data"},
                 "FVEINV": {"name": "PV Inverter", "model": "Solar Inverter Monitor"},
                 "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
@@ -522,6 +543,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         else:
             # Czech language
             device_configs = {
+                "SYSCONFIG": {"name": "Konfigurace systému", "model": "Nastavení funkcí a stránek"},
                 "SPOT": {"name": "Spotové ceny", "model": "Data energetického trhu"},
                 "FVEINV": {"name": "FV Měnič", "model": "Monitor solárního měniče"},
                 "FVE": {"name": "Fotovoltaický systém", "model": "Fotovoltaický regulátor"},
@@ -608,6 +630,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Find the entity configuration to get the property name
             prop = None
+            internal_name = None  # Pre-resolved internal NAME for SYSCONFIG entities
             search_methods = []
 
             # Method 1: Try to find the property in the coordinator's entity data
@@ -617,6 +640,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     entity_data = entities_data[entity_id]
                     # Look for prop in the attributes
                     prop = entity_data.get("attributes", {}).get("prop")
+                    internal_name = entity_data.get("attributes", {}).get("internal_name")
                     if prop:
                         search_methods.append(f"found in {entity_type} data")
                         break
@@ -626,6 +650,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 for entity in self.data.get("entities", []):
                     if entity.get("entity_id") == entity_id:
                         prop = entity.get("prop", "").upper()
+                        internal_name = entity.get("attributes", {}).get("internal_name")
                         if prop:
                             search_methods.append("found in general entities list")
                             break
@@ -680,7 +705,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Using persistent XCC client for property setting")
                 client = self._client
                 try:
-                    success = await client.set_value(prop, value)
+                    success = await client.set_value(prop, value, internal_name=internal_name)
                     if success:
                         _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
                         # Request immediate data refresh to update state
@@ -706,7 +731,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                         password=self.password,
                         cookie_file=cookie_file,
                     ) as client:
-                        success = await client.set_value(prop, value)
+                        success = await client.set_value(prop, value, internal_name=internal_name)
                         if success:
                             _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
                             # Request immediate data refresh to update state
