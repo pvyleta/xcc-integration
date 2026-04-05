@@ -338,16 +338,24 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
                 entity_type = self.get_entity_type(prop)
 
-                # Only log missing descriptors once per entity to avoid spam
+                # If no descriptor found, use the entity's own type from data page parsing
+                # (e.g. _BOOL_i → binary_sensor, _REAL_ → sensor, _INT_ → sensor)
                 if entity_type == "sensor" and prop not in self.entity_configs:
-                    if not hasattr(self, "_logged_missing_descriptors"):
-                        self._logged_missing_descriptors = set()
-
-                    if prop not in self._logged_missing_descriptors:
+                    parsed_type = entity.get("entity_type")
+                    if parsed_type and parsed_type != "sensor":
+                        entity_type = parsed_type
                         _LOGGER.debug(
-                            "Entity %s: no descriptor found, defaulting to sensor", prop
+                            "Entity %s: no descriptor, using parsed type '%s' from data page NAME attribute",
+                            prop, entity_type
                         )
-                        self._logged_missing_descriptors.add(prop)
+                    else:
+                        if not hasattr(self, "_logged_missing_descriptors"):
+                            self._logged_missing_descriptors = set()
+                        if prop not in self._logged_missing_descriptors:
+                            _LOGGER.debug(
+                                "Entity %s: no descriptor found, defaulting to sensor", prop
+                            )
+                            self._logged_missing_descriptors.add(prop)
 
                 # Get descriptor information for this entity
                 descriptor_config = self.entity_configs.get(prop, {})

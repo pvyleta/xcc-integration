@@ -922,9 +922,16 @@ def parse_xml_entities(
                 "friendly_name": prop.replace("-", " ").replace("_", " ").title(),
             }
 
-            # Parse NAME attribute for more info
+            # Parse NAME attribute for type info and internal name
+            # NAME format: __R{addr}_{TYPE}_{format}
+            # Types: _BOOL_i (boolean), _REAL_.1f (float), _INT_d (integer),
+            #        _USINT_u (unsigned small int), _UDINT_u (unsigned double int),
+            #        _STRING[N]_s (string), _DT_ (datetime)
             name_attr = elem.get("NAME", "")
+            attributes["internal_name"] = name_attr  # Store for set_value lookups
+
             if "_REAL_" in name_attr:
+                attributes["data_type"] = "numeric"
                 # Only assign temperature device class if it's actually a temperature sensor
                 if any(
                     temp_indicator in prop.upper()
@@ -964,13 +971,33 @@ def parse_xml_entities(
                     attributes["unit_of_measurement"] = "CZK"
                 # Don't assign device class for other REAL values
             elif "_BOOL_" in name_attr:
+                attributes["data_type"] = "boolean"
                 entity_type = "binary_sensor"
                 value = "1" if value == "1" else "0"
-            elif "_USINT_" in name_attr or "_UINT_" in name_attr:
+            elif "_INT_" in name_attr:
+                attributes["data_type"] = "numeric"
                 try:
                     value = str(int(float(value)))
-                except:
+                except (ValueError, TypeError):
                     pass
+            elif "_USINT_" in name_attr or "_UINT_" in name_attr or "_UDINT_" in name_attr:
+                attributes["data_type"] = "numeric"
+                try:
+                    value = str(int(float(value)))
+                except (ValueError, TypeError):
+                    pass
+            elif "_STRING" in name_attr:
+                attributes["data_type"] = "string"
+            elif "_DT_" in name_attr:
+                attributes["data_type"] = "datetime"
+            else:
+                # Fallback: infer from value
+                if value in ("0", "1"):
+                    attributes["data_type"] = "numeric"  # ambiguous, don't assume boolean
+                elif value.replace(".", "").replace("-", "").isdigit():
+                    attributes["data_type"] = "numeric"
+                else:
+                    attributes["data_type"] = "string"
 
             entities.append(
                 {

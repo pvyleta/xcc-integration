@@ -112,28 +112,25 @@ def test_xcc_client_set_value():
     print("✅ XCC client set_value method structure test passed")
 
 
-def test_xcc_client_set_value_fallback():
-    """Test XCC client fallback endpoint logic structure."""
+def test_xcc_client_set_value_structure():
+    """Test XCC client set_value method structure."""
 
     from custom_components.xcc.xcc_client import XCCClient
+    import inspect
 
     client = XCCClient("192.168.1.100", "xcc", "xcc")
 
-    # Check that the client has the necessary methods and attributes for fallback logic
+    # Check that the client has the necessary methods
     assert hasattr(client, 'set_value'), "XCCClient should have set_value method"
+    assert hasattr(client, '_extract_name_mapping_from_xml'), "XCCClient should have NAME mapping method"
 
-    # Check that the XCC client file contains fallback endpoint logic
-    import inspect
-    from custom_components.xcc import xcc_client
+    # Check that set_value uses the standard approach (same as TUVMINIMALNI)
+    source = inspect.getsource(XCCClient.set_value)
+    assert "internal_name" in source.lower(), "Should use internal NAME for setting values"
+    assert "fetch_page" in source, "Should fetch page to find internal NAME"
+    assert "_extract_name_mapping_from_xml" in source, "Should use XML name mapping"
 
-    # Get the source code of the XCCClient class
-    source = inspect.getsource(xcc_client.XCCClient)
-
-    # Verify fallback endpoint logic exists
-    assert "endpoint" in source.lower(), "Should have endpoint handling logic"
-    assert "fallback" in source.lower() or "try" in source.lower(), "Should have fallback or retry logic"
-
-    print("✅ XCC client fallback structure test passed")
+    print("✅ XCC client set_value structure test passed")
 
 
 @pytest.mark.asyncio
@@ -225,7 +222,7 @@ if __name__ == "__main__":
     try:
         test_coordinator_property_extraction()
         test_xcc_client_set_value()
-        test_xcc_client_set_value_fallback()
+        test_xcc_client_set_value_structure()
         test_entity_value_setting_integration()
 
         # Run async test
