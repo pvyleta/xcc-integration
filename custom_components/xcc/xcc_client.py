@@ -972,7 +972,9 @@ def parse_xml_entities(
                 # Don't assign device class for other REAL values
             elif "_BOOL_" in name_attr:
                 attributes["data_type"] = "boolean"
-                entity_type = "binary_sensor"
+                # _BOOL_i entities are settable (they have a NAME attribute for POST),
+                # so they should be switches, not read-only binary_sensors
+                entity_type = "switch"
                 value = "1" if value == "1" else "0"
             elif "_INT_" in name_attr:
                 attributes["data_type"] = "numeric"
