@@ -28,16 +28,23 @@ async def async_setup_entry(
     # Wait for first data update to ensure descriptors are loaded
     await coordinator.async_config_entry_first_refresh()
 
-    # Create switch entities for all writable switch properties
+    # Create switch entities using the coordinator's resolved type map.
+    # get_entities_by_type("switch") reads from coordinator.entities which has
+    # types correctly resolved from NAME attributes (e.g. _BOOL_i → switch),
+    # unlike get_entity_type() which only checks descriptor configs.
     switches = []
-    for entity_data in coordinator.data.get("entities", []):
-        prop = entity_data.get("prop", "").upper()
-        entity_type = coordinator.get_entity_type(prop)
 
-        if entity_type == "switch" and coordinator.is_writable(prop):
-            switch = XCCSwitch(coordinator, entity_data)
-            switches.append(switch)
-            _LOGGER.info("✅ Switch: %s | ID:%s", switch.name, getattr(switch, 'entity_id', 'not_set').split('.')[-1] if '.' in getattr(switch, 'entity_id', '') else prop.lower())
+    # Build a lookup from entity_id → full entity_data (for name, page, device, etc.)
+    entity_data_by_id = {e["entity_id"]: e for e in coordinator.data.get("entities", [])}
+
+    for entity_id, entity_meta in coordinator.get_entities_by_type("switch").items():
+        entity_data = entity_data_by_id.get(entity_id)
+        if entity_data is None:
+            _LOGGER.debug("Switch entity %s has no matching entity_data, skipping", entity_id)
+            continue
+        switch = XCCSwitch(coordinator, entity_data)
+        switches.append(switch)
+        _LOGGER.info("✅ Switch: %s | ID:%s", switch.name, entity_id)
 
     if switches:
         async_add_entities(switches)

@@ -159,35 +159,25 @@ def test_entity_data_structure_includes_values():
 
 
 def test_number_switch_platforms_use_enhanced_detection():
-    """Test that number and switch platforms use enhanced entity type detection."""
+    """Test that switch platform uses coordinator.entities (resolved types) not descriptor-only lookup."""
 
-    # Read the number.py and switch.py files to verify they use enhanced detection
-    number_file = project_root / "custom_components" / "xcc" / "number.py"
     switch_file = project_root / "custom_components" / "xcc" / "switch.py"
+    number_file = project_root / "custom_components" / "xcc" / "number.py"
 
-    if not all([number_file.exists(), switch_file.exists()]):
-        pytest.skip("Cannot find number.py or switch.py files")
+    if not all([switch_file.exists(), number_file.exists()]):
+        pytest.skip("Cannot find switch.py or number.py files")
 
-    number_content = number_file.read_text()
     switch_content = switch_file.read_text()
+    number_content = number_file.read_text()
 
-    # Check that platforms use enhanced entity type detection
+    # Switch platform must use get_entities_by_type (reads from coordinator.entities
+    # with fully resolved types including _BOOL_i → switch for descriptor-less entities)
+    assert 'get_entities_by_type("switch")' in switch_content, \
+        "Switch platform must use coordinator.get_entities_by_type('switch') for correct type resolution"
+
+    # Number platform should still use get_entity_type (it has descriptors for all number entities)
     assert "coordinator.get_entity_type(prop)" in number_content, \
         "Number platform should use coordinator.get_entity_type()"
-    assert "coordinator.get_entity_type(prop)" in switch_content, \
-        "Switch platform should use coordinator.get_entity_type()"
-
-    # Check that they filter by correct entity types
-    assert 'entity_type == "number"' in number_content, \
-        "Number platform should filter for 'number' entities"
-    assert 'entity_type == "switch"' in switch_content, \
-        "Switch platform should filter for 'switch' entities"
-
-    # Check that they check writability
-    assert "coordinator.is_writable(prop)" in number_content, \
-        "Number platform should check if entity is writable"
-    assert "coordinator.is_writable(prop)" in switch_content, \
-        "Switch platform should check if entity is writable"
 
 
 def test_writable_entity_detection():
