@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="windows-1250" ?>
+<?xml-stylesheet type="text/xsl" href="TRANSF.XSL"?>
+<PAGE>
+<ACCESS PAGE_LEVEL="0" USER_LEVEL="4" UCID="1444740645"/>
+<INPUT P="SVENKU"        NAME="__R3269_REAL_.1f"          VALUE="6.5"/>
+<INPUT P="SNAZEV1"       NAME="__R38365_STRING[20]_s"     VALUE="AW16-3P"/>
+<INPUT P="SNAZEV2"       NAME="__R56846_STRING[30]_s"     VALUE="Vyletova - Plzen"/>
+<INPUT P="SCAS"          NAME="__R8201_DT_TDD.MM.YYYY hh:mm" VALUE="08.04.2026 23:37"/>
+<INPUT P="SCHYBA"        NAME="__R8200_USINT_u"           VALUE="0"/>
+<INPUT P="SZAPNUTO"      NAME="__R34458.0_BOOL_i"         VALUE="1"/>
+<INPUT P="SCOMPACT"      NAME="__R36164.3_BOOL_i"         VALUE="0"/>
+<INPUT P="SVYKON"        NAME="__R3277_INT_d"             VALUE="0"/>
+<INPUT P="SCHLAZENI"     NAME="__R3314.7_BOOL_i"          VALUE="0"/>
+<INPUT P="SPOZTEP"       NAME="__R3325_REAL_.1f"          VALUE="28.9"/>
+<INPUT P="SAKTTEP"       NAME="__R3229_REAL_.1f"          VALUE="27.2"/>
+<INPUT P="STEPTUV"       NAME="__R36135.0_BOOL_i"         VALUE="0"/>
+<INPUT P="SAKTTEPTUV"    NAME="__R3225_REAL_.1f"          VALUE="26.9"/>
+<INPUT P="SHDOIGNORE"    NAME="__R37103.0_BOOL_i"         VALUE="1"/>
+<INPUT P="SHDOLOWT"      NAME="__R37104_REAL_.1f"         VALUE="-10.0"/>
+<INPUT P="SHDOSTAV"      NAME="__R3295.5_BOOL_i"          VALUE="1"/>
+<INPUT P="SSTAVJEDNOTKY" NAME="__R37884.0_BOOL_i"         VALUE="1"/>
+<INPUT P="SSTAVKOTLU"    NAME="__R37884.1_BOOL_i"         VALUE="0"/>
+<INPUT P="SOBEH0RUN"     NAME="__R1818.0_BOOL_i"          VALUE="1"/>
+<INPUT P="SOBEH0VIS"     NAME="__R3323.0_BOOL_i"          VALUE="1"/>
+<INPUT P="SOBEH1RUN"     NAME="__R1898.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH1VIS"     NAME="__R3323.1_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH2RUN"     NAME="__R1978.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH2VIS"     NAME="__R3323.2_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH3RUN"     NAME="__R2058.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH3VIS"     NAME="__R3323.3_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH4RUN"     NAME="__R2138.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH4VIS"     NAME="__R3323.4_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH5RUN"     NAME="__R2218.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH5VIS"     NAME="__R3323.5_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH6RUN"     NAME="__R2298.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH6VIS"     NAME="__R3323.6_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH7RUN"     NAME="__R2378.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH7VIS"     NAME="__R3323.7_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH8RUN"     NAME="__R2458.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH8VIS"     NAME="__R3324.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH9RUN"     NAME="__R2538.0_BOOL_i"          VALUE="0"/>
+<INPUT P="SOBEH9VIS"     NAME="__R3324.1_BOOL_i"          VALUE="0"/>
+</PAGE>

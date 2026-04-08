@@ -450,6 +450,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 # Store in processed_data with the correct structure for entity value retrieval
                 if entity_type == "switch":
                     processed_data["switches"][entity_id] = state_data
+                elif entity_type == "binary_sensor":
+                    processed_data["binary_sensors"][entity_id] = state_data
                 elif entity_type == "number":
                     processed_data["numbers"][entity_id] = state_data
                 elif entity_type == "select":

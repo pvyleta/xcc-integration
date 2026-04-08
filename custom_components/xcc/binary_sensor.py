@@ -30,7 +30,7 @@ async def async_setup_entry(
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     # Get all binary sensor entities from coordinator
-    sensors = coordinator.get_entities_by_type("binary_sensors")
+    sensors = coordinator.get_entities_by_type("binary_sensor")
 
     entities = []
     for entity_id, entity_data in sensors.items():
