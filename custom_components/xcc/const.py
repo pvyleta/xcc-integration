@@ -89,7 +89,8 @@ XCC_DESCRIPTOR_PAGES: Final = [
 
 # Data files (fetched on every update)
 XCC_DATA_PAGES: Final = [
-    "STAVJED1.XML",  # Status data
+    "STAVJED1.XML",  # Heat pump unit status
+    "STATUS.XML",   # Main-page status summary (31 fields not present in STAVJED1.XML)
     "OKRUH10.XML",  # Heating circuits data
     "TUV11.XML",  # Hot water data
     "BIV1.XML",  # Bivalent heating data
@@ -140,3 +141,105 @@ UNIT_HOURS: Final = "h"
 STATE_CLASS_MEASUREMENT: Final = "measurement"
 STATE_CLASS_TOTAL: Final = "total"
 STATE_CLASS_TOTAL_INCREASING: Final = "total_increasing"
+
+# Static descriptor for STATUS.XML fields.
+# STATUS.XML is a data-only endpoint; unlike other pages it has no paired descriptor XML.
+# Field labels, units, and types were extracted from TRANSF.XSL (the XSL that renders the
+# main-page status popup). Only the 31 fields not already covered by STAVJED1.XML are listed.
+STATUS_XML_DESCRIPTOR: dict = {
+    "SVYKON": {
+        "friendly_name": "Výkon TČ",
+        "friendly_name_en": "HP power",
+        "unit": "%",
+        "entity_type": "sensor",
+        "writable": False,
+    },
+    "SCHLAZENI": {
+        "friendly_name": "Režim chlazení",
+        "friendly_name_en": "Cooling mode",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "SPOZTEP": {
+        "friendly_name": "Požadovaná teplota topné vody",
+        "friendly_name_en": "Requested heat water temperature",
+        "unit": "°C",
+        "entity_type": "sensor",
+        "writable": False,
+    },
+    "SAKTTEP": {
+        "friendly_name": "Aktuální teplota topné vody",
+        "friendly_name_en": "Actual heat water temperature",
+        "unit": "°C",
+        "entity_type": "sensor",
+        "writable": False,
+    },
+    "STEPTUV": {
+        "friendly_name": "Požadavek ohřevu TUV",
+        "friendly_name_en": "DHW heating requested",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "SAKTTEPTUV": {
+        "friendly_name": "Aktuální teplota topné vody pro TUV",
+        "friendly_name_en": "Actual DHW heat water temperature",
+        "unit": "°C",
+        "entity_type": "sensor",
+        "writable": False,
+    },
+    "SHDOIGNORE": {
+        "friendly_name": "Ignorovat HDO",
+        "friendly_name_en": "Ignore LRT",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "SHDOLOWT": {
+        "friendly_name": "Ignorovat HDO pod venkovní teplotu",
+        "friendly_name_en": "Ignore LRT under outdoor temperature",
+        "unit": "°C",
+        "entity_type": "sensor",
+        "writable": False,
+    },
+    "SHDOSTAV": {
+        "friendly_name": "Stav HDO",
+        "friendly_name_en": "LRT state",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "SSTAVJEDNOTKY": {
+        "friendly_name": "Stavy venkovních jednotek dostupné",
+        "friendly_name_en": "Outdoor units states available",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "SSTAVKOTLU": {
+        "friendly_name": "Stavy kotle dostupné",
+        "friendly_name_en": "Boiler states available",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+}
+# SOBEH0–9: per-circuit run/visibility flags rendered as icon-only switchGo elements in
+# TRANSF.XSL — no per-index text labels exist in the XSL, names follow XCC convention.
+for _i in range(10):
+    STATUS_XML_DESCRIPTOR[f"SOBEH{_i}RUN"] = {
+        "friendly_name": f"Oběh {_i} běží",
+        "friendly_name_en": f"Circuit {_i} running",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    }
+    STATUS_XML_DESCRIPTOR[f"SOBEH{_i}VIS"] = {
+        "friendly_name": f"Oběh {_i} aktivní",
+        "friendly_name_en": f"Circuit {_i} active",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    }
+

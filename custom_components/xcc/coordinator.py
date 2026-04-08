@@ -21,6 +21,7 @@ from .const import (
     DEFAULT_TIMEOUT,
     DOMAIN,
     LANGUAGE_ENGLISH,
+    STATUS_XML_DESCRIPTOR,
     XCC_DATA_PAGES,
     XCC_DESCRIPTOR_PAGES,
 )
@@ -310,6 +311,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 page_normalized = "NAST"
             elif page == "MAIN.XML" or prop.startswith("SYSCONFIG-"):
                 page_normalized = "SYSCONFIG"
+            elif page == "STATUS.XML":
+                # STATUS.XML has no descriptor; its entities belong to the same
+                # logical device as STAVJED1.XML (heat pump unit status).
+                page_normalized = "STAVJED"
             else:
                 page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
 
@@ -806,11 +811,32 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             _LOGGER.debug("Checking for additional pages not found in main.xml discovery")
 
-            # List of additional pages to check
+            # List of additional pages to check (descriptor + data page pairs)
             additional_pages = [
                 ("nast.xml", "NAST.XML", "Heat pump settings"),
                 ("fveinv.xml", "FVEINV10.XML", "PV Inverter details"),
             ]
+
+            # Data-only pages: these have no paired descriptor XML and are probed directly.
+            # STATUS.XML is not referenced from main.xml; it is rendered via a JS button
+            # on the main page using TRANSF.XSL. Its field labels live in TRANSF.XSL and
+            # are captured in STATUS_XML_DESCRIPTOR rather than a descriptor XML file.
+            additional_data_only_pages = [
+                ("STATUS.XML", "Main-page status summary"),
+            ]
+
+            for data_page, description in additional_data_only_pages:
+                try:
+                    _LOGGER.debug("Probing data-only page %s (%s)", data_page, description)
+                    test_data = await client.fetch_page(data_page)
+                    if test_data and len(test_data) > 100 and '<LOGIN>' not in test_data:
+                        _LOGGER.info("Found data-only page: %s (%s)", data_page, description)
+                        if data_page not in self._discovered_data_pages:
+                            self._discovered_data_pages.append(data_page)
+                    else:
+                        _LOGGER.debug("Data-only page %s not accessible or empty", data_page)
+                except Exception as e:
+                    _LOGGER.debug("Error probing data-only page %s: %s", data_page, e)
 
             for descriptor_page, data_page, description in additional_pages:
                 try:
@@ -893,10 +919,20 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     descriptor_data
                 )
 
+                # Inject static STATUS.XML field configs. These would normally come from
+                # a descriptor XML, but STATUS.XML has none — labels are in TRANSF.XSL.
+                # Only add entries not already defined by a real descriptor to avoid
+                # overriding any future firmware-provided metadata.
+                for prop, config in STATUS_XML_DESCRIPTOR.items():
+                    if prop not in self.entity_configs:
+                        self.entity_configs[prop] = config
+
                 _LOGGER.info(
-                    "Loaded %d entity configurations from %d descriptor files",
+                    "Loaded %d entity configurations from %d descriptor files "
+                    "(%d injected from STATUS_XML_DESCRIPTOR)",
                     len(self.entity_configs),
                     len(descriptor_data),
+                    len(STATUS_XML_DESCRIPTOR),
                 )
 
                 # Log summary by entity type

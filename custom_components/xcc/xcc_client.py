@@ -385,7 +385,11 @@ class XCCClient:
         """
         url_lower = page_url.lower()
 
-        if 'okruh.xml' in url_lower:
+        if 'status.xml' in url_lower:
+            return 'status'  # Matches both STATUS.XML (data) and stavjed.xml (descriptor)
+        elif 'stavjed.xml' in url_lower:
+            return 'status'
+        elif 'okruh.xml' in url_lower:
             return 'heating_circuit'
         elif 'mzona.xml' in url_lower:
             return 'mixed_zone'
