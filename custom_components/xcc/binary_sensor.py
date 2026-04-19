@@ -13,10 +13,10 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
+from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ async def async_setup_entry(
     entities = []
     for entity_id, entity_data in sensors.items():
         try:
-            entity = XCCBinarySensor(coordinator, entity_id)
+            entity = XCCBinarySensor(coordinator, entity_data)
             entities.append(entity)
             _LOGGER.debug("Created binary sensor entity: %s", entity_id)
         except Exception as err:
@@ -46,37 +46,62 @@ async def async_setup_entry(
         _LOGGER.info("Added %d XCC binary sensor entities", len(entities))
 
 
-class XCCBinarySensor(CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorEntity):
+class XCCBinarySensor(XCCEntity, BinarySensorEntity):
     """Representation of an XCC binary sensor."""
 
-    def __init__(self, coordinator: XCCDataUpdateCoordinator, entity_id: str) -> None:
+    def __init__(
+        self, coordinator: XCCDataUpdateCoordinator, entity_data: dict[str, Any]
+    ) -> None:
         """Initialize the XCC binary sensor."""
-        # Create entity description
-        description = self._create_entity_description(coordinator, entity_id)
-        super().__init__(coordinator, entity_id, description)
+        try:
+            entity_id = entity_data.get("entity_id", "")
+            if not entity_id:
+                prop = entity_data.get("prop", "")
+                if prop:
+                    entity_id = f"xcc_{prop.lower().replace('-', '_')}"
+                    _LOGGER.warning(
+                        "Missing entity_id in entity_data, generated from prop: %s",
+                        entity_id,
+                    )
+                else:
+                    raise ValueError(
+                        f"No entity_id found in entity_data and no prop to generate from. Data keys: {list(entity_data.keys())}"
+                    )
+
+            # Create entity description
+            description = self._create_entity_description(coordinator, entity_data)
+
+            # Initialize parent class (XCCEntity handles the coordinator and entity setup)
+            super().__init__(coordinator, entity_id, description)
+
+        except Exception as err:
+            _LOGGER.error(
+                "Error in XCCBinarySensor.__init__ for %s: %s",
+                entity_data.get("entity_id", "unknown"),
+                err,
+            )
+            raise
 
     def _create_entity_description(
         self,
         coordinator: XCCDataUpdateCoordinator,
-        entity_id: str,
+        entity_data: dict[str, Any],
     ) -> BinarySensorEntityDescription:
         """Create entity description for the binary sensor."""
-        entity_data = coordinator.get_entity_data(entity_id)
-        if not entity_data:
-            raise ValueError(f"Entity data not found for {entity_id}")
+        entity_id = entity_data.get("entity_id", "")
+        field_name = entity_data.get("attributes", {}).get("field_name", entity_id)
 
         # Determine device class from field name patterns
-        device_class = self._determine_device_class(entity_id)
+        device_class = self._determine_device_class(field_name)
 
         return BinarySensorEntityDescription(
             key=entity_id,
-            name=self._get_entity_name(),
             device_class=device_class,
         )
 
-    def _determine_device_class(self, entity_id: str) -> BinarySensorDeviceClass | None:
-        """Determine device class from entity ID and attributes."""
-        field_name_lower = entity_id.lower()
+    def _determine_device_class(self, field_name: str) -> BinarySensorDeviceClass | None:
+        """Determine device class from field name and attributes."""
+        field_name_lower = field_name.lower()
 
         # Map common field patterns to device classes
         if any(
