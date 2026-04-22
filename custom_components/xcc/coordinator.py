@@ -934,17 +934,30 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 # (writable) but have no UI control in descriptors. These are typically
                 # service technician settings. We expose them as switches to allow advanced
                 # users to control hidden features like cooling mode configuration.
+                #
+                # IMPORTANT: HIDDEN_SWITCHES OVERRIDES descriptor entries because the
+                # descriptor parser may have incorrectly parsed these as sensors from
+                # <row prop="..."> elements that don't have actual control children.
+                hidden_overrides = 0
                 for prop, config in HIDDEN_SWITCHES.items():
-                    if prop not in self.entity_configs:
-                        self.entity_configs[prop] = config
+                    if prop in self.entity_configs:
+                        _LOGGER.debug(
+                            "HIDDEN_SWITCHES overriding descriptor entry for %s: %s -> %s",
+                            prop,
+                            self.entity_configs[prop].get("entity_type", "sensor"),
+                            config.get("entity_type", "switch"),
+                        )
+                        hidden_overrides += 1
+                    self.entity_configs[prop] = config
 
                 _LOGGER.info(
                     "Loaded %d entity configurations from %d descriptor files "
-                    "(%d injected from STATUS_XML_DESCRIPTOR, %d from HIDDEN_SWITCHES)",
+                    "(%d injected from STATUS_XML_DESCRIPTOR, %d from HIDDEN_SWITCHES, %d overrides)",
                     len(self.entity_configs),
                     len(descriptor_data),
                     len(STATUS_XML_DESCRIPTOR),
                     len(HIDDEN_SWITCHES),
+                    hidden_overrides,
                 )
 
                 # Log summary by entity type
