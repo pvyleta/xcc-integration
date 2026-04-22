@@ -243,3 +243,27 @@ for _i in range(10):
         "writable": False,
     }
 
+# Hidden switches - fields that appear in data pages with _BOOL_i (writable) but have no
+# <switch> or <choice> control in descriptor files. These are typically service technician
+# settings or installation-time configuration.  We expose them as switches in HA to allow
+# advanced users to control hidden features.
+#
+# Found by running: python find_hidden_switches.py
+# Total hidden switches found: 217 across all pages
+#
+# Only the most useful/safe ones are exposed here. Others remain hidden to avoid
+# accidental misconfiguration.
+HIDDEN_SWITCHES: dict = {
+    # Cooling mode configuration - enables reversible heat pump operation
+    "TO-CONFIG-CHLAZENI": {
+        "friendly_name": "Konfigurace chlazení topného okruhu",
+        "friendly_name_en": "Heating circuit cooling mode configuration",
+        "unit": "",
+        "entity_type": "switch",
+        "writable": True,
+        "device_class": None,
+        "note": "Enable cooling mode for this heating circuit (requires compatible heat pump hardware)",
+    },
+    # Add more hidden switches here as needed
+}
+

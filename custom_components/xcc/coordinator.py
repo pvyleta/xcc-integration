@@ -20,6 +20,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,
+    HIDDEN_SWITCHES,
     LANGUAGE_ENGLISH,
     STATUS_XML_DESCRIPTOR,
     XCC_DATA_PAGES,
@@ -929,12 +930,21 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     if prop not in self.entity_configs:
                         self.entity_configs[prop] = config
 
+                # Inject hidden switches - fields that appear in data pages with _BOOL_i
+                # (writable) but have no UI control in descriptors. These are typically
+                # service technician settings. We expose them as switches to allow advanced
+                # users to control hidden features like cooling mode configuration.
+                for prop, config in HIDDEN_SWITCHES.items():
+                    if prop not in self.entity_configs:
+                        self.entity_configs[prop] = config
+
                 _LOGGER.info(
                     "Loaded %d entity configurations from %d descriptor files "
-                    "(%d injected from STATUS_XML_DESCRIPTOR)",
+                    "(%d injected from STATUS_XML_DESCRIPTOR, %d from HIDDEN_SWITCHES)",
                     len(self.entity_configs),
                     len(descriptor_data),
                     len(STATUS_XML_DESCRIPTOR),
+                    len(HIDDEN_SWITCHES),
                 )
 
                 # Log summary by entity type
