@@ -421,7 +421,6 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Store entity metadata for later use (use entity_id as key for proper lookup)
                 self.entities[entity_data["entity_id"]] = {
-                    "entity_id": entity_data["entity_id"],  # Also in value for platform access
                     "type": entity_type,
                     "data": entity,
                     "page": entity["attributes"].get("page", "unknown"),
