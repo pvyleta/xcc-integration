@@ -19,17 +19,21 @@ from .const import (
     DEFAULT_LANGUAGE,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
+    DESCRIPTOR_OVERRIDES,
     DOMAIN,
-    HIDDEN_BINARY_SENSORS,
-    HIDDEN_SWITCHES,
     LANGUAGE_ENGLISH,
-    STATUS_XML_DESCRIPTOR,
     XCC_DATA_PAGES,
     XCC_DESCRIPTOR_PAGES,
 )
+from .entity_helpers import (
+    format_entity_id_suffix,
+    infer_entity_type_from_attributes,
+    lookup_with_normalized_fallback,
+    normalize_property_name,
+)
+from .value_writer import resolve_property
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER.setLevel(logging.DEBUG)  # Force debug logging for coordinator
 
 
 class XCCDataUpdateCoordinator(DataUpdateCoordinator):
@@ -406,7 +410,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Create entity data structure for new platforms with device assignment
                 # Ensure proper entity ID formatting with xcc_ prefix and valid characters
-                entity_id_suffix = self._format_entity_id(prop)
+                entity_id_suffix = format_entity_id_suffix(prop)
                 entity_data = {
                     "entity_id": f"xcc_{entity_id_suffix}",
                     "prop": prop,
@@ -493,29 +497,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _format_entity_id(self, prop: str) -> str:
         """Format XCC property name into valid Home Assistant entity ID suffix."""
-        # Convert to lowercase and replace invalid characters with underscores
-        entity_id = prop.lower()
-
-        # Replace common XCC separators with underscores
-        entity_id = entity_id.replace("-", "_")
-        entity_id = entity_id.replace(".", "_")
-        entity_id = entity_id.replace(" ", "_")
-
-        # Remove any characters that aren't alphanumeric or underscore
-        import re
-        entity_id = re.sub(r'[^a-z0-9_]', '_', entity_id)
-
-        # Remove multiple consecutive underscores
-        entity_id = re.sub(r'_+', '_', entity_id)
-
-        # Remove leading/trailing underscores
-        entity_id = entity_id.strip('_')
-
-        # Ensure it's not empty
-        if not entity_id:
-            entity_id = "unknown"
-
-        return entity_id
+        return format_entity_id_suffix(prop)
 
     def _get_friendly_name(self, descriptor_config: dict[str, Any], prop: str) -> str:
         """Get friendly name based on language preference."""
@@ -601,21 +583,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _determine_entity_type(self, entity: dict[str, Any]) -> str:
         """Determine the appropriate Home Assistant entity type for an XCC entity."""
-        attributes = entity.get("attributes", {})
-        data_type = attributes.get("data_type", "unknown")
-        element_type = attributes.get("element_type", "unknown")
-        is_settable = attributes.get("is_settable", False)
-
-        # Determine entity type based on XCC field characteristics
-        if data_type == "boolean":
-            return "switches" if is_settable else "binary_sensors"
-        if data_type == "enum":
-            return "selects" if is_settable else "sensors"
-        if data_type == "numeric":
-            return "numbers" if is_settable else "sensors"
-        if element_type in ["INPUT", "SELECT"]:
-            return "numbers" if data_type == "numeric" else "selects"
-        return "sensors"
+        return infer_entity_type_from_attributes(entity)
 
     def get_entity_data(self, entity_id: str) -> dict[str, Any] | None:
         """Get entity data by ID."""
@@ -638,70 +606,24 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             _LOGGER.info("🎛️ Setting entity %s to value %s", entity_id, value)
 
-            # Find the entity configuration to get the property name
-            prop = None
-            internal_name = None  # Pre-resolved internal NAME for SYSCONFIG entities
-            search_methods = []
-
-            # Method 1: Try to find the property in the coordinator's entity data
-            for entity_type in ["numbers", "switches", "selects"]:
-                entities_data = self.data.get(entity_type, {})
-                if entity_id in entities_data:
-                    entity_data = entities_data[entity_id]
-                    # Look for prop in the attributes
-                    prop = entity_data.get("attributes", {}).get("prop")
-                    internal_name = entity_data.get("attributes", {}).get("internal_name")
-                    if prop:
-                        search_methods.append(f"found in {entity_type} data")
-                        break
-
-            # Method 2: If not found in type-specific data, try the general entities list
-            if not prop:
-                for entity in self.data.get("entities", []):
-                    if entity.get("entity_id") == entity_id:
-                        prop = entity.get("prop", "").upper()
-                        internal_name = entity.get("attributes", {}).get("internal_name")
-                        if prop:
-                            search_methods.append("found in general entities list")
-                            break
-
-            # Method 3: Try entity configs (descriptor data)
-            if not prop:
-                # Look for the property in entity_configs by matching entity_id patterns
-                entity_suffix = entity_id.replace("number.xcc_", "").replace("switch.xcc_", "").replace("select.xcc_", "")
-                for config_prop, config in self.entity_configs.items():
-                    if config_prop.lower() == entity_suffix.upper():
-                        prop = config_prop
-                        search_methods.append("found in entity configs")
-                        break
-
-            # Method 4: If still not found, try to derive from entity_id
-            if not prop:
-                # Remove common prefixes and convert to uppercase
-                prop = (
-                    entity_id.replace("number.xcc_", "")
-                    .replace("switch.xcc_", "")
-                    .replace("select.xcc_", "")
-                )
-                prop = (
-                    prop.replace("number.", "")
-                    .replace("switch.", "")
-                    .replace("select.", "")
-                )
-                prop = prop.upper()
-                search_methods.append("derived from entity_id")
+            resolution = resolve_property(entity_id, self.data, self.entity_configs)
+            prop = resolution.prop
+            internal_name = resolution.internal_name
 
             if not prop:
                 _LOGGER.error(
                     "❌ Could not determine property name for entity %s. Tried methods: %s",
-                    entity_id, ", ".join(search_methods) if search_methods else "none"
+                    entity_id,
+                    ", ".join(resolution.attempted) if resolution.attempted else "none",
                 )
-                _LOGGER.debug("Available entity types in data: %s", list(self.data.keys()))
+                _LOGGER.debug("Available entity types in data: %s", list((self.data or {}).keys()))
                 _LOGGER.debug("Available entity configs: %d properties", len(self.entity_configs))
                 return False
 
-            _LOGGER.debug("🔍 Property resolution: %s -> %s (method: %s)",
-                         entity_id, prop, search_methods[-1] if search_methods else "unknown")
+            _LOGGER.debug(
+                "🔍 Property resolution: %s -> %s (method: %s)",
+                entity_id, prop, resolution.method,
+            )
 
             _LOGGER.info(
                 "🔧 Setting XCC property %s to value %s for entity %s",
@@ -924,59 +846,26 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     descriptor_data
                 )
 
-                # Inject static STATUS.XML field configs. These would normally come from
-                # a descriptor XML, but STATUS.XML has none — labels are in TRANSF.XSL.
-                # Only add entries not already defined by a real descriptor to avoid
-                # overriding any future firmware-provided metadata.
-                for prop, config in STATUS_XML_DESCRIPTOR.items():
-                    if prop not in self.entity_configs:
-                        self.entity_configs[prop] = config
-
-                # Inject hidden switches - fields that appear in data pages with _BOOL_i
-                # (writable) but have no UI control in descriptors. These are typically
-                # service technician settings. We expose them as switches to allow advanced
-                # users to control hidden features like cooling mode configuration.
-                #
-                # IMPORTANT: HIDDEN_SWITCHES OVERRIDES descriptor entries because the
-                # descriptor parser may have incorrectly parsed these as sensors from
-                # <row prop="..."> elements that don't have actual control children.
-                hidden_overrides = 0
-                for prop, config in HIDDEN_SWITCHES.items():
+                # Apply DESCRIPTOR_OVERRIDES — the single source of manual metadata edits.
+                # See const.py for the grouping (STATUS_XML_DESCRIPTOR / HIDDEN_SWITCHES /
+                # HIDDEN_BINARY_SENSORS). Every entry replaces any descriptor-derived config
+                # for that prop because the override table is curated by hand from TRANSF.XSL
+                # and field-suffix analysis, while descriptor parsing infers types from
+                # register suffixes (e.g. _BOOL_i → switch) which is wrong for read-only
+                # status outputs and incomplete for STATUS.XML (no descriptor file exists).
+                overridden = 0
+                for prop, config in DESCRIPTOR_OVERRIDES.items():
                     if prop in self.entity_configs:
-                        _LOGGER.debug(
-                            "HIDDEN_SWITCHES overriding descriptor entry for %s: %s -> %s",
-                            prop,
-                            self.entity_configs[prop].get("entity_type", "sensor"),
-                            config.get("entity_type", "switch"),
-                        )
-                        hidden_overrides += 1
-                    self.entity_configs[prop] = config
-
-                # Inject hidden binary sensors - _BOOL_i fields that are read-only status
-                # outputs (e.g. consumption-prioritizer -OK flags) and should never be
-                # writable switches.  Like HIDDEN_SWITCHES, these always override.
-                bs_overrides = 0
-                for prop, config in HIDDEN_BINARY_SENSORS.items():
-                    if prop in self.entity_configs:
-                        _LOGGER.debug(
-                            "HIDDEN_BINARY_SENSORS overriding descriptor entry for %s: %s -> binary_sensor",
-                            prop,
-                            self.entity_configs[prop].get("entity_type", "sensor"),
-                        )
-                        bs_overrides += 1
+                        overridden += 1
                     self.entity_configs[prop] = config
 
                 _LOGGER.info(
                     "Loaded %d entity configurations from %d descriptor files "
-                    "(%d injected from STATUS_XML_DESCRIPTOR, %d from HIDDEN_SWITCHES, "
-                    "%d from HIDDEN_BINARY_SENSORS, %d switch overrides, %d bs overrides)",
+                    "(%d from DESCRIPTOR_OVERRIDES, %d overrides applied)",
                     len(self.entity_configs),
                     len(descriptor_data),
-                    len(STATUS_XML_DESCRIPTOR),
-                    len(HIDDEN_SWITCHES),
-                    len(HIDDEN_BINARY_SENSORS),
-                    hidden_overrides,
-                    bs_overrides,
+                    len(DESCRIPTOR_OVERRIDES),
+                    overridden,
                 )
 
                 # Log summary by entity type
@@ -997,64 +886,20 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         """Get the entity type for a given property with smart matching."""
         if not self.entity_configs:
             return "sensor"  # Default to sensor if no descriptors loaded
-
-        # First try exact match
-        config = self.entity_configs.get(prop)
-        if config:
-            return config.get("entity_type", "sensor")
-
-        # Try normalized matching (handle different naming conventions)
-        normalized_prop = self._normalize_property_name(prop)
-        for config_prop, config in self.entity_configs.items():
-            if self._normalize_property_name(config_prop) == normalized_prop:
-                return config.get("entity_type", "sensor")
-
-        # No match found - default to sensor
-        return "sensor"
+        config = lookup_with_normalized_fallback(prop, self.entity_configs)
+        return config.get("entity_type", "sensor") if config else "sensor"
 
     def _normalize_property_name(self, prop: str) -> str:
         """Normalize property names for matching."""
-        # Convert to uppercase and replace common separators
-        normalized = prop.upper().replace("_", "-").replace(".", "-")
-
-        # Handle common prefixes/suffixes that might differ
-        # Remove common prefixes that might be added/removed
-        prefixes_to_remove = ["WEB-", "MAIN-", "CONFIG-"]
-        for prefix in prefixes_to_remove:
-            if normalized.startswith(prefix):
-                normalized = normalized[len(prefix) :]
-
-        return normalized
+        return normalize_property_name(prop)
 
     def is_writable(self, prop: str) -> bool:
         """Check if a property is writable with smart matching."""
         if not self.entity_configs:
             return False
-
-        # First try exact match
-        config = self.entity_configs.get(prop)
-        if config:
-            return config.get("writable", False)
-
-        # Try normalized matching
-        normalized_prop = self._normalize_property_name(prop)
-        for config_prop, config in self.entity_configs.items():
-            if self._normalize_property_name(config_prop) == normalized_prop:
-                return config.get("writable", False)
-
-        return False
+        config = lookup_with_normalized_fallback(prop, self.entity_configs)
+        return bool(config and config.get("writable", False))
 
     def get_entity_config(self, prop: str) -> dict:
         """Get the full entity configuration for a property with smart matching."""
-        # First try exact match
-        config = self.entity_configs.get(prop)
-        if config:
-            return config
-
-        # Try normalized matching
-        normalized_prop = self._normalize_property_name(prop)
-        for config_prop, config in self.entity_configs.items():
-            if self._normalize_property_name(config_prop) == normalized_prop:
-                return config
-
-        return {}
+        return lookup_with_normalized_fallback(prop, self.entity_configs, default={}) or {}

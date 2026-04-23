@@ -370,3 +370,15 @@ HIDDEN_BINARY_SENSORS: dict = {
     },
 }
 
+# Single descriptor-override table consumed by the coordinator at descriptor-load time.
+# Sources are grouped above purely for readability; semantically all entries replace any
+# config inferred from descriptor XML or from the _BOOL_i register suffix:
+#   * STATUS_XML_DESCRIPTOR  — metadata for STATUS.XML (no paired descriptor file)
+#   * HIDDEN_SWITCHES        — promotes hidden _BOOL_i fields to writable switches
+#   * HIDDEN_BINARY_SENSORS  — pins read-only _BOOL_i status fields as binary_sensor
+# Add new manual overrides to whichever of the three source dicts fits the intent.
+DESCRIPTOR_OVERRIDES: dict = {
+    **STATUS_XML_DESCRIPTOR,
+    **HIDDEN_SWITCHES,
+    **HIDDEN_BINARY_SENSORS,
+}

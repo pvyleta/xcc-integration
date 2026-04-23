@@ -30,23 +30,19 @@ def test_entity_id_formatting():
         }
     ]
     
-    # Simulate the _format_entity_id method from coordinator
+    # Use the real helper from the integration so this test exercises production code.
+    # Load the helper file directly rather than through ``xcc.entity_helpers`` to
+    # avoid pulling in the whole package (which imports homeassistant.*).
+    import importlib.util
+    from pathlib import Path
+
+    helper_path = Path(__file__).parent.parent / "custom_components" / "xcc" / "entity_helpers.py"
+    spec = importlib.util.spec_from_file_location("_xcc_entity_helpers", helper_path)
+    helpers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helpers)
+
     def format_entity_id(prop: str) -> str:
-        """Format XCC property name into valid Home Assistant entity ID suffix."""
-        entity_id = prop.lower()
-        entity_id = entity_id.replace("-", "_")
-        entity_id = entity_id.replace(".", "_")
-        entity_id = entity_id.replace(" ", "_")
-        
-        import re
-        entity_id = re.sub(r'[^a-z0-9_]', '_', entity_id)
-        entity_id = re.sub(r'_+', '_', entity_id)
-        entity_id = entity_id.strip('_')
-        
-        if not entity_id:
-            entity_id = "unknown"
-        
-        return f"xcc_{entity_id}"
+        return f"xcc_{helpers.format_entity_id_suffix(prop)}"
     
     print("�� ENTITY ID FORMATTING TESTS:")
     
