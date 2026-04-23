@@ -20,6 +20,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DOMAIN,
+    HIDDEN_BINARY_SENSORS,
     HIDDEN_SWITCHES,
     LANGUAGE_ENGLISH,
     STATUS_XML_DESCRIPTOR,
@@ -422,6 +423,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 # Store entity metadata for later use (use entity_id as key for proper lookup)
                 self.entities[entity_data["entity_id"]] = {
                     "type": entity_type,
+                    "entity_id": entity_data["entity_id"],  # also inside value for platform lookup
                     "data": entity,
                     "page": entity["attributes"].get("page", "unknown"),
                     "prop": prop,  # Keep prop for reference
@@ -950,14 +952,31 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                         hidden_overrides += 1
                     self.entity_configs[prop] = config
 
+                # Inject hidden binary sensors - _BOOL_i fields that are read-only status
+                # outputs (e.g. consumption-prioritizer -OK flags) and should never be
+                # writable switches.  Like HIDDEN_SWITCHES, these always override.
+                bs_overrides = 0
+                for prop, config in HIDDEN_BINARY_SENSORS.items():
+                    if prop in self.entity_configs:
+                        _LOGGER.debug(
+                            "HIDDEN_BINARY_SENSORS overriding descriptor entry for %s: %s -> binary_sensor",
+                            prop,
+                            self.entity_configs[prop].get("entity_type", "sensor"),
+                        )
+                        bs_overrides += 1
+                    self.entity_configs[prop] = config
+
                 _LOGGER.info(
                     "Loaded %d entity configurations from %d descriptor files "
-                    "(%d injected from STATUS_XML_DESCRIPTOR, %d from HIDDEN_SWITCHES, %d overrides)",
+                    "(%d injected from STATUS_XML_DESCRIPTOR, %d from HIDDEN_SWITCHES, "
+                    "%d from HIDDEN_BINARY_SENSORS, %d switch overrides, %d bs overrides)",
                     len(self.entity_configs),
                     len(descriptor_data),
                     len(STATUS_XML_DESCRIPTOR),
                     len(HIDDEN_SWITCHES),
+                    len(HIDDEN_BINARY_SENSORS),
                     hidden_overrides,
+                    bs_overrides,
                 )
 
                 # Log summary by entity type

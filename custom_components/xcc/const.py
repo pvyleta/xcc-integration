@@ -267,3 +267,106 @@ HIDDEN_SWITCHES: dict = {
     # Add more hidden switches here as needed
 }
 
+# Hidden binary sensors - fields that appear in data pages with _BOOL_i (parsed as writable
+# switch) but are actually read-only status outputs.  The consumption prioritizer fields
+# (BLOKYSPOTREBY) are the main example: they show which consumer the heat pump is currently
+# serving, not something a user would ever toggle.
+#
+# Like HIDDEN_SWITCHES, these entries OVERRIDE the type inferred from the _BOOL_i register
+# suffix so the entity appears as a binary_sensor instead of a switch.
+HIDDEN_BINARY_SENSORS: dict = {
+    # Consumption-prioritizer "active" flags (BLOKYSPOTREBY = consumption block)
+    # Each consumer has a -OK flag that turns 1 when the HP is currently serving it.
+    "BLOKYSPOTREBY-OK": {
+        "friendly_name": "TČ topí okruh",
+        "friendly_name_en": "HP heating circuit",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
+    "BLOKYSPOTREBY1-OK": {
+        "friendly_name": "TČ topí bazén 1",
+        "friendly_name_en": "HP heating pool 1",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
+    "BLOKYSPOTREBY2-OK": {
+        "friendly_name": "TČ topí bazénovou místnost",
+        "friendly_name_en": "HP heating pool room",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
+    "BLOKYSPOTREBY3-OK": {
+        "friendly_name": "TČ ohřívá TUV",
+        "friendly_name_en": "HP heating DHW",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
+    "BLOKYSPOTREBY6-OK": {
+        "friendly_name": "TČ ohřívá TUV 2",
+        "friendly_name_en": "HP heating DHW 2",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
+    "BLOKYSPOTREBY7-OK": {
+        "friendly_name": "TČ topí bazén 2",
+        "friendly_name_en": "HP heating pool 2",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
+    # Attenuation flags - consumer is in setback/reduced-output mode
+    "BLOKYSPOTREBY-UTLUM": {
+        "friendly_name": "Okruh v útlumu",
+        "friendly_name_en": "Heating circuit in attenuation",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "BLOKYSPOTREBY1-UTLUM": {
+        "friendly_name": "Bazén 1 v útlumu",
+        "friendly_name_en": "Pool 1 in attenuation",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "BLOKYSPOTREBY2-UTLUM": {
+        "friendly_name": "Bazénová místnost v útlumu",
+        "friendly_name_en": "Pool room in attenuation",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "BLOKYSPOTREBY3-UTLUM": {
+        "friendly_name": "TUV v útlumu",
+        "friendly_name_en": "DHW in attenuation",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "BLOKYSPOTREBY6-UTLUM": {
+        "friendly_name": "TUV 2 v útlumu",
+        "friendly_name_en": "DHW 2 in attenuation",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+    "BLOKYSPOTREBY7-UTLUM": {
+        "friendly_name": "Bazén 2 v útlumu",
+        "friendly_name_en": "Pool 2 in attenuation",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+    },
+}
+
