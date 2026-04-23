@@ -12,8 +12,8 @@ def test_language_preference_constants():
             DEFAULT_LANGUAGE
         )
     except ImportError as e:
-        print(f"Failed to import language constants: {e}")
-        return False
+        import pytest
+        pytest.skip(f"Failed to import language constants: {e}")
     
     # Verify constants are defined correctly
     assert CONF_LANGUAGE == "language"

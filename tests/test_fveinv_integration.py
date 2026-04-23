@@ -1,13 +1,12 @@
 """Test FVEINV integration with the full XCC client."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 import os
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
-
-# Import the XCC client
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
 
 from custom_components.xcc.xcc_client import XCCClient, parse_xml_entities
 

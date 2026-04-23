@@ -1,6 +1,9 @@
 """Test FVEINV device priority and assignment."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 from custom_components.xcc.coordinator import XCCDataUpdateCoordinator
 from custom_components.xcc.const import LANGUAGE_ENGLISH, LANGUAGE_CZECH
 

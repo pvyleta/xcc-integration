@@ -1,6 +1,9 @@
 """Test FVE-CONFIG switch setting functionality."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 from unittest.mock import AsyncMock, MagicMock
 from custom_components.xcc.xcc_client import XCCClient
 

@@ -7,11 +7,8 @@ This test verifies that the XCC client properly handles:
 """
 
 import pytest
-import sys
-import os
 
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'xcc'))
+pytest.importorskip("homeassistant")
 
 def test_xml_parsing_encoding_fix():
     """Test that XML parsing works without encoding errors."""

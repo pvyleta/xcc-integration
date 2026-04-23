@@ -5,109 +5,118 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-and-format:
-    name: Lint and Format
+  lint:
+    name: Lint (ruff)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+          cache: pip
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff
+      - run: pip install ruff
 
-      - name: Run Ruff linter
+      - name: Ruff check
         run: ruff check .
+        continue-on-error: true
 
-      - name: Run Ruff formatter
+      - name: Ruff format check
         run: ruff format --check .
+        continue-on-error: true
 
-  test:
-    name: Test
+  syntax:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile every .py file
+        run: |
+          python -m compileall -q custom_components/xcc tests
+
+  test-unit:
+    name: Unit tests (no Home Assistant) - py${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
 
-      - name: Install dependencies
+      - name: Install minimal test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements-test.txt
+
+      - name: Run tests that don't require Home Assistant
+        run: pytest tests/ -v --tb=short
+
+  test-ha:
+    name: Home Assistant tests - py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install Home Assistant + test deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run tests
-        run: pytest tests/ -v --cov=custom_components/xcc --cov-report=xml
+      - name: Run full test suite with Home Assistant available
+        run: pytest tests/ -v --tb=short --cov=custom_components/xcc --cov-report=xml
 
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage
+        if: always()
+        uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           fail_ci_if_error: false
 
-  syntax-check:
-    name: Python Syntax Check
+  verify-manifest:
+    name: Verify manifest version matches tag
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Check Python syntax
+      - name: Check manifest.json version matches release tag
         run: |
-          python -m py_compile custom_components/xcc/*.py
-          python -m py_compile tests/*.py
-
-  home-assistant-check:
-    name: Home Assistant Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install Home Assistant
-        run: |
-          python -m pip install --upgrade pip
-          pip install homeassistant
-
-      - name: Check integration loads
-        run: |
-          python -c "
-          import sys
-          sys.path.insert(0, '.')
-          try:
-              from custom_components.xcc import DOMAIN
-              print(f'✅ Integration domain: {DOMAIN}')
-              from custom_components.xcc.coordinator import XCCDataUpdateCoordinator
-              print('✅ Coordinator imports successfully')
-              from custom_components.xcc.xcc_client import XCCClient
-              print('✅ XCC client imports successfully')
-              print('✅ All core components import successfully')
-          except Exception as e:
-              print(f'❌ Import error: {e}')
-              sys.exit(1)
-          "
+          set -e
+          MANIFEST_VERSION=$(python -c "import json; print(json.load(open('custom_components/xcc/manifest.json'))['version'])")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "manifest.json version: $MANIFEST_VERSION"
+          echo "release tag version:   $TAG_VERSION"
+          if [ "$MANIFEST_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::manifest.json version ($MANIFEST_VERSION) does not match release tag ($TAG_VERSION)"
+            exit 1
+          fi

@@ -5,12 +5,10 @@ Tests the coordinator's async_set_entity_value method and XCC client's set_value
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-import sys
-import os
 
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'xcc'))
+pytest.importorskip("homeassistant")
+
+from unittest.mock import Mock, AsyncMock, patch
 
 def test_coordinator_property_extraction():
     """Test that coordinator can extract property names from entity data."""

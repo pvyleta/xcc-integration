@@ -1,12 +1,10 @@
 """Test friendly name fixes for XCC integration."""
 
 import pytest
-import sys
-import os
-import xml.etree.ElementTree as ET
 
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'xcc'))
+pytest.importorskip("homeassistant")
+
+import xml.etree.ElementTree as ET
 
 from custom_components.xcc.descriptor_parser import XCCDescriptorParser
 

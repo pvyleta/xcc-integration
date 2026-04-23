@@ -1,6 +1,9 @@
 """Test logging fixes and improvements."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 import sys
 import logging
 from pathlib import Path

@@ -1,12 +1,11 @@
 """Test FVEINV (PV Inverter) page parsing functionality."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 import os
 from pathlib import Path
-
-# Import the parsing functions
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
 
 from custom_components.xcc.xcc_client import parse_xml_entities
 from custom_components.xcc.descriptor_parser import XCCDescriptorParser

@@ -1,6 +1,9 @@
 """Test that configurable entities (number, switch, select) are assigned to correct devices."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 from unittest.mock import Mock, patch
 from custom_components.xcc.coordinator import XCCDataUpdateCoordinator
 from custom_components.xcc.number import XCCNumber

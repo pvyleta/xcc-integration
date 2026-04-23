@@ -1,13 +1,11 @@
 """Test Czech and English translations in descriptor parsing."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 import xml.etree.ElementTree as ET
 from unittest.mock import Mock, patch
-import sys
-import os
-
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components'))
 
 def test_czech_english_translations_comprehensive():
     """Test that both _determine_entity_config and _extract_sensor_info_from_row create proper Czech and English friendly names."""

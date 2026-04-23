@@ -1,12 +1,10 @@
 """Test specific entity translations that were showing incorrect names in logs."""
 
 import pytest
-from unittest.mock import patch
-import sys
-import os
 
-# Add the custom_components directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components'))
+pytest.importorskip("homeassistant")
+
+from unittest.mock import patch
 
 def test_specific_problematic_entities():
     """Test the specific entities that were showing English-only names in the logs."""

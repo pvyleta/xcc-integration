@@ -1,13 +1,12 @@
 """Test XCC page discovery functionality using sample data."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 import os
-import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
-
-# Add the custom_components directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
     from lxml import etree

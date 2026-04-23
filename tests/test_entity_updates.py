@@ -1,6 +1,9 @@
 """Test entity value updates during coordinator refresh cycles."""
 
 import pytest
+
+pytest.importorskip("homeassistant")
+
 from unittest.mock import Mock, AsyncMock, patch
 import asyncio
 import logging
