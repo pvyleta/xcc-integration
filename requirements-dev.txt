@@ -17,6 +17,10 @@ types-requests>=2.28.0
 # Home Assistant development
 homeassistant>=2024.1.0
 
+# Integration runtime deps (imported by custom_components/xcc at test collection)
+lxml>=4.6.0
+aiofiles>=0.8.0
+
 # Additional testing utilities
 aioresponses>=0.7.0
 freezegun>=1.2.0
