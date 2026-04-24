@@ -16,10 +16,10 @@ def test_fve_config_meniceconfig_readonly_discovery():
 
     # Load the FVEINV descriptor
     sample_dir = project_root / "tests" / "sample_data"
-    fveinv_desc_file = sample_dir / "FVEINV.XML"
-    
+    fveinv_desc_file = sample_dir / "fveinv.xml"
+
     if not fveinv_desc_file.exists():
-        pytest.skip("FVEINV.XML sample file not found")
+        pytest.skip("fveinv.xml sample file not found")
 
     with open(fveinv_desc_file, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -51,10 +51,10 @@ def test_all_fve_config_entities_discovered():
 
     # Load the FVEINV descriptor
     sample_dir = project_root / "tests" / "sample_data"
-    fveinv_desc_file = sample_dir / "FVEINV.XML"
-    
+    fveinv_desc_file = sample_dir / "fveinv.xml"
+
     if not fveinv_desc_file.exists():
-        pytest.skip("FVEINV.XML sample file not found")
+        pytest.skip("fveinv.xml sample file not found")
 
     with open(fveinv_desc_file, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -92,10 +92,10 @@ def test_fve_config_vs_fvestats_entities():
 
     # Load the FVEINV descriptor
     sample_dir = project_root / "tests" / "sample_data"
-    fveinv_desc_file = sample_dir / "FVEINV.XML"
-    
+    fveinv_desc_file = sample_dir / "fveinv.xml"
+
     if not fveinv_desc_file.exists():
-        pytest.skip("FVEINV.XML sample file not found")
+        pytest.skip("fveinv.xml sample file not found")
 
     with open(fveinv_desc_file, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -129,10 +129,10 @@ def test_fve_config_entity_properties():
 
     # Load the FVEINV descriptor
     sample_dir = project_root / "tests" / "sample_data"
-    fveinv_desc_file = sample_dir / "FVEINV.XML"
-    
+    fveinv_desc_file = sample_dir / "fveinv.xml"
+
     if not fveinv_desc_file.exists():
-        pytest.skip("FVEINV.XML sample file not found")
+        pytest.skip("fveinv.xml sample file not found")
 
     with open(fveinv_desc_file, 'r', encoding='utf-8') as f:
         content = f.read()

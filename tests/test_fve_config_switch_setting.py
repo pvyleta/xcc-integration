@@ -89,10 +89,10 @@ async def test_fve_config_switch_entity_creation():
     from pathlib import Path
     
     project_root = Path(__file__).parent.parent
-    sample_file = project_root / "tests" / "sample_data" / "FVEINV.XML"
-    
+    sample_file = project_root / "tests" / "sample_data" / "fveinv.xml"
+
     if not sample_file.exists():
-        pytest.skip("FVEINV.XML sample file not found")
+        pytest.skip("fveinv.xml sample file not found")
     
     with open(sample_file, 'r', encoding='utf-8') as f:
         content = f.read()

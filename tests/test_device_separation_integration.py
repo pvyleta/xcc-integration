@@ -9,12 +9,12 @@ def test_device_separation_with_sample_data():
     
     # Sample XML files to test
     sample_files = {
-        "SPOT": "tests/sample_data/SPOT.XML",
-        "FVE": "tests/sample_data/FVE.XML", 
-        "BIV": "tests/sample_data/BIV.XML",
-        "OKRUH": "tests/sample_data/OKRUH.XML",
-        "TUV1": "tests/sample_data/TUV1.XML",
-        "STAVJED": "tests/sample_data/STAVJED.XML"
+        "SPOT": "tests/sample_data/spot.xml",
+        "FVE": "tests/sample_data/fve.xml",
+        "BIV": "tests/sample_data/biv.xml",
+        "OKRUH": "tests/sample_data/okruh.xml",
+        "TUV1": "tests/sample_data/tuv1.xml",
+        "STAVJED": "tests/sample_data/stavjed.xml"
     }
     
     # Priority order (highest to lowest)

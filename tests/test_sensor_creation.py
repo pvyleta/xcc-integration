@@ -66,7 +66,7 @@ def test_sensor_creation_with_sample_data():
             return None
     
     # Load descriptors to determine entity types
-    descriptor_files = ["OKRUH.XML", "FVE.XML", "TUV1.XML", "BIV.XML", "SPOT.XML"]
+    descriptor_files = ["okruh.xml", "fve.xml", "tuv1.xml", "biv.xml", "spot.xml"]
     descriptor_data = {}
     
     for desc_file in descriptor_files:

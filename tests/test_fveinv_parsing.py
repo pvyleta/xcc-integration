@@ -21,8 +21,8 @@ def load_sample_file(filename: str) -> str:
 def test_fveinv_descriptor_parsing():
     """Test parsing of FVEINV.XML descriptor file."""
     # Load the descriptor file
-    descriptor_content = load_sample_file("FVEINV.XML")
-    
+    descriptor_content = load_sample_file("fveinv.xml")
+
     # Parse using descriptor parser
     parser = XCCDescriptorParser()
     entity_configs = parser.parse_descriptor_files({"fveinv.xml": descriptor_content})
@@ -85,7 +85,7 @@ def test_fveinv_data_parsing():
 def test_fveinv_combined_parsing():
     """Test combined parsing of descriptor and data files."""
     # Load both files
-    descriptor_content = load_sample_file("FVEINV.XML")
+    descriptor_content = load_sample_file("fveinv.xml")
     data_content = load_sample_file("FVEINV10.XML")
     
     # Parse descriptor first
@@ -128,7 +128,7 @@ def test_fveinv_combined_parsing():
 
 def test_fveinv_entity_types():
     """Test that FVEINV entities get correct entity types."""
-    descriptor_content = load_sample_file("FVEINV.XML")
+    descriptor_content = load_sample_file("fveinv.xml")
     
     parser = XCCDescriptorParser()
     entity_configs = parser.parse_descriptor_files({"fveinv.xml": descriptor_content})

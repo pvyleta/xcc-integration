@@ -38,7 +38,7 @@ async def test_fveinv_full_parsing_flow():
     client = XCCClient("http://test.com", "user", "pass")
     
     # Load sample files
-    descriptor_content = load_sample_file("FVEINV.XML")
+    descriptor_content = load_sample_file("fveinv.xml")
     data_content = load_sample_file("FVEINV10.XML")
     
     # Mock the fetch_page method to return our sample data
@@ -80,9 +80,9 @@ async def test_fveinv_entity_creation():
     client = XCCClient("http://test.com", "user", "pass")
     
     # Load sample files
-    descriptor_content = load_sample_file("FVEINV.XML")
+    descriptor_content = load_sample_file("fveinv.xml")
     data_content = load_sample_file("FVEINV10.XML")
-    
+
     # Parse descriptor
     descriptor_data = {"fveinv.xml": descriptor_content}
     entity_configs = client.descriptor_parser.parse_descriptor_files(descriptor_data)
@@ -119,7 +119,7 @@ async def test_fveinv_friendly_names():
     client = XCCClient("http://test.com", "user", "pass")
     
     # Load sample files
-    descriptor_content = load_sample_file("FVEINV.XML")
+    descriptor_content = load_sample_file("fveinv.xml")
     
     # Parse descriptor
     descriptor_data = {"fveinv.xml": descriptor_content}

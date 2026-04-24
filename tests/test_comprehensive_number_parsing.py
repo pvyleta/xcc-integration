@@ -21,12 +21,12 @@ def test_comprehensive_number_entity_parsing():
     
     # Define the descriptor-data file pairs (like in XCC CLI)
     file_pairs = [
-        ("TUV1.XML", "TUV11.XML"),
-        ("STAVJED.XML", "STAVJED1.XML"),
-        ("OKRUH.XML", "OKRUH10.XML"),
-        ("BIV.XML", "BIV1.XML"),
-        ("FVE.XML", "FVE4.XML"),
-        ("SPOT.XML", "SPOT1.XML")
+        ("tuv1.xml", "TUV11.XML"),
+        ("stavjed.xml", "STAVJED1.XML"),
+        ("okruh.xml", "OKRUH10.XML"),
+        ("biv.xml", "BIV1.XML"),
+        ("fve.xml", "FVE4.XML"),
+        ("spot.xml", "SPOT1.XML")
     ]
     
     parser = XCCDescriptorParser()
@@ -205,9 +205,9 @@ def test_specific_tuv_number_entities():
     except ImportError as e:
         pytest.skip(f"Cannot import XCCDescriptorParser: {e}")
     
-    # Load TUV1.XML and TUV11.XML specifically
-    tuv1_path = project_root / "sample_data" / "TUV1.XML"
-    tuv11_path = project_root / "sample_data" / "TUV11.XML"
+    # Load tuv1.xml and TUV11.XML specifically
+    tuv1_path = project_root / "tests" / "sample_data" / "tuv1.xml"
+    tuv11_path = project_root / "tests" / "sample_data" / "TUV11.XML"
     
     if not tuv1_path.exists() or not tuv11_path.exists():
         pytest.skip("TUV sample files not found")
@@ -217,7 +217,7 @@ def test_specific_tuv_number_entities():
         tuv1_content = f.read()
     
     parser = XCCDescriptorParser()
-    entity_configs = parser._parse_single_descriptor(tuv1_content, 'TUV1.XML')
+    entity_configs = parser._parse_single_descriptor(tuv1_content, 'tuv1.xml')
     
     # Parse data
     try:

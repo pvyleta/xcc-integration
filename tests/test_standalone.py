@@ -86,8 +86,8 @@ def test_sample_data_exists():
     # Check for key sample files
     required_files = [
         "STAVJED1.XML",
-        "OKRUH10.XML", 
-        "OKRUH.XML"
+        "OKRUH10.XML",
+        "okruh.xml"
     ]
     
     existing_files = []
@@ -144,15 +144,15 @@ def test_descriptor_sample_parsing():
         if not sample_dir.exists():
             pytest.skip("Sample data directory not found")
         
-        sample_file = sample_dir / "OKRUH.XML"
+        sample_file = sample_dir / "okruh.xml"
         if not sample_file.exists():
-            pytest.skip("OKRUH.XML sample file not found")
-        
+            pytest.skip("okruh.xml sample file not found")
+
         with open(sample_file, 'r', encoding='windows-1250') as f:
             xml_content = f.read()
-        
+
         parser = descriptor_parser.XCCDescriptorParser()
-        entities = parser.parse_descriptor_files({"OKRUH.XML": xml_content})
+        entities = parser.parse_descriptor_files({"okruh.xml": xml_content})
         
         # Should parse some entities
         assert len(entities) > 0

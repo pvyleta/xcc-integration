@@ -200,13 +200,13 @@ class TestPageDiscoverySimple:
         """Test that expected sample data files exist."""
         expected_files = [
             'main.xml',
-            'FVE.XML',
+            'fve.xml',
             'FVE4.XML',
-            'OKRUH.XML',
+            'okruh.xml',
             'OKRUH10.XML',
-            'TUV1.XML',
+            'tuv1.xml',
             'TUV11.XML',
-            'STAVJED.XML',
+            'stavjed.xml',
             'STAVJED1.XML',
         ]
         

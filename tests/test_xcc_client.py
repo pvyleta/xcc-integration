@@ -6,11 +6,11 @@ import xml.etree.ElementTree as ET
 
 def test_sample_data_parsing(sample_data_dir):
     """Test that sample XML data can be parsed."""
-    xml_files = ["BIV.XML", "FVE.XML", "OKRUH.XML", "SPOT.XML", "STAVJED.XML", "TUV1.XML"]
-    
+    xml_files = ["biv.xml", "fve.xml", "okruh.xml", "spot.xml", "stavjed.xml", "tuv1.xml"]
+
     for xml_file in xml_files:
         file_path = os.path.join(sample_data_dir, xml_file)
-        
+
         # Test that XML can be parsed
         try:
             tree = ET.parse(file_path)
@@ -21,7 +21,7 @@ def test_sample_data_parsing(sample_data_dir):
 
 def test_xml_structure(sample_data_dir):
     """Test that XML files have expected structure."""
-    xml_files = ["BIV.XML", "FVE.XML", "OKRUH.XML", "STAVJED.XML", "TUV1.XML"]
+    xml_files = ["biv.xml", "fve.xml", "okruh.xml", "stavjed.xml", "tuv1.xml"]
 
     for xml_file in xml_files:
         file_path = os.path.join(sample_data_dir, xml_file)
@@ -39,24 +39,24 @@ def test_xml_structure(sample_data_dir):
 
         assert has_inputs or has_rows or has_blocks or has_pages, f"No expected XCC elements found in {xml_file}"
 
-    # Test SPOT.XML separately as it may contain login redirect instead of data
-    spot_file = os.path.join(sample_data_dir, "SPOT.XML")
+    # Test spot.xml separately as it may contain login redirect instead of data
+    spot_file = os.path.join(sample_data_dir, "spot.xml")
     if os.path.exists(spot_file):
         tree = ET.parse(spot_file)
         root = tree.getroot()
 
-        # SPOT.XML might be a login redirect, which is acceptable
+        # spot.xml might be a login redirect, which is acceptable
         has_login = root.tag == "LOGIN"
         has_inputs = any(elem.tag == "INPUT" for elem in root.iter())
         has_rows = any(elem.tag == "row" for elem in root.iter())
         has_blocks = any(elem.tag == "block" for elem in root.iter())
         has_pages = root.tag == "page"
 
-        assert has_login or has_inputs or has_rows or has_blocks or has_pages, "SPOT.XML should have either LOGIN or XCC data structure"
+        assert has_login or has_inputs or has_rows or has_blocks or has_pages, "spot.xml should have either LOGIN or XCC data structure"
 
 def test_xml_encoding(sample_data_dir):
     """Test that XML files are properly encoded."""
-    xml_files = ["BIV.XML", "FVE.XML", "OKRUH.XML", "SPOT.XML", "STAVJED.XML", "TUV1.XML"]
+    xml_files = ["biv.xml", "fve.xml", "okruh.xml", "spot.xml", "stavjed.xml", "tuv1.xml"]
     
     for xml_file in xml_files:
         file_path = os.path.join(sample_data_dir, xml_file)
