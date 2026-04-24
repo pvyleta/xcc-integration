@@ -146,9 +146,15 @@ def test_deduplication_mechanisms():
     assert "Clean up old entries" in entity_content, \
         "Should have memory cleanup for deduplication"
 
-    # Check for missing descriptor deduplication
-    assert "_logged_missing_descriptors" in coordinator_content, \
-        "Should have missing descriptor deduplication"
+    # Check for missing descriptor deduplication. Historically this was a
+    # per-prop ``_logged_missing_descriptors`` set; after the v1.15.8 refactor
+    # the coordinator aggregates with/without-descriptor counts per page into
+    # ``descriptor_stats_by_page`` and emits a single summary line per update.
+    # Either mechanism satisfies the "don't log once per missing prop" intent.
+    assert (
+        "_logged_missing_descriptors" in coordinator_content
+        or "descriptor_stats_by_page" in coordinator_content
+    ), "Should have missing descriptor deduplication or per-page aggregation"
 
     # Check for INPUT element deduplication
     assert "_logged_input_elements" in xcc_client_content, \
