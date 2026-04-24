@@ -231,6 +231,13 @@ class XCCSensor(XCCEntity, SensorEntity):
             # Initialize parent class (XCCEntity handles the coordinator and entity setup)
             super().__init__(coordinator, entity_id, description)
 
+            # Explicitly set entity_id to avoid HA's fallback of
+            # slugify(device_name + friendly_name), which bakes the controller
+            # IP address (part of the device name) into the entity_id.
+            base_entity_id = entity_id.replace('-', '_')
+            if not base_entity_id.startswith('xcc_'):
+                base_entity_id = f"xcc_{base_entity_id}"
+            self.entity_id = f"sensor.{base_entity_id}"
 
         except Exception as err:
             _LOGGER.error(
