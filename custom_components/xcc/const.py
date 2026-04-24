@@ -277,12 +277,19 @@ HIDDEN_SWITCHES: dict = {
 HIDDEN_BINARY_SENSORS: dict = {
     # Consumption-prioritizer "active" flags (BLOKYSPOTREBY = consumption block)
     # Each consumer has a -OK flag that turns 1 when the HP is currently serving it.
-    # Note: BLOKYSPOTREBY-OK (the heating-circuit one in okruh.xml) is intentionally
-    # omitted — its <row prop="BLOKYSPOTREBY-OK" text="Vypínač okruhu"
-    # text_en="Heating circuit switch"> descriptor already yields a read-only sensor
-    # with the correct name, and users relied on that name (sensor.heating_circuit_switch)
-    # in v1.15.1. The numbered siblings below have no such row-level prop in their
-    # descriptors and would otherwise fall back to _BOOL_i parsing as writable switches.
+    # All six share the same semantics and are named systematically as
+    # "HP heating/is-serving <consumer>". BLOKYSPOTREBY-OK is included here
+    # (overriding the okruh.xml descriptor) because the descriptor reuses the row
+    # label from the adjacent <switch prop="TO-POVOLENI"/> control ("Vypínač okruhu"
+    # / "Heating circuit switch"), which describes the switch, not the status flag.
+    "BLOKYSPOTREBY-OK": {
+        "friendly_name": "TČ topí okruh",
+        "friendly_name_en": "HP heating circuit",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
     "BLOKYSPOTREBY1-OK": {
         "friendly_name": "TČ topí bazén 1",
         "friendly_name_en": "HP heating pool 1",
