@@ -98,20 +98,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entity_type = entry.data.get(CONF_ENTITY_TYPE, DEFAULT_ENTITY_TYPE)
     _LOGGER.info("XCC integration configured for %s entities", entity_type)
 
-    # If the user ticked "Regenerate entity IDs" in the options flow, sweep
-    # the registry once before platforms set up (so fresh XCCEntity instances
-    # bind to the canonical slots) and then clear the flag so it behaves as
-    # a one-shot trigger rather than re-running on every reload.
-    if entry.options.get(CONF_REGENERATE_ENTITY_IDS):
+    # Did the user opt in to entity-ID regeneration? The flag can live in
+    # either ``entry.data`` (checkbox on the initial user step) or
+    # ``entry.options`` (later toggle in Configure). Either turns both the
+    # registry-wide sweep below AND the per-entity migration in
+    # ``XCCEntity._migrate_legacy_entity_id`` on for this setup only.
+    should_regenerate = bool(
+        entry.data.get(CONF_REGENERATE_ENTITY_IDS)
+        or entry.options.get(CONF_REGENERATE_ENTITY_IDS)
+    )
+    # Stash on the coordinator so entities can read it during
+    # ``async_added_to_hass`` (platform setup below) without another lookup.
+    # Entities must consult this attribute rather than the entry flags, which
+    # we clear below to make the regeneration a one-shot operation.
+    coordinator.regenerate_entity_ids = should_regenerate
+
+    if should_regenerate:
         stats = async_regenerate_entity_ids(
             hass, entry.entry_id, entry.data.get("ip_address", "")
         )
         _LOGGER.info("🧹 Regenerated entity IDs for %s: %s", entry.title, stats)
-        new_options = {**entry.options, CONF_REGENERATE_ENTITY_IDS: False}
-        hass.config_entries.async_update_entry(entry, options=new_options)
+        # Clear the one-shot flag(s) *before* wiring the update listener so
+        # async_update_entry doesn't cascade into a reload of the entry we
+        # are still setting up.
+        if entry.data.get(CONF_REGENERATE_ENTITY_IDS):
+            hass.config_entries.async_update_entry(
+                entry,
+                data={**entry.data, CONF_REGENERATE_ENTITY_IDS: False},
+            )
+        if entry.options.get(CONF_REGENERATE_ENTITY_IDS):
+            hass.config_entries.async_update_entry(
+                entry,
+                options={**entry.options, CONF_REGENERATE_ENTITY_IDS: False},
+            )
 
-    # Register an update listener so that changes to the options trigger a
-    # reload (and therefore re-run the regenerate step above).
+    # Register an update listener so that later changes to the options
+    # (e.g. the user toggling the regenerate flag again) trigger a reload.
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     # Set up integration platforms (sensors, binary_sensors, etc.)

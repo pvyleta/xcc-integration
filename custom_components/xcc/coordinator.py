@@ -69,6 +69,13 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.entity_configs = {}  # Cached entity configurations
         self._descriptors_loaded = False  # Track if descriptors have been loaded
 
+        # One-shot flag set by ``async_setup_entry`` when the user opted in
+        # to entity-ID regeneration. ``XCCEntity._migrate_legacy_entity_id``
+        # consults this attribute to decide whether to rewrite legacy
+        # IP-baked entity_ids on ``async_added_to_hass``. Default False so
+        # history attached to existing entity_ids is preserved by default.
+        self.regenerate_entity_ids: bool = False
+
         # Page discovery attributes
         self._pages_discovered = False
         self._discovered_descriptor_pages = []

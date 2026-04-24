@@ -49,8 +49,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             LANGUAGE_ENGLISH,
             LANGUAGE_CZECH,
         ]),
-        # Entity type is now fixed to integration entities only
-        # vol.Optional(CONF_ENTITY_TYPE, default=DEFAULT_ENTITY_TYPE): removed MQTT option
+        # Off by default so a remove+re-add of the integration preserves any
+        # entity_ids still held in HA's ``deleted_entities`` registry (and
+        # therefore the recorder history attached to those entity_id strings).
+        # Tick to rewrite legacy IP-baked ids to the canonical ``xcc_*`` form.
+        vol.Optional(CONF_REGENERATE_ENTITY_IDS, default=False): bool,
     },
 )
 

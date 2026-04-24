@@ -9,14 +9,16 @@
           "username": "Username",
           "password": "Password",
           "scan_interval": "Scan Interval (seconds)",
-          "entity_type": "Entity Type"
+          "entity_type": "Entity Type",
+          "regenerate_entity_ids": "Regenerate entity IDs (discard existing)"
         },
         "data_description": {
           "ip_address": "The IP address of your XCC controller",
           "username": "Username for XCC controller (default: xcc)",
           "password": "Password for XCC controller (default: xcc)",
           "scan_interval": "How often to update data from the controller in seconds (10-3600, default: 120)",
-          "entity_type": "Choose how entities are created: MQTT (via MQTT broker) or Integration (direct Home Assistant entities)"
+          "entity_type": "Choose how entities are created: MQTT (via MQTT broker) or Integration (direct Home Assistant entities)",
+          "regenerate_entity_ids": "Leave unchecked to keep any existing entity IDs and their recorder history when re-adding the integration. Tick only to rewrite legacy IP-based entity IDs (e.g. sensor.stav_jednotky_192_168_0_50_*) to the canonical xcc_* form — this will reset history for renamed entities."
         }
       }
     },
@@ -40,7 +42,8 @@
           "regenerate_entity_ids": "Regenerate entity IDs on next reload"
         },
         "data_description": {
-          "regenerate_entity_ids": "Rename any legacy entity IDs (e.g. containing the controller IP address) to the canonical xcc_<name> form and drop duplicates. Runs once on the next reload; the toggle is cleared afterwards."
+          "scan_interval": "How often to update data from the controller in seconds (10-3600, default: 120)",
+          "regenerate_entity_ids": "Rename any legacy entity IDs (e.g. containing the controller IP address) to the canonical xcc_<name> form and drop duplicates. Runs once on the next reload; the toggle is cleared afterwards. Warning: recorder history is keyed by entity_id, so renamed entities start with fresh history."
         }
       }
     }

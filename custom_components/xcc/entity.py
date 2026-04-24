@@ -190,7 +190,15 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         ``device_name + friendly_name`` and therefore contained the controller
         IP). Any ``suggested_object_id`` the entity provides is ignored in that
         path, so we have to rename explicitly after the entity is added.
+
+        Gated on ``coordinator.regenerate_entity_ids`` (set by
+        ``async_setup_entry`` from the user-facing checkbox) so the rename
+        only happens when the user explicitly opted in. Without the opt-in
+        the legacy entity_id is left untouched and the recorder history
+        keyed to that string is preserved.
         """
+        if not getattr(self.coordinator, "regenerate_entity_ids", False):
+            return
         try:
             registry = er.async_get(self.hass)
             current = self.entity_id

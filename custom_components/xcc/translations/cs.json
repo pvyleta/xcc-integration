@@ -8,13 +8,15 @@
           "ip_address": "IP Adresa",
           "username": "Uživatelské jméno",
           "password": "Heslo",
-          "scan_interval": "Interval skenování (sekundy)"
+          "scan_interval": "Interval skenování (sekundy)",
+          "regenerate_entity_ids": "Přegenerovat ID entit (zahodit stávající)"
         },
         "data_description": {
           "ip_address": "IP adresa vašeho XCC regulátoru",
           "username": "Uživatelské jméno pro XCC regulátor (výchozí: xcc)",
           "password": "Heslo pro XCC regulátor (výchozí: xcc)",
-          "scan_interval": "Jak často aktualizovat data z regulátoru v sekundách (10-3600, výchozí: 120)"
+          "scan_interval": "Jak často aktualizovat data z regulátoru v sekundách (10-3600, výchozí: 120)",
+          "regenerate_entity_ids": "Nechte nezaškrtnuté, aby se při opětovném přidání integrace zachovala stávající ID entit a jejich historie. Zaškrtněte jen pokud chcete zastaralá ID s IP adresou (např. sensor.stav_jednotky_192_168_0_50_*) přepsat na kanonický tvar xcc_* — přejmenovaným entitám se tím resetuje historie."
         }
       }
     },
@@ -38,7 +40,8 @@
           "regenerate_entity_ids": "Přegenerovat ID entit při příštím načtení"
         },
         "data_description": {
-          "regenerate_entity_ids": "Přejmenuje zastaralá ID entit (např. obsahující IP adresu regulátoru) na kanonický tvar xcc_<název> a zahodí duplicity. Provede se jednou při příštím načtení; přepínač se poté automaticky vypne."
+          "scan_interval": "Jak často aktualizovat data z regulátoru v sekundách (10-3600, výchozí: 120)",
+          "regenerate_entity_ids": "Přejmenuje zastaralá ID entit (např. obsahující IP adresu regulátoru) na kanonický tvar xcc_<název> a zahodí duplicity. Provede se jednou při příštím načtení; přepínač se poté automaticky vypne. Upozornění: historie v recorderu je vázaná na entity_id, takže přejmenované entity začnou s prázdnou historií."
         }
       }
     }
