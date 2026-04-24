@@ -30,6 +30,7 @@ from .entity_helpers import (
     infer_entity_type_from_attributes,
     lookup_with_normalized_fallback,
     normalize_property_name,
+    process_entities as _process_entities_core,
 )
 from .value_writer import resolve_property
 
@@ -228,271 +229,68 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             ) from err
 
     def _process_entities(self, entities: list[dict[str, Any]]) -> dict[str, Any]:
-        """Process raw entities into organized data structure with priority-based device assignment."""
-        processed_data = {
-            "sensors": {},
-            "binary_sensors": {},
-            "switches": {},
-            "numbers": {},
-            "selects": {},
-            "buttons": {},
-            "climates": {},
-        }
+        """Process raw entities into organized data structure with priority-based device assignment.
 
-        # Create entities list for the new platform approach
-        entities_list = []
-
-        # Priority-based device assignment: each entity appears only once
-        # Priority order (highest to lowest): SPOT, FVEINV, FVE, BIV, OKRUH, TUV1, STAVJED, NAST, XCC_HIDDEN_SETTINGS
-        device_priority = [
-            "SYSCONFIG",  # System configuration from main.xml (highest priority for SYSCONFIG-* entities)
-            "SPOT",
-            "FVEINV",  # PV Inverter (higher priority than FVE for inverter-specific entities)
-            "FVE",
-            "BIV",
-            "OKRUH",
-            "TUV1",
-            "STAVJED",
-            "NAST",  # Heat pump settings from NAST.XML
-            "XCC_HIDDEN_SETTINGS"  # Special device for entities without descriptors
-        ]
-
-        # Track assigned entities to prevent duplicates
-        assigned_entities = set()
-
-        # Separate entities with and without descriptors
-        entities_with_descriptors = []
-        entities_without_descriptors = []
-
-        # Track descriptor stats by page for consolidated logging
-        descriptor_stats_by_page = {}
-
+        Thin wrapper around :func:`entity_helpers.process_entities` — keeps the
+        pipeline pure (and therefore unit-testable without Home Assistant) and
+        lets the coordinator stay in charge of stateful bookkeeping
+        (``self.entities`` merge, per-page logging).
+        """
+        # Per-page descriptor stats, logged before the priority pass so the
+        # summary line matches what process_entities will act on.
+        descriptor_stats_by_page: dict[str, dict[str, list[str]]] = {}
         for entity in entities:
             prop = entity["attributes"]["field_name"]
             page = entity["attributes"].get("page", "unknown")
             has_descriptor = prop in self.entity_configs
-
-            # Special handling for NAST entities - treat them as having descriptors
             is_nast_entity = page.upper() == "NAST.XML"
-
-            # Special handling for SYSCONFIG entities from main.xml
             is_sysconfig_entity = prop.startswith("SYSCONFIG-")
-
-            # Track stats by page
-            if page not in descriptor_stats_by_page:
-                descriptor_stats_by_page[page] = {"with": [], "without": []}
-
+            bucket = descriptor_stats_by_page.setdefault(
+                page, {"with": [], "without": []}
+            )
             if has_descriptor or is_nast_entity or is_sysconfig_entity:
-                entities_with_descriptors.append(entity)
-                descriptor_stats_by_page[page]["with"].append(prop)
+                bucket["with"].append(prop)
             else:
-                entities_without_descriptors.append(entity)
-                descriptor_stats_by_page[page]["without"].append(prop)
+                bucket["without"].append(prop)
 
-        # Log consolidated descriptor stats in a single line
         page_stats = []
         for page, stats in descriptor_stats_by_page.items():
             with_count = len(stats["with"])
             without_count = len(stats["without"])
-            if with_count > 0 and without_count > 0:
+            if with_count and without_count:
                 page_stats.append(f"{page}(✅{with_count}/❌{without_count})")
-            elif with_count > 0:
+            elif with_count:
                 page_stats.append(f"{page}(✅{with_count})")
-            elif without_count > 0:
+            elif without_count:
                 page_stats.append(f"{page}(❌{without_count})")
-
         if page_stats:
-            _LOGGER.debug("📊 Descriptors: %d entities, %d configs | %s", len(entities), len(self.entity_configs), " | ".join(page_stats))
+            _LOGGER.debug(
+                "📊 Descriptors: %d entities, %d configs | %s",
+                len(entities), len(self.entity_configs), " | ".join(page_stats),
+            )
 
-        # Group entities with descriptors by page/device for priority processing
-        entities_by_page = {}
-        page_normalization_stats = {}
+        processed_data, entities_metadata = _process_entities_core(
+            entities, self.entity_configs, self.language
+        )
 
-        for entity in entities_with_descriptors:
-            page = entity["attributes"].get("page", "unknown").upper()
-            prop = entity["attributes"]["field_name"]
-            # Normalize page names (remove numbers and .XML extension)
-            # Special handling for known page types
-            if page == "NAST.XML":
-                page_normalized = "NAST"
-            elif page == "MAIN.XML" or prop.startswith("SYSCONFIG-"):
-                page_normalized = "SYSCONFIG"
-            elif page == "STATUS.XML":
-                # STATUS.XML has no descriptor; its entities belong to the same
-                # logical device as STAVJED1.XML (heat pump unit status).
-                page_normalized = "STAVJED"
-            else:
-                page_normalized = page.replace("1.XML", "").replace("10.XML", "").replace("11.XML", "").replace("4.XML", "").replace(".XML", "")
+        # Merge into the long-lived entities map the rest of the coordinator /
+        # platform layer reads from.
+        self.entities.update(entities_metadata)
 
-            # Track normalization stats
-            if page not in page_normalization_stats:
-                page_normalization_stats[page] = {"normalized": page_normalized, "count": 0}
-            page_normalization_stats[page]["count"] += 1
-
-            if page_normalized not in entities_by_page:
-                entities_by_page[page_normalized] = []
-            entities_by_page[page_normalized].append(entity)
-
-        # Add entities without descriptors to hidden settings device
-        if entities_without_descriptors:
-            entities_by_page["XCC_HIDDEN_SETTINGS"] = entities_without_descriptors
-
-        # Log consolidated page grouping in a single line
-        page_groups = [f"{page}:{len(ents)}" for page, ents in entities_by_page.items()]
-        _LOGGER.debug("📊 Page grouping: %s", " | ".join(page_groups))
-
-        _LOGGER.info("🏗️ PRIORITY-BASED DEVICE ASSIGNMENT")
-        _LOGGER.info("   Device priority order: %s", " > ".join(device_priority))
-        _LOGGER.info("   Pages found: %s", list(entities_by_page.keys()))
-
-        # Process entities in priority order
-        for device_name in device_priority:
-            if device_name not in entities_by_page:
-                _LOGGER.debug("   📄 %s: No entities found", device_name)
-                continue
-
-            device_entities = entities_by_page[device_name]
-            assigned_count = 0
-            skipped_count = 0
-
-            for entity in device_entities:
-                prop = entity["attributes"]["field_name"]
-
-                # Skip if entity already assigned to higher priority device
-                if prop in assigned_entities:
-                    skipped_count += 1
-                    continue
-
-                # Mark entity as assigned
-                assigned_entities.add(prop)
-                assigned_count += 1
-
-                entity_type = self.get_entity_type(prop)
-
-                # If no descriptor found, use the entity's own type from data page parsing
-                # (e.g. _BOOL_i → binary_sensor, _REAL_ → sensor, _INT_ → sensor)
-                if entity_type == "sensor" and prop not in self.entity_configs:
-                    parsed_type = entity.get("entity_type")
-                    if parsed_type and parsed_type != "sensor":
-                        entity_type = parsed_type
-                        _LOGGER.debug(
-                            "Entity %s: no descriptor, using parsed type '%s' from data page NAME attribute",
-                            prop, entity_type
-                        )
-                    else:
-                        if not hasattr(self, "_logged_missing_descriptors"):
-                            self._logged_missing_descriptors = set()
-                        if prop not in self._logged_missing_descriptors:
-                            _LOGGER.debug(
-                                "Entity %s: no descriptor found, defaulting to sensor", prop
-                            )
-                            self._logged_missing_descriptors.add(prop)
-
-                # Get descriptor information for this entity
-                descriptor_config = self.entity_configs.get(prop, {})
-
-                # Special handling for NAST entities - create synthetic descriptor config
-                if entity["attributes"].get("page", "").upper() == "NAST.XML" and not descriptor_config:
-                    # Use the attributes from the NAST entity itself
-                    entity_attrs = entity.get("attributes", {})
-                    descriptor_config = {
-                        "friendly_name": entity_attrs.get("friendly_name", prop.replace("-", " ").title()),
-                        "friendly_name_en": entity_attrs.get("friendly_name", prop.replace("-", " ").title()),
-                        "unit": entity_attrs.get("unit_of_measurement", ""),
-                        "element_type": entity.get("entity_type", "sensor"),
-                        "source": "NAST",
-                    }
-
-                # Use descriptor friendly name based on language preference
-                friendly_name = self._get_friendly_name(descriptor_config, prop)
-
-                unit = descriptor_config.get("unit") or entity["attributes"].get("unit", "")
-
-                # Create entity data structure for new platforms with device assignment
-                # Ensure proper entity ID formatting with xcc_ prefix and valid characters
-                entity_id_suffix = format_entity_id_suffix(prop)
-                entity_data = {
-                    "entity_id": f"xcc_{entity_id_suffix}",
-                    "prop": prop,
-                    "name": friendly_name,
-                    "friendly_name": friendly_name,
-                    "state": entity["attributes"].get("value", ""),
-                    "unit": unit,
-                    "page": entity["attributes"].get("page", "unknown"),
-                    "device": device_name,  # Add device assignment
-                }
-
-                entities_list.append(entity_data)
-
-                # Store entity metadata for later use (use entity_id as key for proper lookup)
-                self.entities[entity_data["entity_id"]] = {
-                    "type": entity_type,
-                    "entity_id": entity_data["entity_id"],  # also inside value for platform lookup
-                    "data": entity,
-                    "page": entity["attributes"].get("page", "unknown"),
-                    "prop": prop,  # Keep prop for reference
-                    "descriptor_config": descriptor_config,  # Include descriptor config for platforms
-                    "device": device_name,  # Add device assignment
-                }
-
-                # Create state data structure that entities can use to retrieve values
-                # This is the key fix - store data in the format that _get_current_value expects
-                # IMPORTANT: Extract state from the correct field - entities have "state", not "value" in attributes
-                state_value = entity.get("state", "")
-
-                # IMPORTANT: Define entity_id BEFORE using it in logging to avoid UnboundLocalError
-                entity_id = entity_data["entity_id"]
-
-                state_data = {
-                    "state": state_value,
-                    "attributes": entity["attributes"],
-                    "entity_id": entity_id,
-                    "prop": prop,
-                    "name": friendly_name,  # Use enhanced friendly name
-                    "unit": unit,  # Use enhanced unit from descriptor
-                    "page": entity["attributes"].get("page", "unknown"),
-                    "device": device_name,  # Add device assignment
-                }
-
-                # Store in processed_data with the correct structure for entity value retrieval
-                if entity_type == "switch":
-                    processed_data["switches"][entity_id] = state_data
-                elif entity_type == "binary_sensor":
-                    processed_data["binary_sensors"][entity_id] = state_data
-                elif entity_type == "number":
-                    processed_data["numbers"][entity_id] = state_data
-                elif entity_type == "select":
-                    processed_data["selects"][entity_id] = state_data
-                elif entity_type == "button":
-                    processed_data["buttons"][entity_id] = state_data
-                else:
-                    processed_data["sensors"][entity_id] = state_data
-
-            # Log device assignment summary
-            _LOGGER.info("   📄 %s: Assigned %d entities, skipped %d duplicates", device_name, assigned_count, skipped_count)
-
-
-
-        # Store entities list for new platforms
-        processed_data["entities"] = entities_list
-
-        # Log final entity distribution with detailed breakdown
         entity_counts = {
             "switches": len(processed_data["switches"]),
+            "binary_sensors": len(processed_data["binary_sensors"]),
             "numbers": len(processed_data["numbers"]),
             "selects": len(processed_data["selects"]),
             "buttons": len(processed_data["buttons"]),
             "sensors": len(processed_data["sensors"]),
-            "total": len(entities_list),
+            "total": len(processed_data["entities"]),
         }
         _LOGGER.info("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
         _LOGGER.info("Final entity distribution: %s", entity_counts)
-
-        # Log data structure that will be returned
         _LOGGER.info(
             "Returning processed_data with keys: %s", list(processed_data.keys())
         )
-
         return processed_data
 
     def _format_entity_id(self, prop: str) -> str:

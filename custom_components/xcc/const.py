@@ -31,6 +31,7 @@ CONF_PASSWORD: Final = "password"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
 CONF_ENTITY_TYPE: Final = "entity_type"
 CONF_LANGUAGE: Final = "language"
+CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
 
 # Default values
 DEFAULT_USERNAME: Final = "xcc"

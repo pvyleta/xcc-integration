@@ -36,7 +36,11 @@
         "title": "XCC Controller Options",
         "description": "Configure advanced options for your XCC controller",
         "data": {
-          "scan_interval": "Scan Interval (seconds)"
+          "scan_interval": "Scan Interval (seconds)",
+          "regenerate_entity_ids": "Regenerate entity IDs on next reload"
+        },
+        "data_description": {
+          "regenerate_entity_ids": "Rename any legacy entity IDs (e.g. containing the controller IP address) to the canonical xcc_<name> form and drop duplicates. Runs once on the next reload; the toggle is cleared afterwards."
         }
       }
     }

@@ -5,13 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LANGUAGE_ENGLISH
 from .coordinator import XCCDataUpdateCoordinator
+from .entity_helpers import format_entity_id_suffix
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -171,14 +173,61 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         """Run when entity is added to Home Assistant."""
         await super().async_added_to_hass()
 
+        # Rename legacy IP-baked entity_ids (e.g. from deleted-entities restore
+        # after the user removed and re-added the integration) to the clean
+        # xcc_* form before any consumer reads self.entity_id.
+        self._migrate_legacy_entity_id()
+
         # Force update entity name in registry if it has changed
         await self._update_entity_registry_name()
+
+    def _migrate_legacy_entity_id(self) -> None:
+        """Rename registry entity_id to the canonical xcc_* form if needed.
+
+        When a config entry is removed, HA keeps the registry entry in
+        ``deleted_entities``. On re-add, ``async_get_or_create`` restores the
+        old ``entity_id`` (which, for pre-v1.15.6 installs, was slugified from
+        ``device_name + friendly_name`` and therefore contained the controller
+        IP). Any ``suggested_object_id`` the entity provides is ignored in that
+        path, so we have to rename explicitly after the entity is added.
+        """
+        try:
+            registry = er.async_get(self.hass)
+            current = self.entity_id
+            if not current or "." not in current:
+                return
+
+            domain, _object_id = current.split(".", 1)
+            suffix = self.entity_id_suffix or ""
+            if not suffix.startswith("xcc_"):
+                suffix = f"xcc_{suffix}"
+            desired = f"{domain}.{suffix}"
+
+            if current == desired:
+                return
+
+            if registry.async_get(current) is None:
+                return
+
+            if registry.async_get(desired) is not None:
+                _LOGGER.debug(
+                    "Cannot rename %s → %s: target entity_id already registered",
+                    current, desired,
+                )
+                return
+
+            _LOGGER.info(
+                "🆔 Renaming legacy entity_id: %s → %s", current, desired
+            )
+            registry.async_update_entity(current, new_entity_id=desired)
+        except Exception as e:
+            _LOGGER.warning(
+                "Failed to migrate entity_id for %s: %s", self.entity_id, e
+            )
 
     async def _update_entity_registry_name(self) -> None:
         """Update entity name in the entity registry if needed."""
         try:
-            from homeassistant.helpers import entity_registry as er
-
             registry = er.async_get(self.hass)
             entity_entry = registry.async_get(self.entity_id)
 
@@ -457,3 +506,67 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             # Request immediate update
             await self.coordinator.async_request_refresh()
         return success
+
+
+
+@callback
+def async_regenerate_entity_ids(
+    hass: HomeAssistant,
+    config_entry_id: str,
+    ip_address: str,
+) -> dict[str, int]:
+    """Force all this entry's registry entries onto the ``xcc_<suffix>`` form.
+
+    Invoked from ``__init__.async_setup_entry`` when the user ticks the
+    "Regenerate entity IDs" options toggle. Walks every registry entry owned
+    by this config entry and:
+
+    * Computes the canonical object_id ``xcc_<slug>`` from the entry's
+      ``unique_id`` (which is always ``<ip>_<original-entity-id-suffix>``).
+    * If the current entity_id doesn't match, renames it via
+      ``async_update_entity(new_entity_id=…)``.
+    * If the canonical target is already occupied by another entry, removes
+      the current legacy entry instead — the canonical one is the one new
+      entities will bind to, so the duplicate is the one to drop.
+
+    Returns a small counters dict for logging.
+    """
+    registry = er.async_get(hass)
+    entries = er.async_entries_for_config_entry(registry, config_entry_id)
+    prefix = f"{ip_address}_"
+
+    stats = {"scanned": 0, "renamed": 0, "removed": 0, "skipped": 0}
+
+    for entry in entries:
+        stats["scanned"] += 1
+        uid = entry.unique_id or ""
+        if not uid.startswith(prefix):
+            stats["skipped"] += 1
+            continue
+
+        suffix = uid[len(prefix):]
+        if not suffix.startswith("xcc_"):
+            suffix = f"xcc_{format_entity_id_suffix(suffix)}"
+        desired = f"{entry.domain}.{suffix}"
+
+        if entry.entity_id == desired:
+            stats["skipped"] += 1
+            continue
+
+        existing = registry.async_get(desired)
+        if existing is not None and existing.entity_id != entry.entity_id:
+            _LOGGER.info(
+                "🧹 Removing legacy duplicate %s (canonical %s already registered)",
+                entry.entity_id, desired,
+            )
+            registry.async_remove(entry.entity_id)
+            stats["removed"] += 1
+            continue
+
+        _LOGGER.info(
+            "🆔 Regenerating entity_id: %s → %s", entry.entity_id, desired
+        )
+        registry.async_update_entity(entry.entity_id, new_entity_id=desired)
+        stats["renamed"] += 1
+
+    return stats

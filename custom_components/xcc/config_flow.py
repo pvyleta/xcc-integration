@@ -8,14 +8,20 @@ from typing import Any
 
 import aiohttp
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     CONF_ENTITY_TYPE,
     CONF_LANGUAGE,
+    CONF_REGENERATE_ENTITY_IDS,
     CONF_SCAN_INTERVAL,
     DEFAULT_LANGUAGE,
     DEFAULT_PASSWORD,
@@ -99,6 +105,12 @@ class XCCConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Return the options flow handler."""
+        return XCCOptionsFlowHandler(config_entry)
+
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
@@ -131,6 +143,44 @@ class XCCConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
         )
+
+
+class XCCOptionsFlowHandler(OptionsFlow):
+    """Handle options for the XCC integration."""
+
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Store the config entry for option lookups."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        """Show the single options step.
+
+        The only option today is ``regenerate_entity_ids``: when submitted as
+        true, ``async_setup_entry`` will sweep the entity registry on the next
+        reload, rename legacy IP-baked ids to the canonical ``xcc_<suffix>``
+        form, and drop any stale duplicates. The flag is cleared after the
+        sweep so it behaves as a one-shot trigger.
+        """
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current_scan = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL,
+            self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+        )
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_SCAN_INTERVAL, default=current_scan): vol.All(
+                    vol.Coerce(int),
+                    vol.Range(min=10, max=3600),
+                ),
+                vol.Optional(CONF_REGENERATE_ENTITY_IDS, default=False): bool,
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)
 
 
 class CannotConnect(HomeAssistantError):

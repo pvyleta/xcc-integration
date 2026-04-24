@@ -34,7 +34,11 @@
         "title": "Možnosti XCC Regulátoru",
         "description": "Nakonfigurujte pokročilé možnosti pro váš XCC regulátor",
         "data": {
-          "scan_interval": "Interval skenování (sekundy)"
+          "scan_interval": "Interval skenování (sekundy)",
+          "regenerate_entity_ids": "Přegenerovat ID entit při příštím načtení"
+        },
+        "data_description": {
+          "regenerate_entity_ids": "Přejmenuje zastaralá ID entit (např. obsahující IP adresu regulátoru) na kanonický tvar xcc_<název> a zahodí duplicity. Provede se jednou při příštím načtení; přepínač se poté automaticky vypne."
         }
       }
     }

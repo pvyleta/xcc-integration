@@ -12,12 +12,14 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_ENTITY_TYPE,
+    CONF_REGENERATE_ENTITY_IDS,
     DEFAULT_ENTITY_TYPE,
     DOMAIN,
     ENTITY_TYPE_INTEGRATION,
     PLATFORMS,
 )
 from .coordinator import XCCDataUpdateCoordinator
+from .entity import async_regenerate_entity_ids
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,6 +98,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entity_type = entry.data.get(CONF_ENTITY_TYPE, DEFAULT_ENTITY_TYPE)
     _LOGGER.info("XCC integration configured for %s entities", entity_type)
 
+    # If the user ticked "Regenerate entity IDs" in the options flow, sweep
+    # the registry once before platforms set up (so fresh XCCEntity instances
+    # bind to the canonical slots) and then clear the flag so it behaves as
+    # a one-shot trigger rather than re-running on every reload.
+    if entry.options.get(CONF_REGENERATE_ENTITY_IDS):
+        stats = async_regenerate_entity_ids(
+            hass, entry.entry_id, entry.data.get("ip_address", "")
+        )
+        _LOGGER.info("🧹 Regenerated entity IDs for %s: %s", entry.title, stats)
+        new_options = {**entry.options, CONF_REGENERATE_ENTITY_IDS: False}
+        hass.config_entries.async_update_entry(entry, options=new_options)
+
+    # Register an update listener so that changes to the options trigger a
+    # reload (and therefore re-run the regenerate step above).
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
     # Set up integration platforms (sensors, binary_sensors, etc.)
     # Only do this AFTER we have successfully fetched initial data AND registered the main device
     _LOGGER.debug("Setting up integration entities")
@@ -105,6 +123,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info("✅ XCC integration setup complete for %s", entry.data.get("ip_address"))
 
     return True
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the config entry when its options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
