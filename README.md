@@ -6,7 +6,7 @@ Inspired by work in https://github.com/Pdobry/xcc-graph.
 
 ## 🏠 Home Assistant Integration Features
 
-- 🔧 **470+ settable fields** automatically discovered across 6 configuration pages
+- 🔧 **470+ settable fields** automatically discovered across 8 configuration pages
 - 📊 **Live data monitoring** with real-time sensor values
 - 🌐 **Bilingual support** (English/Czech with auto-detection)
 - 📋 **Organized by device** (heating, PV, hot water, auxiliary source, etc.)
@@ -67,8 +67,10 @@ The integration automatically discovers entities from these XCC pages:
 |------|-------------|------------------|
 | **Heating Circuits** | Temperature control, schedules | Temperature sensors, setpoint controls |
 | **Photovoltaics** | Battery management, export limits | Power sensors, battery controls |
+| **PV Inverter** | Inverter configuration and telemetry | String/phase sensors, inverter settings |
 | **Hot Water** | Sanitization, circulation | Water temperature, heating controls |
 | **Auxiliary Source** | Backup heating system | Status sensors, operation controls |
 | **Spot Pricing** | Dynamic pricing optimization | Price sensors, optimization switches |
 | **System Status** | Overall system information | Status sensors, diagnostic data |
+| **Heat Pump Settings** | Advanced configuration (discovered dynamically) | Configuration switches, numbers |
 
