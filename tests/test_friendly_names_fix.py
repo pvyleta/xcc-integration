@@ -1,5 +1,6 @@
 """Test friendly name fixes for XCC integration."""
 
+import os
 import pytest
 
 pytest.importorskip("homeassistant")
@@ -21,19 +22,19 @@ def test_friendly_name_fixes():
     test_cases = [
         {
             "name": "TO-FVEPRETOPENI-POVOLENI",
-            "file": "sample_data/OKRUH.XML",
+            "file": "tests/sample_data/okruh.xml",
             "expected_friendly_name_en": "Overheat circuit when the outside temp. decreases",
             "description": "Switch element should inherit parent row's text_en"
         },
         {
-            "name": "FVE-CHARGEATCHEAPMAXSOC", 
-            "file": "sample_data/FVE.XML",
+            "name": "FVE-CHARGEATCHEAPMAXSOC",
+            "file": "tests/sample_data/fve.xml",
             "expected_friendly_name_en": "Ukončit nabíjení při překročení SOC baterie",  # Should fall back to Czech
             "description": "Should fall back to Czech when text_en is empty"
         },
         {
             "name": "FVM0-CURRENTBATTERYSETTINGS-CHARGEIMAX",
-            "file": "sample_data/FVE.XML", 
+            "file": "tests/sample_data/fve.xml",
             "expected_friendly_name_en": "Iverter 1 - Actual maximal charge current",
             "description": "Readonly sensor should use parent row's text_en"
         }
@@ -53,7 +54,7 @@ def test_friendly_name_fixes():
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 xml_content = f.read()
             
-            page_name = os.path.basename(file_path).replace('.XML', '')
+            page_name = os.path.basename(file_path).rsplit('.', 1)[0]
             entity_configs = parser._parse_single_descriptor(xml_content, page_name)
             
             # Find the test entity

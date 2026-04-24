@@ -20,7 +20,7 @@ def test_czech_english_translations_comprehensive():
         test_cases = [
             {
                 "name": "TCSTAV3-VYKON (number element - first pass)",
-                "xml_file": "tests/sample_data/STAVJED.XML",
+                "xml_file": "tests/sample_data/stavjed.xml",
                 "prop": "TCSTAV3-VYKON",
                 "expected_czech": "Výkon TČ (TCSTAV3-VYKON)",
                 "expected_english": "Power output by HP (TCSTAV3-VYKON)",
@@ -28,7 +28,7 @@ def test_czech_english_translations_comprehensive():
             },
             {
                 "name": "TCSTAV5-FANH (number element - first pass)",
-                "xml_file": "tests/sample_data/STAVJED.XML",
+                "xml_file": "tests/sample_data/stavjed.xml",
                 "prop": "TCSTAV5-FANH",
                 "expected_czech": "Otáčky horního ventilátoru (TCSTAV5-FANH)",
                 "expected_english": "RPM of upper fan (TCSTAV5-FANH)",
@@ -36,15 +36,15 @@ def test_czech_english_translations_comprehensive():
             },
             {
                 "name": "TCSTAV3-TCJ (number element - first pass)",
-                "xml_file": "tests/sample_data/STAVJED.XML",
-                "prop": "TCSTAV3-TCJ", 
+                "xml_file": "tests/sample_data/stavjed.xml",
+                "prop": "TCSTAV3-TCJ",
                 "expected_czech": "Teplota kondenzátu (TCSTAV3-TCJ)",
                 "expected_english": "Condensate temperature (TCSTAV3-TCJ)",
                 "element_type": "number"
             },
             {
                 "name": "TO-POZADOVANA (number element - first pass)",
-                "xml_file": "tests/sample_data/OKRUH.XML",
+                "xml_file": "tests/sample_data/okruh.xml",
                 "prop": "TO-POZADOVANA",
                 "expected_czech": "Požadovaná teplota prostoru",
                 "expected_english": "Requested room temperature",
@@ -52,7 +52,7 @@ def test_czech_english_translations_comprehensive():
             },
             {
                 "name": "TUVEXTERNIOHREVMOTOHODINY (number element - first pass)",
-                "xml_file": "tests/sample_data/TUV1.XML",
+                "xml_file": "tests/sample_data/tuv1.xml",
                 "prop": "TUVEXTERNIOHREVMOTOHODINY",
                 "expected_czech": "Externí ohřev - Motohodiny",
                 "expected_english": "External heating - Runhours",
@@ -65,7 +65,7 @@ def test_czech_english_translations_comprehensive():
             with open(test_case['xml_file'], 'r', encoding='utf-8') as f:
                 xml_content = f.read()
             
-            page_name = test_case['xml_file'].split('/')[-1].replace('.XML', '').lower()
+            page_name = test_case['xml_file'].split('/')[-1].rsplit('.', 1)[0].lower()
             
             # Parse the XML and get entity configs
             descriptor_data = {page_name: xml_content}
@@ -156,17 +156,17 @@ def test_regression_prevention():
         # Test a few key entities to ensure they never regress to English-only
         regression_test_entities = [
             {
-                "file": "tests/sample_data/STAVJED.XML",
+                "file": "tests/sample_data/stavjed.xml",
                 "prop": "TCSTAV8-VYKON",
                 "must_be_different": True  # Czech and English must be different
             },
             {
-                "file": "tests/sample_data/OKRUH.XML", 
+                "file": "tests/sample_data/okruh.xml",
                 "prop": "TO-EK50",
                 "must_be_different": True  # Czech and English must be different
             },
             {
-                "file": "tests/sample_data/TUV1.XML",
+                "file": "tests/sample_data/tuv1.xml",
                 "prop": "TUVEXTERNIOHREVMOTOHODINY",
                 "must_be_different": True  # Czech and English must be different
             }
@@ -177,7 +177,7 @@ def test_regression_prevention():
             with open(test_entity['file'], 'r', encoding='utf-8') as f:
                 xml_content = f.read()
             
-            page_name = test_entity['file'].split('/')[-1].replace('.XML', '').lower()
+            page_name = test_entity['file'].split('/')[-1].rsplit('.', 1)[0].lower()
             
             # Parse the XML and get entity configs
             descriptor_data = {page_name: xml_content}

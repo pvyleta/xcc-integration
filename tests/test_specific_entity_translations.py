@@ -17,7 +17,7 @@ def test_specific_problematic_entities():
         # These are the exact entities from the user's logs that were showing incorrect names
         problematic_entities = [
             {
-                "file": "tests/sample_data/STAVJED.XML",
+                "file": "tests/sample_data/stavjed.xml",
                 "entities": [
                     {
                         "prop": "TCSTAV0-FANL",
@@ -33,7 +33,7 @@ def test_specific_problematic_entities():
                 ]
             },
             {
-                "file": "tests/sample_data/OKRUH.XML",
+                "file": "tests/sample_data/okruh.xml",
                 "entities": [
                     {
                         "prop": "TO-EK50",
@@ -59,7 +59,7 @@ def test_specific_problematic_entities():
             with open(file_data['file'], 'r', encoding='utf-8') as f:
                 xml_content = f.read()
             
-            page_name = file_data['file'].split('/')[-1].replace('.XML', '').lower()
+            page_name = file_data['file'].split('/')[-1].rsplit('.', 1)[0].lower()
             
             # Parse the XML and get entity configs
             descriptor_data = {page_name: xml_content}
@@ -109,7 +109,7 @@ def test_log_format_verification():
         parser = XCCDescriptorParser()
         
         # Parse a sample file to trigger debug logging
-        with open("tests/sample_data/STAVJED.XML", 'r', encoding='utf-8') as f:
+        with open("tests/sample_data/stavjed.xml", 'r', encoding='utf-8') as f:
             xml_content = f.read()
         
         descriptor_data = {"stavjed": xml_content}
@@ -152,9 +152,9 @@ def test_both_code_paths_working():
         
         # Parse multiple files to ensure both code paths are tested
         test_files = [
-            "tests/sample_data/STAVJED.XML",
-            "tests/sample_data/OKRUH.XML", 
-            "tests/sample_data/TUV1.XML"
+            "tests/sample_data/stavjed.xml",
+            "tests/sample_data/okruh.xml",
+            "tests/sample_data/tuv1.xml"
         ]
         
         total_entities_processed = 0
@@ -164,7 +164,7 @@ def test_both_code_paths_working():
             with open(xml_file, 'r', encoding='utf-8') as f:
                 xml_content = f.read()
             
-            page_name = xml_file.split('/')[-1].replace('.XML', '').lower()
+            page_name = xml_file.split('/')[-1].rsplit('.', 1)[0].lower()
             descriptor_data = {page_name: xml_content}
             entity_configs = parser.parse_descriptor_files(descriptor_data)
             

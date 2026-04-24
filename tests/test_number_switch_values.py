@@ -1,10 +1,15 @@
 """Test that number and switch entities get proper values with enhanced descriptor parsing."""
 
+import sys
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("homeassistant")
 
 from unittest.mock import Mock
+
+project_root = Path(__file__).parent.parent
 
 
 def test_enhanced_descriptor_identifies_writable_entities():
