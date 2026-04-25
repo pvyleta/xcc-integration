@@ -116,17 +116,26 @@ def lookup_with_normalized_fallback(
 
 
 # Device priority order used by ``process_entities``. Highest priority first.
-# Copied out of XCCDataUpdateCoordinator so the pure pipeline remains
-# self-contained; keep in sync with coordinator._process_entities if that
-# method is ever extended.
+# Any entity whose page-derived device key (see ``_normalize_page_to_device``)
+# is *not* listed here is silently dropped, so every sub-device whose data
+# pages may carry descriptor-backed props must appear in this tuple.
+# Keep in sync with ``XCCDataUpdateCoordinator._init_device_info``.
 _DEVICE_PRIORITY: tuple[str, ...] = (
     "SYSCONFIG",
     "SPOT",
     "FVEINV",
     "FVE",
     "BIV",
+    "BIVTUV",
     "OKRUH",
     "TUV1",
+    "TUV2",
+    "BAZEN1",
+    "BAZEN2",
+    "BAZMIST",
+    "SOLAR",
+    "AKU",
+    "POCASI",
     "STAVJED",
     "NAST",
     "XCC_HIDDEN_SETTINGS",

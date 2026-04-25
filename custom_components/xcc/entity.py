@@ -21,6 +21,15 @@ _LOGGER = logging.getLogger(__name__)
 class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
     """Base class for XCC entities."""
 
+    # Opt in to Home Assistant's modern entity-naming scheme (HA 2022.7+).
+    # With this flag set, ``self._attr_name`` is the *feature* name only
+    # (e.g. "Actual heat water temperature") and HA composes the display
+    # label by combining it with ``DeviceInfo.name`` — rendering the device
+    # name as a grey subtitle in cards / more-info / history / voice. When
+    # an entity represents the device itself, ``_attr_name`` is set to
+    # ``None`` below so HA displays just the device name.
+    _attr_has_entity_name = True
+
     def __init__(
         self,
         coordinator: XCCDataUpdateCoordinator,
@@ -97,9 +106,6 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         # Generate unique ID
         self._attr_unique_id = f"{coordinator.ip_address}_{entity_id}"
 
-        # Set entity name
-        self._attr_name = self._get_entity_name()
-
         # Set device info based on entity's assigned device
         device_info = coordinator.get_device_info_for_entity(entity_id)
         self._attr_device_info = DeviceInfo(
@@ -111,6 +117,13 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             configuration_url=device_info.get("configuration_url"),
             via_device=device_info.get("via_device"),  # Link to parent device if applicable
         )
+
+        # Set feature-level entity name (has_entity_name=True composes the
+        # display label as "<device name> <entity name>"). If the derived
+        # friendly name is identical to the device name, use None so the
+        # card shows the device name alone rather than "Device Device".
+        entity_name = self._get_entity_name()
+        self._attr_name = None if entity_name == device_info.get("name") else entity_name
 
     def _get_entity_name(self) -> str:
         """Get the entity name based on language preference."""

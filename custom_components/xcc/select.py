@@ -45,6 +45,11 @@ async def async_setup_entry(
 
 
 class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
+    # Opt in to modern entity naming: ``_attr_name`` is the feature name,
+    # HA renders ``<device name> <entity name>`` with the device name as a
+    # grey subtitle. See ``XCCEntity`` for the rationale.
+    _attr_has_entity_name = True
+
     """Representation of an XCC select."""
 
     def __init__(
@@ -110,6 +115,11 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
         # Device info - use proper device assignment based on entity's page
         device_info = coordinator.get_device_info_for_entity(base_entity_id)
         self._attr_device_info = device_info
+
+        # With has_entity_name=True, collapse to device-name-only if the
+        # feature name equals the device name.
+        if self._attr_name == device_info.get("name"):
+            self._attr_name = None
 
     @property
     def current_option(self) -> str | None:

@@ -331,8 +331,16 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "FVEINV": {"name": "PV Inverter", "model": "Solar Inverter Monitor"},
                 "FVE": {"name": "Solar PV System", "model": "Photovoltaic Controller"},
                 "BIV": {"name": "Heat Pump", "model": "Bivalent Heat Pump"},
+                "BIVTUV": {"name": "DHW Bivalent Source", "model": "External DHW Heater"},
                 "OKRUH": {"name": "Heating Circuits", "model": "Heating Zone Controller"},
                 "TUV1": {"name": "Hot Water System", "model": "Domestic Hot Water"},
+                "TUV2": {"name": "Hot Water System 2", "model": "Domestic Hot Water"},
+                "BAZEN1": {"name": "Pool 1", "model": "Pool Heating"},
+                "BAZEN2": {"name": "Pool 2", "model": "Pool Heating"},
+                "BAZMIST": {"name": "Pool Room", "model": "Pool Room Heating"},
+                "SOLAR": {"name": "Solar Thermal", "model": "Solar Thermal Controller"},
+                "AKU": {"name": "Buffer Tank", "model": "Thermal Storage"},
+                "POCASI": {"name": "Weather", "model": "Weather Forecast"},
                 "STAVJED": {"name": "Unit Status", "model": "System Status Monitor"},
                 "NAST": {"name": "Heat Pump Settings", "model": "HP Configuration & Calibration"},
                 "XCC_HIDDEN_SETTINGS": {"name": "Hidden Settings", "model": "Advanced Configuration"},
@@ -345,8 +353,16 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "FVEINV": {"name": "FV Měnič", "model": "Monitor solárního měniče"},
                 "FVE": {"name": "Fotovoltaický systém", "model": "Fotovoltaický regulátor"},
                 "BIV": {"name": "Tepelné čerpadlo", "model": "Bivalentní tepelné čerpadlo"},
+                "BIVTUV": {"name": "Bivalentní zdroj TUV", "model": "Externí ohřev TUV"},
                 "OKRUH": {"name": "Topné okruhy", "model": "Regulátor topných zón"},
                 "TUV1": {"name": "Systém teplé vody", "model": "Teplá užitková voda"},
+                "TUV2": {"name": "Systém teplé vody 2", "model": "Teplá užitková voda"},
+                "BAZEN1": {"name": "Bazén 1", "model": "Ohřev bazénu"},
+                "BAZEN2": {"name": "Bazén 2", "model": "Ohřev bazénu"},
+                "BAZMIST": {"name": "Bazénová místnost", "model": "Ohřev bazénové místnosti"},
+                "SOLAR": {"name": "Solární systém", "model": "Regulátor solárního ohřevu"},
+                "AKU": {"name": "Akumulační nádrž", "model": "Tepelná akumulace"},
+                "POCASI": {"name": "Počasí", "model": "Předpověď počasí"},
                 "STAVJED": {"name": "Stav jednotky", "model": "Monitor stavu systému"},
                 "NAST": {"name": "Nastavení TČ", "model": "Konfigurace a kalibrace TČ"},
                 "XCC_HIDDEN_SETTINGS": {"name": "Skrytá nastavení", "model": "Pokročilá konfigurace"},
@@ -356,7 +372,12 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         for device_name, config in device_configs.items():
             self.sub_device_info[device_name] = {
                 "identifiers": {(DOMAIN, f"{self.ip_address}_{device_name}")},
-                "name": f"{config['name']} ({self.ip_address})",
+                # Sub-device name is intentionally IP-free so the grey
+                # subtitle that has_entity_name renders in cards/dialogs is
+                # short (e.g. "AW16-3P"). Multi-controller installs stay
+                # distinguishable via the IP-namespaced identifiers above
+                # and via_device link to the parent XCC Controller entry.
+                "name": config["name"],
                 "manufacturer": "XCC",
                 "model": config["model"],
                 "sw_version": "Unknown",

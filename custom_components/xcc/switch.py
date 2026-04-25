@@ -52,6 +52,11 @@ async def async_setup_entry(
 
 
 class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
+    # Opt in to modern entity naming: ``_attr_name`` is the feature name,
+    # HA renders ``<device name> <entity name>`` with the device name as a
+    # grey subtitle. See ``XCCEntity`` for the rationale.
+    _attr_has_entity_name = True
+
     """Representation of an XCC switch."""
 
     def __init__(
@@ -87,6 +92,11 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
         # Device info - use proper device assignment based on entity's page
         device_info = coordinator.get_device_info_for_entity(base_entity_id)
         self._attr_device_info = device_info
+
+        # With has_entity_name=True, collapse to device-name-only if the
+        # feature name equals the device name.
+        if self._attr_name == device_info.get("name"):
+            self._attr_name = None
 
     @property
     def is_on(self) -> bool | None:
