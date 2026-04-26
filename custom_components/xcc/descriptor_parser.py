@@ -257,9 +257,12 @@ class XCCDescriptorParser:
         if any(price_word in prop.upper() for price_word in ["PRICE", "CENA", "COST"]):
             return "€/MWh"
 
-        # Time entities
-        if any(
-            time_word in prop.upper() for time_word in ["CAS", "TIME", "HODIN", "HOURS"]
+        # Time entities. Skip POCASI* (Czech "počasí" = "weather"); the substring
+        # "CAS" appears in the prefix but those props are weather data (city name,
+        # forecast validity datetime strings, icon indices) and must not get unit "h".
+        prop_upper = prop.upper()
+        if not prop_upper.startswith("POCASI") and any(
+            time_word in prop_upper for time_word in ["CAS", "TIME", "HODIN", "HOURS"]
         ):
             return "h"
 
