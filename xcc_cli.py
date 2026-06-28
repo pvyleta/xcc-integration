@@ -219,7 +219,8 @@ class XCCController:
             ("TUV1.XML", "TUV11.XML"),
             ("BIV.XML", "BIV1.XML"),
             ("FVE.XML", "FVE4.XML"),
-            ("SPOT.XML", "SPOT1.XML")
+            ("SPOT.XML", "SPOT1.XML"),
+            ("FVESOC.XML", "FVESOC1.XML")
         ]
         
         from lxml import etree

@@ -2,6 +2,20 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.12] - 2026-06-28
+
+### ✨ New Features
+
+#### **FVE-SOC Page (PV battery SOC curve)**
+- **ADDED**: `fvesoc.xml` / `FVESOC1.XML` page discovery and integration. It is not referenced from `main.xml`, so it is registered explicitly via `_check_additional_pages` and the static page lists.
+- **ADDED**: 12 writable monthly battery state-of-charge target setpoints (`FVE-SOCCONFIG-SOCCURVE0..11`, unit `%`), grouped under the existing **Photovoltaics** device.
+- **ADDED**: `set_value` routing so SOC-curve writes target `FVESOC1.XML` instead of being misrouted to `FVE4.XML`.
+- **ADDED**: `tests/sample_data/fvesoc.xml` + `FVESOC1.XML` fixtures and `tests/test_fvesoc_pages.py` regression tests.
+
+### 🧹 Housekeeping
+- **FIXED**: README rot — removed stale MQTT install/integration sections (the MQTT path no longer exists), updated HACS instructions, refreshed the module list.
+- **DOCS**: Flagged the partially/fully broken standalone tools (`xcc_scraper.py`, `xcc_cli.py`) while keeping them; added a project `CLAUDE.md`.
+
 ## [1.12.1] - 2025-08-13
 
 ### 🎯 Feature Release: NAST Page Integration

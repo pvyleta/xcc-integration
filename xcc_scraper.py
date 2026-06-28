@@ -142,6 +142,7 @@ except ImportError:
                     'fve.xml': ['FVE4.XML'],
                     'fveinv.xml': ['FVEINV10.XML'],
                     'spot.xml': ['SPOT1.XML'],
+                    'fvesoc.xml': ['FVESOC1.XML'],
                 }
 
                 # Add mapped data pages
@@ -180,8 +181,8 @@ except ImportError:
             except Exception as e:
                 # Fallback to integration defaults if discovery fails
                 print(f"Discovery failed, using integration defaults: {e}")
-                default_descriptors = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml"]
-                default_data = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+                default_descriptors = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml", "fvesoc.xml"]
+                default_data = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML", "FVESOC1.XML"]
                 return default_descriptors, default_data
 
         async def close(self):
@@ -243,8 +244,8 @@ class XCCPageScraper:
             # If discovery found nothing, use integration defaults
             if not descriptor_pages and not data_pages:
                 self.logger.warning("🔄 Discovery found no pages, using integration defaults...")
-                descriptor_pages = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml"]
-                data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+                descriptor_pages = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml", "fvesoc.xml"]
+                data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML", "FVESOC1.XML"]
 
                 self.logger.info(f"📋 Using defaults:")
                 self.logger.info(f"   Descriptor pages: {len(descriptor_pages)}")
@@ -257,8 +258,8 @@ class XCCPageScraper:
             self.logger.warning("🔄 Falling back to integration defaults...")
 
             # Use the same defaults as the integration
-            descriptor_pages = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml"]
-            data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML"]
+            descriptor_pages = ["stavjed.xml", "okruh.xml", "tuv1.xml", "biv.xml", "fve.xml", "spot.xml", "fvesoc.xml"]
+            data_pages = ["STAVJED1.XML", "OKRUH10.XML", "TUV11.XML", "BIV1.XML", "FVE4.XML", "SPOT1.XML", "FVESOC1.XML"]
 
             self.logger.info(f"📋 Fallback defaults:")
             self.logger.info(f"   Descriptor pages: {len(descriptor_pages)}")

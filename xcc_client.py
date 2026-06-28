@@ -264,6 +264,7 @@ STANDARD_PAGES = [
     "biv.xml", "BIV1.XML",          # Bivalent heating
     "fve.xml", "FVE4.XML",          # Photovoltaics
     "spot.xml", "SPOT1.XML",        # Spot pricing
+    "fvesoc.xml", "FVESOC1.XML",    # PV battery SOC curve
 ]
 
 MINIMAL_PAGES = [

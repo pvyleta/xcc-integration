@@ -895,6 +895,8 @@ class XCCClient:
                 page_to_fetch = "main.xml"
             elif any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
+            elif prop_upper.startswith("FVE-SOCCONFIG-") or "SOCCURVE" in prop_upper:
+                page_to_fetch = "FVESOC1.XML"
             elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
                 page_to_fetch = "FVEINV10.XML"
             elif any(fve_word in prop_upper for fve_word in ["FVE", "SOLAR", "PV"]):
@@ -1383,6 +1385,8 @@ STANDARD_PAGES = [
     "FVE4.XML",  # Photovoltaics
     "spot.xml",
     "SPOT1.XML",  # Spot pricing
+    "fvesoc.xml",
+    "FVESOC1.XML",  # PV battery SOC curve
 ]
 
 MINIMAL_PAGES = [

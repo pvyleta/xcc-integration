@@ -6,7 +6,6 @@ This integration allows you to monitor and control XCC heat pump controllers thr
 
 - **Automatic Discovery**: Automatically discovers all available parameters from your XCC controller
 - **Multi-language Support**: Supports English and Czech languages with automatic language detection
-- **MQTT Integration**: Automatically creates MQTT devices and entities for external access
 - **Real-time Monitoring**: Monitors temperatures, pressures, power consumption, and system status
 - **Control Capabilities**: Allows setting of configurable parameters like setpoints and operation modes
 - **Device Classes**: Proper device classes for sensors (temperature, power, energy, etc.)
@@ -37,7 +36,6 @@ This integration allows you to monitor and control XCC heat pump controllers thr
        ├── switch.py
        ├── number.py
        ├── select.py
-       ├── mqtt_discovery.py
        ├── xcc_client.py
        ├── const.py
        ├── strings.json
@@ -53,9 +51,9 @@ This integration allows you to monitor and control XCC heat pump controllers thr
 
 5. Follow the configuration steps
 
-### Method 2: HACS (Future)
+### Method 2: HACS
 
-This integration will be available through HACS in the future.
+Install via HACS as a custom repository — see the top-level [README](../../README.md) for the exact steps.
 
 ## Configuration
 
@@ -79,20 +77,6 @@ This integration will be available through HACS in the future.
 5. Click **Submit**
 
 The integration will automatically discover all available parameters and create entities.
-
-## MQTT Integration
-
-If MQTT is configured in your Home Assistant, the integration will automatically:
-
-- Create MQTT device discovery messages
-- Publish entity states to MQTT topics
-- Enable external access to XCC data via MQTT
-
-### MQTT Topics
-
-- Device availability: `xcc/{ip_address}/availability`
-- Entity states: `xcc/{ip_address}/{entity_id}/state`
-- Entity commands: `xcc/{ip_address}/{entity_id}/set`
 
 ## Language Support
 
@@ -133,13 +117,6 @@ The integration automatically detects your Home Assistant language setting:
    - Verify network connectivity
    - Look for authentication errors in logs
 
-### MQTT Issues
-
-1. **MQTT entities not appearing**:
-   - Ensure MQTT is configured in Home Assistant
-   - Check MQTT broker connectivity
-   - Verify MQTT discovery is enabled
-
 ## Development
 
 ### File Structure
@@ -153,7 +130,10 @@ The integration automatically detects your Home Assistant language setting:
 - `switch.py`: Switch entities for boolean controls
 - `number.py`: Number entities for numeric controls
 - `select.py`: Select entities for enumerated controls
-- `mqtt_discovery.py`: MQTT device discovery functionality
+- `button.py`: Button entities for actions
+- `descriptor_parser.py`: Parses descriptor XML into entity definitions
+- `entity_helpers.py`: Pure entity/device processing helpers (no Home Assistant import)
+- `value_writer.py`: Resolves an entity_id back to its XCC property for writes
 - `xcc_client.py`: XCC controller communication client
 - `const.py`: Constants and configuration
 - `strings.json`: English translations

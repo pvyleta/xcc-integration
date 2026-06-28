@@ -2,6 +2,8 @@
 
 A simple command-line tool to discover and download all pages from your XCC heat pump controller using the same logic as the Home Assistant integration.
 
+> ⚠️ **Known limitation (kept for reference).** This script has two client code paths: when `custom_components/xcc/xcc_client.py` imports successfully it tries to use the integration client, whose API differs from what the scraper expects, so it fails at runtime. The scraper only works reliably via its **inline fallback client** (used when that import fails). The related `xcc_cli.py` is also currently broken (it needs a `field_database.json` and `scripts/analyze_known_pages.py` that are not in the repo). To pull one-off pages, a small direct-fetch script against the controller's `LOGIN.XML` → `RPC/WEBSES/create.asp` (SHA1 challenge) auth is the most dependable approach.
+
 ## 🚀 Quick Start
 
 ### 1. Setup Environment

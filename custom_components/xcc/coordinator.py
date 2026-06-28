@@ -568,6 +568,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             additional_pages = [
                 ("nast.xml", "NAST.XML", "Heat pump settings"),
                 ("fveinv.xml", "FVEINV10.XML", "PV Inverter details"),
+                ("fvesoc.xml", "FVESOC1.XML", "PV battery SOC curve"),
             ]
 
             # Data-only pages: these have no paired descriptor XML and are probed directly.

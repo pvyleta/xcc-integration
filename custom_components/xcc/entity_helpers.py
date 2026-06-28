@@ -185,6 +185,12 @@ def _normalize_page_to_device(page: str, prop: str) -> str:
         # STATUS.XML has no descriptor; its fields belong to the same logical
         # device as STAVJED1.XML (heat-pump unit status).
         return "STAVJED"
+    if page_upper.startswith("FVESOC"):
+        # fvesoc.xml / FVESOC1.XML carry the monthly battery SOC-curve setpoints
+        # (FVE-SOCCONFIG-SOCCURVE*). They belong to the Photovoltaics system, so
+        # group them under the existing FVE device. A bare "FVESOC" key is not in
+        # _DEVICE_PRIORITY and its entities would otherwise be silently dropped.
+        return "FVE"
     return (
         page_upper
         .replace("1.XML", "")

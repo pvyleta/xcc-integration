@@ -85,6 +85,7 @@ XCC_DESCRIPTOR_PAGES: Final = [
     "fve.xml",  # Photovoltaics descriptor
     "fveinv.xml",  # PV Inverter descriptor
     "spot.xml",  # Spot pricing descriptor
+    "fvesoc.xml",  # PV battery SOC-curve descriptor (not referenced from main.xml)
     # Note: nast.xml (Heat pump settings) is added dynamically if accessible
 ]
 
@@ -98,6 +99,7 @@ XCC_DATA_PAGES: Final = [
     "FVE4.XML",  # Photovoltaics data
     "FVEINV10.XML",  # PV Inverter data
     "SPOT1.XML",  # Spot pricing data
+    "FVESOC1.XML",  # PV battery SOC-curve data (not referenced from main.xml)
     # Note: NAST.XML (Heat pump settings) is added dynamically if accessible
 ]
 

@@ -73,4 +73,17 @@ The integration automatically discovers entities from these XCC pages:
 | **Spot Pricing** | Dynamic pricing optimization | Price sensors, optimization switches |
 | **System Status** | Overall system information | Status sensors, diagnostic data |
 | **Heat Pump Settings** | Advanced configuration (discovered dynamically) | Configuration switches, numbers |
+| **PV Battery SOC** | Monthly battery state-of-charge target curve | 12 monthly setpoint numbers (%) |
+
+## 🧰 Standalone Tools
+
+The repo root ships a few helper scripts, separate from the integration in `custom_components/xcc/`. They do **not** share code with the integration (auth and page lists are duplicated). Current status:
+
+| Tool | Purpose | Status |
+|------|---------|--------|
+| `find_hidden_switches.py` | Offline analysis of scraped XML to list hidden `_BOOL_i` switch fields | ✅ Works (needs `fresh_tuv_data/` or `tests/sample_data/`) |
+| `xcc_scraper.py` | Download all controller pages to disk | ⚠️ Partially broken — only the inline fallback client path works; the `custom_components/xcc` import path is API-incompatible |
+| `xcc_cli.py` | Interactive CLI to browse/search controller fields | ❌ Broken — depends on `field_database.json` and `scripts/analyze_known_pages.py`, neither of which exists in the repo |
+
+These are kept for reference/backup workflows. See [XCC_SCRAPER_README.md](XCC_SCRAPER_README.md) for scraper usage and caveats.
 
