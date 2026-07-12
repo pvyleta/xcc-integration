@@ -895,7 +895,10 @@ class XCCClient:
                 page_to_fetch = "main.xml"
             elif any(tuv_word in prop_upper for tuv_word in tuv_keywords):
                 page_to_fetch = "TUV11.XML"
-            elif prop_upper.startswith("FVE-SOCCONFIG-") or "SOCCURVE" in prop_upper:
+            elif "SOCCURVE" in prop_upper:
+                # Only the SOCCURVE0..11 monthly setpoints live on FVESOC1.XML.
+                # Other FVE-SOCCONFIG-* props (SOCMODE, MANUALSOC) are inputs on
+                # FVE4.XML, so they must fall through to the generic FVE branch.
                 page_to_fetch = "FVESOC1.XML"
             elif prop_upper.startswith("FVE-CONFIG-") or prop_upper.startswith("FVESTATS-"):
                 page_to_fetch = "FVEINV10.XML"
