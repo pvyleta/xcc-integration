@@ -177,7 +177,11 @@ def _resolve_friendly_name(
 def _normalize_page_to_device(page: str, prop: str) -> str:
     """Map a raw XCC page name onto a logical device key."""
     page_upper = page.upper()
-    if page_upper == "NAST.XML":
+    if page_upper.startswith("NAST"):
+        # nast.xml descriptor + the NAST1/2/3.XML data pages it spans (one per
+        # <block data="NASTn">). All fold into the single NAST device; without
+        # this NAST2.XML/NAST3.XML would normalize to "NAST2"/"NAST3" (absent
+        # from _DEVICE_PRIORITY) and their entities would be silently dropped.
         return "NAST"
     if page_upper == "MAIN.XML" or prop.startswith("SYSCONFIG-"):
         return "SYSCONFIG"
@@ -253,7 +257,7 @@ def process_entities(
         prop = entity["attributes"]["field_name"]
         page = entity["attributes"].get("page", "unknown")
         has_descriptor = prop in entity_configs
-        is_nast_entity = page.upper() == "NAST.XML"
+        is_nast_entity = page.upper().startswith("NAST")
         is_sysconfig_entity = prop.startswith("SYSCONFIG-")
         if has_descriptor or is_nast_entity or is_sysconfig_entity:
             entities_with_descriptors.append(entity)
@@ -289,7 +293,7 @@ def process_entities(
 
             descriptor_config = entity_configs.get(prop, {})
             if (
-                entity["attributes"].get("page", "").upper() == "NAST.XML"
+                entity["attributes"].get("page", "").upper().startswith("NAST")
                 and not descriptor_config
             ):
                 entity_attrs = entity.get("attributes", {})

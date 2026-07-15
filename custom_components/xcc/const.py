@@ -86,7 +86,7 @@ XCC_DESCRIPTOR_PAGES: Final = [
     "fveinv.xml",  # PV Inverter descriptor
     "spot.xml",  # Spot pricing descriptor
     "fvesoc.xml",  # PV battery SOC-curve descriptor (not referenced from main.xml)
-    # Note: nast.xml (Heat pump settings) is added dynamically if accessible
+    # Note: nast.xml (Heat pump settings) descriptor is added dynamically if accessible
 ]
 
 # Data files (fetched on every update)
@@ -100,7 +100,9 @@ XCC_DATA_PAGES: Final = [
     "FVEINV10.XML",  # PV Inverter data
     "SPOT1.XML",  # Spot pricing data
     "FVESOC1.XML",  # PV battery SOC-curve data (not referenced from main.xml)
-    # Note: NAST.XML (Heat pump settings) is added dynamically if accessible
+    # Note: NAST1/2/3.XML (Heat pump settings) data pages are added dynamically
+    # if accessible. NAST.XML is not a data page — the controller echoes the
+    # nast.xml descriptor back for it, so it carries no values.
 ]
 
 # Legacy combined list (for backward compatibility)

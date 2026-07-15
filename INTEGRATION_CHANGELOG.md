@@ -2,6 +2,30 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.14] - 2026-07-15
+
+### Fixed
+
+#### **NAST (heat-pump settings) page produced no entities**
+The NAST settings page advertised in 1.12.1 never actually populated on the
+controller. `_check_additional_pages` fetched a single **`NAST.XML`** data
+page, but the controller echoes the `nast.xml` *descriptor* back for that name
+(no `<INPUT ... VALUE=...>` values) — so `OMEZENIVYKONUGLOBALNI` and ~144 other
+NAST settings (`B0-I`, `OFFSETBAZ`, `MZO-ZONA0-OFFSET`, the power-restriction
+knobs) came up empty.
+
+The real values live in **`NAST1.XML` / `NAST2.XML` / `NAST3.XML`** — one data
+page per `<block data="NASTn">` in the descriptor (`OMEZENIVYKONUGLOBALNI` is in
+the NAST2 block). Two fixes were needed:
+
+- **`_check_additional_pages`**: fetch `NAST1/2/3.XML` instead of `NAST.XML`.
+- **`_normalize_page_to_device`**: fold `NAST2.XML` / `NAST3.XML` into the
+  `NAST` device — previously they normalized to `NAST2` / `NAST3`, which are
+  absent from `_DEVICE_PRIORITY`, so their entities were silently dropped.
+
+Added `tests/test_nast_pages.py` (+ `NAST1/2/3.XML` fixtures) pinning the
+descriptor→data→device pipeline end to end.
+
 ## [1.15.12] - 2026-06-28
 
 ### ✨ New Features

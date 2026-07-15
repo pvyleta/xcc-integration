@@ -250,7 +250,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             prop = entity["attributes"]["field_name"]
             page = entity["attributes"].get("page", "unknown")
             has_descriptor = prop in self.entity_configs
-            is_nast_entity = page.upper() == "NAST.XML"
+            is_nast_entity = page.upper().startswith("NAST")
             is_sysconfig_entity = prop.startswith("SYSCONFIG-")
             bucket = descriptor_stats_by_page.setdefault(
                 page, {"with": [], "without": []}
@@ -564,11 +564,15 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             _LOGGER.debug("Checking for additional pages not found in main.xml discovery")
 
-            # List of additional pages to check (descriptor + data page pairs)
+            # Additional pages not discoverable from main.xml: each descriptor
+            # maps to the data page(s) that carry its live values. Most span a
+            # single data page; nast.xml spans three (NAST1/2/3.XML — one per
+            # <block data="NASTn">). NAST.XML is NOT a data page: the controller
+            # echoes the descriptor back for it, so it never yields any values.
             additional_pages = [
-                ("nast.xml", "NAST.XML", "Heat pump settings"),
-                ("fveinv.xml", "FVEINV10.XML", "PV Inverter details"),
-                ("fvesoc.xml", "FVESOC1.XML", "PV battery SOC curve"),
+                ("nast.xml", ["NAST1.XML", "NAST2.XML", "NAST3.XML"], "Heat pump settings"),
+                ("fveinv.xml", ["FVEINV10.XML"], "PV Inverter details"),
+                ("fvesoc.xml", ["FVESOC1.XML"], "PV battery SOC curve"),
             ]
 
             # Data-only pages: these have no paired descriptor XML and are probed directly.
@@ -592,7 +596,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 except Exception as e:
                     _LOGGER.debug("Error probing data-only page %s: %s", data_page, e)
 
-            for descriptor_page, data_page, description in additional_pages:
+            for descriptor_page, data_pages, description in additional_pages:
                 try:
                     # Test if descriptor page is accessible
                     _LOGGER.debug("Testing accessibility of %s (%s)", descriptor_page, description)
@@ -606,10 +610,10 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                             self._discovered_descriptor_pages.append(descriptor_page)
                             _LOGGER.info("Added %s to descriptor pages", descriptor_page)
 
-                        # For NAST, the descriptor and data are the same file
-                        if data_page not in self._discovered_data_pages:
-                            self._discovered_data_pages.append(data_page)
-                            _LOGGER.info("Added %s to data pages", data_page)
+                        for data_page in data_pages:
+                            if data_page not in self._discovered_data_pages:
+                                self._discovered_data_pages.append(data_page)
+                                _LOGGER.info("Added %s to data pages", data_page)
                     else:
                         _LOGGER.debug("❌ Additional page %s not accessible or invalid", descriptor_page)
 
