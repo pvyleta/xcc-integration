@@ -11,8 +11,10 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
@@ -40,6 +42,15 @@ async def async_setup_entry(
             _LOGGER.debug("Created binary sensor entity: %s", entity_id)
         except Exception as err:
             _LOGGER.error("Error creating binary sensor entity %s: %s", entity_id, err)
+
+    # Always-present diagnostic: fires when the controller keeps dropping data
+    # pages (or the update keeps failing) for several consecutive polls, so a
+    # stuck/partial integration surfaces instead of silently going stale. Wrapped
+    # like the loop above so a construction error can't abort the whole platform.
+    try:
+        entities.append(XCCDataIncompleteBinarySensor(coordinator))
+    except Exception as err:
+        _LOGGER.error("Error creating XCC data-incomplete diagnostic sensor: %s", err)
 
     if entities:
         async_add_entities(entities)
@@ -175,3 +186,53 @@ class XCCBinarySensor(XCCEntity, BinarySensorEntity):
             attrs["raw_value"] = raw_value
 
         return attrs
+
+
+class XCCDataIncompleteBinarySensor(
+    CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorEntity
+):
+    """Diagnostic alarm: the integration is not gathering all XCC data pages.
+
+    Computed from the coordinator's consecutive incomplete/failed poll counters,
+    NOT from a data page — so it stays available and keeps reporting even while
+    the controller is dropping data (the very condition it warns about). Turns on
+    after ``coordinator.missing_page_alert_polls`` consecutive incomplete or
+    failed polls and clears automatically on recovery. Alert on it directly, e.g.
+    notify when ``binary_sensor.xcc_data_incomplete`` is ``on``.
+    """
+
+    _attr_has_entity_name = True
+    _attr_name = "Data incomplete"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: XCCDataUpdateCoordinator) -> None:
+        """Initialize the data-incomplete diagnostic sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.ip_address}_xcc_data_incomplete"
+        self.entity_id = "binary_sensor.xcc_data_incomplete"
+        self._attr_device_info = {"identifiers": {(DOMAIN, coordinator.ip_address)}}
+
+    @property
+    def available(self) -> bool:
+        """Always available — the alarm must persist through the outage it reports."""
+        return True
+
+    @property
+    def is_on(self) -> bool:
+        """True once data gathering has been degraded for the alert threshold."""
+        return self.coordinator.data_gathering_degraded
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose the streak counters and which pages are missing."""
+        c = self.coordinator
+        return {
+            "consecutive_incomplete_polls": c.consecutive_incomplete_polls,
+            "consecutive_failed_polls": c.consecutive_failed_polls,
+            "alert_after_polls": c.missing_page_alert_polls,
+            "missing_pages": c.last_missing_pages,
+            "pages_gathered": c.gathered_page_count,
+            "pages_expected": c.expected_page_count,
+            "last_poll_failed": c.last_poll_failed,
+        }

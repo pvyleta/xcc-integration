@@ -355,3 +355,50 @@ def process_entities(
 
     processed_data["entities"] = entities_list
     return processed_data, entities_metadata
+
+
+# ---------------------------------------------------------------------------
+# Data-gathering health
+#
+# A flaky controller can keep dropping some data pages while the overall poll
+# still "succeeds": ``client.fetch_pages`` returns an ``"Error: ..."`` string for
+# each page it could not fetch, and the coordinator simply skips those. Their
+# entities then go stale/unavailable silently. These pure helpers let the
+# coordinator fold each poll into two streak counters so a diagnostic
+# binary_sensor + a Repairs issue can alert once the gap persists.
+# ---------------------------------------------------------------------------
+
+def missing_data_pages(
+    expected_pages: "list[str] | set[str]", pages_data: dict[str, Any] | None
+) -> list[str]:
+    """Return the expected data pages NOT successfully gathered this poll.
+
+    A page counts as gathered only when ``pages_data`` holds it with real content
+    (not an ``"Error: ..."`` sentinel). A requested page absent from
+    ``pages_data`` also counts as missing.
+    """
+    gathered = {
+        page
+        for page, content in (pages_data or {}).items()
+        if isinstance(content, str) and not content.startswith("Error:")
+    }
+    return sorted(set(expected_pages) - gathered)
+
+
+def next_gather_health(
+    missing_pages: list[str],
+    poll_failed: bool,
+    prev_incomplete: int,
+    prev_failed: int,
+) -> tuple[int, int]:
+    """Fold one poll's outcome into ``(incomplete_streak, failed_streak)``.
+
+    - A *failed* poll (the whole update raised) bumps the failed streak and
+      leaves the incomplete streak untouched — completeness can't be judged.
+    - A *successful* poll clears the failed streak, then bumps the incomplete
+      streak when any expected page is missing, else resets it to 0.
+    """
+    if poll_failed:
+        return prev_incomplete, prev_failed + 1
+    incomplete = prev_incomplete + 1 if missing_pages else 0
+    return incomplete, 0

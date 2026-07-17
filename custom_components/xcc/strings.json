@@ -194,5 +194,11 @@
     "parameter_error": {
       "message": "Error setting parameter {parameter}: {error}"
     }
+  },
+  "issues": {
+    "data_gathering_degraded": {
+      "title": "XCC is not gathering all data",
+      "description": "The XCC controller at {ip} has failed to return all data pages for {polls} consecutive polls (missing: {missing}). Entities from those pages may be stale or unavailable, and controls on them cannot be written. Check the controller's network reachability. This alert clears automatically once full data resumes."
+    }
   }
 }

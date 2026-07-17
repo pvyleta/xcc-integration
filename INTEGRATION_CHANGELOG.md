@@ -2,6 +2,30 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.16] - 2026-07-17
+
+### ✨ New Features
+
+#### **Self-reported data-gathering alert**
+A flaky controller can keep dropping some data pages while a poll still
+"succeeds" (`fetch_pages` returns an `Error:` string for the pages it missed),
+so those entities go stale/unavailable silently. The integration now tracks that
+itself:
+
+- **`binary_sensor.xcc_data_incomplete`** (device_class `problem`, diagnostic) —
+  turns **on** after `DEFAULT_MISSING_PAGE_ALERT_POLLS` (5) consecutive polls
+  that either miss ≥1 expected data page or fail entirely (~10 min at the default
+  120 s scan), and clears automatically on recovery. It is **always available**
+  (computed from the coordinator's streak counters, not from a data page) so the
+  alarm persists through the outage it reports. Attributes expose the missing
+  pages and streak counts. Alert on it directly (e.g. notify when it is `on`).
+- A matching **Repairs issue** is raised/cleared in tandem for at-a-glance
+  visibility in Settings → Repairs.
+
+Auth failures don't trip it (they have their own reauth flow). Detection logic is
+pure (`entity_helpers.missing_data_pages` / `next_gather_health`) and covered by
+`tests/test_data_gathering_health.py`.
+
 ## [1.15.15] - 2026-07-17
 
 ### Fixed

@@ -11,12 +11,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_LANGUAGE,
     CONF_SCAN_INTERVAL,
     DEFAULT_LANGUAGE,
+    DEFAULT_MISSING_PAGE_ALERT_POLLS,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DESCRIPTOR_OVERRIDES,
@@ -29,6 +31,8 @@ from .entity_helpers import (
     format_entity_id_suffix,
     infer_entity_type_from_attributes,
     lookup_with_normalized_fallback,
+    missing_data_pages,
+    next_gather_health,
     normalize_property_name,
     process_entities as _process_entities_core,
 )
@@ -84,6 +88,80 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self._update_lock = asyncio.Lock()  # Prevent concurrent updates
         self._last_update_time = 0  # Track last update time
         self._min_update_interval = 1.0  # Minimum 1 second between updates
+
+        # Data-gathering health. A flaky controller can keep dropping some data
+        # pages while the poll still "succeeds" (fetch_pages returns "Error:"
+        # strings for the missed pages), leaving those entities silently stale.
+        # These streaks drive binary_sensor.xcc_data_incomplete + a Repairs issue.
+        self.missing_page_alert_polls = DEFAULT_MISSING_PAGE_ALERT_POLLS
+        self.consecutive_incomplete_polls = 0  # successful polls missing >=1 page
+        self.consecutive_failed_polls = 0  # polls where the whole update raised
+        self.last_missing_pages: list[str] = []
+        self.last_poll_failed = False  # was the most recent poll a total failure?
+        self.expected_page_count = 0
+        self.gathered_page_count = 0
+
+    @property
+    def data_gathering_degraded(self) -> bool:
+        """True once pages have been missing (or the update failing) for the
+        alert threshold of consecutive polls."""
+        return (
+            max(self.consecutive_incomplete_polls, self.consecutive_failed_polls)
+            >= self.missing_page_alert_polls
+        )
+
+    def _note_gather_result(
+        self, missing: list[str], poll_failed: bool, expected: int = 0
+    ) -> None:
+        """Fold one poll into the health streaks and raise/clear the Repairs issue."""
+        self.consecutive_incomplete_polls, self.consecutive_failed_polls = (
+            next_gather_health(
+                missing,
+                poll_failed,
+                self.consecutive_incomplete_polls,
+                self.consecutive_failed_polls,
+            )
+        )
+        self.last_poll_failed = poll_failed
+        if not poll_failed:
+            self.expected_page_count = expected
+            self.gathered_page_count = expected - len(missing)
+            self.last_missing_pages = missing
+            if missing:
+                _LOGGER.warning(
+                    "XCC gathered %d/%d data pages (missing: %s) — incomplete poll %d/%d",
+                    self.gathered_page_count,
+                    expected,
+                    ", ".join(missing),
+                    self.consecutive_incomplete_polls,
+                    self.missing_page_alert_polls,
+                )
+        issue_id = f"data_gathering_degraded_{self.ip_address}"
+        if self.data_gathering_degraded:
+            polls = max(self.consecutive_incomplete_polls, self.consecutive_failed_polls)
+            # Describe the *current* state: a total failure this poll overrides a
+            # stale partial-page snapshot from before it went fully unreachable.
+            if self.last_poll_failed:
+                missing_txt = "all pages (controller unreachable / update failing)"
+            elif self.last_missing_pages:
+                missing_txt = ", ".join(self.last_missing_pages)
+            else:
+                missing_txt = "some pages"
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="data_gathering_degraded",
+                translation_placeholders={
+                    "ip": self.ip_address,
+                    "polls": str(polls),
+                    "missing": missing_txt,
+                },
+            )
+        else:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
@@ -190,6 +268,14 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("📄 Parsed %d entities from %d pages: %s", len(all_entities), len(page_counts), ", ".join(page_counts))
             processed_data = self._process_entities(all_entities)
 
+            # Record data-gathering health: which expected data pages failed to
+            # fetch this poll (fetch_pages returns "Error:" for the ones it missed).
+            self._note_gather_result(
+                missing_data_pages(data_pages, pages_data),
+                poll_failed=False,
+                expected=len(data_pages),
+            )
+
             # Log summary of processed data
             entity_counts = {key: len(value) for key, value in processed_data.items()}
             _LOGGER.info("XCC data update successful: %s", entity_counts)
@@ -222,6 +308,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error(
                 "Timeout communicating with XCC controller %s: %s", self.ip_address, err
             )
+            self._note_gather_result([], poll_failed=True)
             raise UpdateFailed(
                 f"Timeout communicating with XCC controller: {err}"
             ) from err
@@ -229,8 +316,11 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error(
                 "Error communicating with XCC controller %s: %s", self.ip_address, err
             )
+            # Auth failures have their own reauth flow — don't also trip the
+            # data-gathering alert on them; only count genuine gather failures.
             if "authentication" in str(err).lower() or "login" in str(err).lower():
                 raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
+            self._note_gather_result([], poll_failed=True)
             raise UpdateFailed(
                 f"Error communicating with XCC controller: {err}"
             ) from err

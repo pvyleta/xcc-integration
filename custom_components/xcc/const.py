@@ -38,6 +38,9 @@ DEFAULT_USERNAME: Final = "xcc"
 DEFAULT_PASSWORD: Final = "xcc"
 DEFAULT_SCAN_INTERVAL: Final = 120  # seconds (2 minutes)
 DEFAULT_TIMEOUT: Final = 10  # seconds
+# Consecutive incomplete/failed polls before binary_sensor.xcc_data_incomplete
+# (+ a Repairs issue) fires. 5 x 120 s default scan ~= 10 min of missing data.
+DEFAULT_MISSING_PAGE_ALERT_POLLS: Final = 5
 
 # Language options
 LANGUAGE_ENGLISH: Final = "english"

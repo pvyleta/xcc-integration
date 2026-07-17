@@ -192,5 +192,11 @@
     "parameter_error": {
       "message": "Chyba při nastavování parametru {parameter}: {error}"
     }
+  },
+  "issues": {
+    "data_gathering_degraded": {
+      "title": "XCC nenačítá všechna data",
+      "description": "Regulátor XCC na {ip} nevrátil všechny datové stránky po {polls} po sobě jdoucích cyklech (chybí: {missing}). Entity z těchto stránek mohou být neaktuální nebo nedostupné a nelze do nich zapisovat. Zkontrolujte dostupnost regulátoru v síti. Toto upozornění zmizí automaticky, jakmile se načítání dat obnoví."
+    }
   }
 }
