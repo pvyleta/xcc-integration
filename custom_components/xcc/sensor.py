@@ -88,9 +88,11 @@ async def async_setup_entry(
     _LOGGER.info("Setting up XCC sensor platform")
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Wait for first data update to ensure descriptors are loaded
-    _LOGGER.debug("Waiting for coordinator first refresh")
-    await coordinator.async_config_entry_first_refresh()
+    # NEVER call async_config_entry_first_refresh() here — __init__ already ran it
+    # before forwarding platforms. A second refresh re-fetches every page and, if it
+    # races the per-page timeout (e.g. slow FVESOC1.XML), raises ConfigEntryNotReady
+    # from within this forwarded platform, leaving sensor entities unregistered
+    # (stuck "unavailable"). Read the already-loaded coordinator.data directly.
     _LOGGER.debug(
         "Coordinator data keys: %s",
         list(coordinator.data.keys()) if coordinator.data else "No data",
@@ -262,6 +264,20 @@ class XCCSensor(XCCEntity, SensorEntity):
         # Get unit from descriptor or entity data
         xcc_unit = entity_config.get("unit") or entity_data.get("unit", "")
         ha_unit = UNIT_MAPPING.get(xcc_unit, xcc_unit) if xcc_unit else None
+
+        # A numeric unit forces HA to coerce the state to float, so a non-numeric
+        # value (datetime/string) raises ValueError on every read. Datetime fields
+        # (NAME "..._DT_...", data_type "datetime", e.g. '01.01.1970 00:00') can
+        # inherit a bogus unit from the CAS->h descriptor heuristic. Strip the unit
+        # for non-numeric fields so they render as plain string sensors. Belt to the
+        # descriptor-level fix — this also catches data-only fields like SCAS.
+        resolved_data_type = str(
+            entity_data.get("attributes", {}).get("data_type")
+            or entity_config.get("data_type")
+            or ""
+        ).lower()
+        if resolved_data_type in ("datetime", "date", "time", "string"):
+            ha_unit = None
 
         # Determine device class - prioritize descriptor information
         device_class = None

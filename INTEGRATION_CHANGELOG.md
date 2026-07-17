@@ -2,6 +2,48 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.15] - 2026-07-17
+
+### Fixed
+
+#### **Switch / sensor / select entities randomly stuck "unavailable" after setup**
+`sensor.py`, `select.py`, and `switch.py` each called
+`coordinator.async_config_entry_first_refresh()` inside their forwarded
+`async_setup_entry`, even though `__init__.async_setup_entry` already performs
+that first refresh once, before forwarding platforms. The redundant call
+re-fetches every data page; if it races the per-page 10 s timeout (made more
+likely by the extra `FVESOC1.XML` page added in 1.15.12 — "21/21"), it raises
+`ConfigEntryNotReady` from *within* the forwarded platform. The other platforms
+have already set up, so the entry is left partially loaded and the losing
+platform's entities are never re-registered — they show `unavailable` (a
+restored registry entry with no live entity) until a manual reload. Which
+platform loses is a race; a stuck `switch.xcc_to_config_chlazeni` left an
+AC-Heating cooling swap-set un-actuatable (the master cooling bit could not be
+turned off).
+
+Removed the redundant call from all three platforms; they now read the
+already-loaded `coordinator.data` directly (as `number.py` / `binary_sensor.py`
+already did). A failed first refresh now fails the *whole* entry cleanly (HA
+retries it) instead of silently dropping one platform.
+
+#### **`FLASH-HEADER*-DATETIME` (and other datetime fields) raised ValueError every poll**
+The `CAS`→`h` unit heuristic in `descriptor_parser._infer_unit_from_context`
+matched the substring `TIME` inside `DATETIME` / `TIMESTAMP`, so datetime labels
+like `FLASH-HEADER0-DATETIME` (value `01.01.1970 00:00`) got the numeric unit
+`h` and a `duration` device_class. HA then coerces the state to float and raises
+`ValueError` on every read (~2000×/session observed), and the three FLASH-HEADER
+datetime sensors failed to add entirely.
+
+- `descriptor_parser`: the `CAS`→`h` carve-out now also skips
+  `DATETIME` / `DATUM` / `DATE` / `TIMESTAMP` props (generalising the existing
+  POCASI guard). Genuine hours-durations (`PROVOZHODIN`, ...) still get `h`.
+- `sensor.py`: belt-and-suspenders — any field whose resolved `data_type` is
+  `datetime` / `date` / `time` / `string` has its numeric unit stripped, which
+  also catches data-only `_DT_` fields (e.g. `SCAS`) that never pass through a
+  descriptor.
+
+Added `tests/test_first_refresh_and_datetime_unit_fix.py`.
+
 ## [1.15.14] - 2026-07-15
 
 ### Fixed

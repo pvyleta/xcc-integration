@@ -260,9 +260,16 @@ class XCCDescriptorParser:
         # Time entities. Skip POCASI* (Czech "počasí" = "weather"); the substring
         # "CAS" appears in the prefix but those props are weather data (city name,
         # forecast validity datetime strings, icon indices) and must not get unit "h".
+        # Also skip date/datetime props: "TIME" is a substring of "DATETIME", and a
+        # date/datetime value ('01.01.1970 00:00') is a string, not an hours duration
+        # — the "h" unit makes HA raise ValueError on every read (e.g.
+        # FLASH-HEADER*-DATETIME). Real durations (PROVOZHODIN, ...) still match.
         prop_upper = prop.upper()
-        if not prop_upper.startswith("POCASI") and any(
-            time_word in prop_upper for time_word in ["CAS", "TIME", "HODIN", "HOURS"]
+        is_date_prop = any(kw in prop_upper for kw in ("DATETIME", "DATUM", "DATE", "TIMESTAMP"))
+        if (
+            not prop_upper.startswith("POCASI")
+            and not is_date_prop
+            and any(time_word in prop_upper for time_word in ["CAS", "TIME", "HODIN", "HOURS"])
         ):
             return "h"
 

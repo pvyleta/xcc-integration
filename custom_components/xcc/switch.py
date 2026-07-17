@@ -25,8 +25,11 @@ async def async_setup_entry(
     """Set up XCC switch entities from a config entry."""
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Wait for first data update to ensure descriptors are loaded
-    await coordinator.async_config_entry_first_refresh()
+    # NEVER call async_config_entry_first_refresh() here — __init__ already ran it
+    # before forwarding platforms. A second refresh re-fetches every page and, if it
+    # races the per-page timeout (e.g. slow FVESOC1.XML), raises ConfigEntryNotReady
+    # from within this forwarded platform, leaving switch entities unregistered
+    # (stuck "unavailable"). Read the already-loaded coordinator.data directly.
 
     # Create switch entities using the coordinator's resolved type map.
     # get_entities_by_type("switch") reads from coordinator.entities which has
