@@ -160,6 +160,7 @@ def test_entity_ids_have_xcc_prefix_and_no_ip(sample_data_dir):
         # HIDDEN_BINARY_SENSORS override (was surfacing as stav_jednotky_obeh_5_aktivni)
         ("BLOKYSPOTREBY-OK", "xcc_blokyspotreby_ok", "HP heating circuit"),
         ("BLOKYSPOTREBY3-OK", "xcc_blokyspotreby3_ok", "HP heating DHW"),
+        ("TUVSANITACEVYSTUP", "xcc_tuvsanitacevystup", "DHW sanitation active"),
         # STATUS_XML_DESCRIPTOR entry (STATUS.XML has no paired descriptor file)
         ("SVYKON", "xcc_svykon", "HP power"),
         # HIDDEN_SWITCHES override
@@ -178,3 +179,20 @@ def test_known_friendly_names(sample_data_dir, prop, expected_id, expected_en):
         pytest.skip(f"{prop} not present in sample data; nothing to verify")
     assert meta["prop"] == prop
     assert meta["descriptor_config"].get("friendly_name_en") == expected_en
+
+
+def test_dhw_sanitation_output_is_read_only_binary_sensor(sample_data_dir):
+    """The active sanitation output must never be exposed as a writable switch."""
+    entity_configs, raw_entities = _load_all(sample_data_dir)
+    processed_data, entities_metadata = process_entities(
+        raw_entities, entity_configs, language="english"
+    )
+
+    entity_id = "xcc_tuvsanitacevystup"
+    assert entity_id in processed_data["binary_sensors"]
+    assert entity_id not in processed_data["switches"]
+
+    meta = entities_metadata[entity_id]
+    assert meta["type"] == "binary_sensor"
+    assert meta["descriptor_config"]["writable"] is False
+    assert meta["descriptor_config"]["device_class"] == "running"

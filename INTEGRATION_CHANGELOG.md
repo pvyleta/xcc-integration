@@ -2,6 +2,34 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.18] - 2026-09-18
+
+### New Features
+
+#### **DHW sanitation status**
+The controller's sanitation-cycle flag is now exposed as a read-only binary
+sensor, allowing Home Assistant to show when a legionella cycle is active.
+
+### Fixed
+
+#### **Independent active/attenuation status for every heating circuit**
+The controller publishes `BLOKYSPOTREBY-OK`, `BLOKYSPOTREBY-SET`, and
+`BLOKYSPOTREBY-UTLUM` on every `OKRUH1<n>.XML` page. Despite sharing property
+names, these are separate per-circuit registers—the web UI uses them to show
+which individual zone is active. The integration previously treated them as
+global duplicates, so the pages collided and Home Assistant exposed only one
+unreliable status entity.
+
+- Secondary circuits now namespace these values like their existing `TO-*`
+  entities (for example circuit 4 exposes
+  `binary_sensor.xcc_okruh4_blokyspotreby_ok`).
+- Circuit 0 keeps `binary_sensor.xcc_blokyspotreby_ok`, preserving its entity
+  ID, unique ID, and recorder history.
+- Namespaced status fields inherit the original read-only binary-sensor
+  override and descriptor metadata.
+- Regression coverage verifies that simultaneous Downstairs and Upstairs page
+  data survives the complete parsing and entity-processing pipeline.
+
 ## [1.15.17] - 2026-08-03
 
 ### ✨ New Features

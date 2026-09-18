@@ -322,6 +322,17 @@ HIDDEN_BINARY_SENSORS: dict = {
         "writable": False,
         "device_class": "running",
     },
+    # Active sanitation output. The controller publishes this as a BOOL input,
+    # but it reports whether the DHW sanitation cycle is currently running; it
+    # is not the user-facing sanitation enable switch (TSC-POVOLENI).
+    "TUVSANITACEVYSTUP": {
+        "friendly_name": "Sanitace TUV aktivní",
+        "friendly_name_en": "DHW sanitation active",
+        "unit": "",
+        "entity_type": "binary_sensor",
+        "writable": False,
+        "device_class": "running",
+    },
     "BLOKYSPOTREBY6-OK": {
         "friendly_name": "TČ ohřívá TUV 2",
         "friendly_name_en": "HP heating DHW 2",

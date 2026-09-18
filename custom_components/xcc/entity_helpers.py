@@ -27,12 +27,24 @@ _REPEATED_UNDERSCORES = re.compile(r"_+")
 # local so this module stays dependency-free (see module docstring).
 _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
+_CIRCUIT_SCOPED_PROPS = frozenset(
+    {
+        "BLOKYSPOTREBY-OK",
+        "BLOKYSPOTREBY-SET",
+        "BLOKYSPOTREBY-UTLUM",
+    }
+)
 
 
 def _circuit_base_prop(prop: str) -> str | None:
-    """Return the bare ``TO-*`` prop behind a circuit-namespaced one, else None."""
+    """Return the bare prop behind a circuit-namespaced one, else None."""
     match = _OKRUH_PROP_RE.match((prop or "").upper())
-    return f"TO-{match.group(2)}" if match else None
+    if not match:
+        return None
+    suffix = match.group(2)
+    if suffix in _CIRCUIT_SCOPED_PROPS:
+        return suffix
+    return f"TO-{suffix}"
 
 
 def circuit_of_prop(prop: str) -> int | None:
@@ -130,10 +142,10 @@ def lookup_with_normalized_fallback(
         if normalize_property_name(key) == normalized_prop:
             return value
 
-    # Circuit-namespaced props (OKRUH<n>-KONSTANTA) have no descriptor of their
-    # own — okruh.xml is byte-identical for every ?page=N and describes them
-    # under the bare TO-* name. Fall back to that so secondary circuits inherit
-    # circuit 0's entity type, unit, and select options.
+    # Circuit-namespaced props have no descriptor of their own — okruh.xml is
+    # byte-identical for every ?page=N and describes them under the bare name.
+    # Fall back so secondary circuits inherit circuit 0's entity type, unit,
+    # options and read-only status overrides.
     base_prop = _circuit_base_prop(prop)
     if base_prop is not None:
         return lookup_with_normalized_fallback(base_prop, table, default)
@@ -298,7 +310,7 @@ def process_entities(
     for entity in raw_entities:
         prop = entity["attributes"]["field_name"]
         page = entity["attributes"].get("page", "unknown")
-        # Circuit-namespaced props are described by their bare TO-* counterpart
+        # Circuit-namespaced props are described by their bare counterpart
         # (okruh.xml is shared across circuits), so they are descriptor-backed
         # even though the namespaced key itself is absent from the table.
         has_descriptor = prop in entity_configs or _circuit_base_prop(prop) in entity_configs

@@ -1,8 +1,9 @@
 """Per-circuit (okruh) entity namespacing.
 
-Every heating circuit's data page carries the same unprefixed ``TO-*`` props and
-shares one descriptor, so circuits above 0 are namespaced to ``OKRUH<n>-*``.
-Circuit 0 must stay bare — its entity_ids/unique_ids are already in service.
+Every heating circuit's data page carries the same unprefixed ``TO-*`` and
+``BLOKYSPOTREBY-*`` props and shares one descriptor, so circuits above 0 are
+namespaced to ``OKRUH<n>-*``. Circuit 0 must stay bare — its entity_ids and
+unique_ids are already in service.
 """
 
 import importlib.util
@@ -39,6 +40,7 @@ _circuit_base_prop = _entity_helpers._circuit_base_prop
 _normalize_page_to_device = _entity_helpers._normalize_page_to_device
 circuit_of_prop = _entity_helpers.circuit_of_prop
 lookup_with_normalized_fallback = _entity_helpers.lookup_with_normalized_fallback
+process_entities = _entity_helpers.process_entities
 
 circuit_from_okruh_page = _xcc_client.circuit_from_okruh_page
 okruh_data_page = _xcc_client.okruh_data_page
@@ -74,18 +76,33 @@ class TestPropNamespacing:
         assert qualify_circuit_prop("TO-KONSTANTA", 2) == "OKRUH2-KONSTANTA"
         assert qualify_circuit_prop("TO-CONFIG-CHLAZENI", 2) == "OKRUH2-CONFIG-CHLAZENI"
 
+    @pytest.mark.parametrize(
+        "prop",
+        ["BLOKYSPOTREBY-OK", "BLOKYSPOTREBY-SET", "BLOKYSPOTREBY-UTLUM"],
+    )
+    def test_secondary_circuit_block_status_namespaced(self, prop):
+        assert qualify_circuit_prop(prop, 4) == f"OKRUH4-{prop}"
+
     def test_system_wide_props_untouched(self):
-        """Only TO-* is circuit-scoped; shared props must keep global names."""
-        for prop in ("SVENKU", "BLOKYSPOTREBY-OK", "FVE-STATS", "SCHYBA"):
+        """Shared props must keep their global names."""
+        for prop in ("SVENKU", "FVE-STATS", "SCHYBA"):
             assert qualify_circuit_prop(prop, 2) == prop
 
     def test_roundtrip(self):
         assert unqualify_circuit_prop("OKRUH2-KONSTANTA") == ("TO-KONSTANTA", 2)
+        assert unqualify_circuit_prop("OKRUH4-BLOKYSPOTREBY-OK") == (
+            "BLOKYSPOTREBY-OK",
+            4,
+        )
         assert unqualify_circuit_prop("TO-KONSTANTA") == ("TO-KONSTANTA", None)
         assert unqualify_circuit_prop("SVENKU") == ("SVENKU", None)
 
     def test_helpers_agree(self):
         assert _circuit_base_prop("OKRUH2-KONSTANTA") == "TO-KONSTANTA"
+        assert (
+            _circuit_base_prop("OKRUH4-BLOKYSPOTREBY-OK")
+            == "BLOKYSPOTREBY-OK"
+        )
         assert _circuit_base_prop("TO-KONSTANTA") is None
         assert circuit_of_prop("OKRUH2-KONSTANTA") == 2
         assert circuit_of_prop("TO-KONSTANTA") is None
@@ -108,6 +125,21 @@ class TestDescriptorFallback:
         table = {"TO-KONSTANTA": {"entity_type": "number", "friendly_name": "Constant"}}
         assert lookup_with_normalized_fallback("OKRUH2-KONSTANTA", table) == table["TO-KONSTANTA"]
 
+    def test_namespaced_block_status_inherits_base_override(self):
+        table = {
+            "BLOKYSPOTREBY-OK": {
+                "entity_type": "binary_sensor",
+                "friendly_name": "HP heating circuit",
+                "writable": False,
+            }
+        }
+        assert (
+            lookup_with_normalized_fallback(
+                "OKRUH4-BLOKYSPOTREBY-OK", table
+            )
+            == table["BLOKYSPOTREBY-OK"]
+        )
+
     def test_exact_match_still_wins(self):
         table = {
             "TO-KONSTANTA": {"entity_type": "number"},
@@ -117,6 +149,44 @@ class TestDescriptorFallback:
 
     def test_missing_stays_missing(self):
         assert lookup_with_normalized_fallback("OKRUH2-NOPE", {}, "dflt") == "dflt"
+
+
+def test_per_circuit_active_flags_survive_full_processing_pipeline():
+    """Downstairs and upstairs status flags must become separate HA entities."""
+    xml_downstairs = (
+        '<PAGE><INPUT P="BLOKYSPOTREBY-OK" '
+        'NAME="__R6009.0_BOOL_i" VALUE="1"/></PAGE>'
+    )
+    xml_upstairs = (
+        '<PAGE><INPUT P="BLOKYSPOTREBY-OK" '
+        'NAME="__R6099.0_BOOL_i" VALUE="0"/></PAGE>'
+    )
+    raw_entities = parse_xml_entities(xml_downstairs, "OKRUH10.XML")
+    raw_entities += parse_xml_entities(xml_upstairs, "OKRUH14.XML")
+    entity_configs = {
+        "BLOKYSPOTREBY-OK": {
+            "friendly_name": "TČ topí okruh",
+            "friendly_name_en": "HP heating circuit",
+            "entity_type": "binary_sensor",
+            "writable": False,
+            "device_class": "running",
+        }
+    }
+
+    processed, metadata = process_entities(
+        raw_entities, entity_configs, language="english"
+    )
+
+    assert set(processed["binary_sensors"]) == {
+        "xcc_blokyspotreby_ok",
+        "xcc_okruh4_blokyspotreby_ok",
+    }
+    assert processed["binary_sensors"]["xcc_blokyspotreby_ok"]["state"] == "1"
+    assert (
+        processed["binary_sensors"]["xcc_okruh4_blokyspotreby_ok"]["state"]
+        == "0"
+    )
+    assert metadata["xcc_okruh4_blokyspotreby_ok"]["page"] == "OKRUH14.XML"
 
 
 @pytest.mark.skipif(
