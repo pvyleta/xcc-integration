@@ -26,16 +26,23 @@ _auth_locks = {}
 # Heating-circuit (okruh) namespacing
 #
 # Every circuit's data page (OKRUH10.XML = circuit 0, OKRUH12.XML = circuit 2,
-# ...) carries the SAME unprefixed ``TO-*`` prop names, and the okruh.xml
-# descriptor is byte-identical for every ``?page=N``. Entities are keyed by
-# prop alone, so without a namespace two circuits collide and one is silently
-# dropped. Circuit 0 keeps the bare ``TO-*`` names so existing entity_ids and
-# unique_ids (and their recorder history) are untouched; every other circuit
-# is namespaced to ``OKRUH<n>-*``.
+# ...) carries the SAME unprefixed ``TO-*`` props and the same three
+# ``BLOKYSPOTREBY-*`` live-status props. The okruh.xml descriptor is
+# byte-identical for every ``?page=N``. Entities are keyed by prop alone, so
+# without a namespace two circuits collide and one is silently dropped.
+# Circuit 0 keeps its bare names so existing entity_ids/unique_ids (and recorder
+# history) are untouched; every other circuit is namespaced to ``OKRUH<n>-*``.
 # ---------------------------------------------------------------------------
 _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 _CIRCUIT_PROP_PREFIX = "TO-"
+_CIRCUIT_SCOPED_PROPS = frozenset(
+    {
+        "BLOKYSPOTREBY-OK",
+        "BLOKYSPOTREBY-SET",
+        "BLOKYSPOTREBY-UTLUM",
+    }
+)
 
 
 def okruh_data_page(circuit: int) -> str:
@@ -50,18 +57,24 @@ def circuit_from_okruh_page(page: str) -> int | None:
 
 
 def qualify_circuit_prop(prop: str, circuit: int | None) -> str:
-    """Namespace a circuit-scoped ``TO-*`` prop for circuits above 0.
+    """Namespace a circuit-scoped prop for circuits above 0.
 
-    Only ``TO-*`` props are circuit-scoped. The other props on an okruh data
-    page (SVENKU, BLOKYSPOTREBY-*, FVE-*, ...) are system-wide duplicates of
-    values published on other pages and must keep their global names so they
-    continue to dedupe against them.
+    Besides ``TO-*``, each okruh page publishes its own consumption-block
+    active flag, requested-water temperature and attenuation flag under the
+    same three ``BLOKYSPOTREBY-*`` names. Their controller register addresses
+    differ by circuit, so they must be namespaced too. Other props on an okruh
+    page (SVENKU, FVE-*, ...) remain global duplicates and keep their names.
     """
     if not circuit or not prop:
         return prop
-    if prop.upper().startswith(_CIRCUIT_PROP_PREFIX):
-        return f"OKRUH{circuit}-{prop[len(_CIRCUIT_PROP_PREFIX):]}"
-    return prop
+    prop_upper = prop.upper()
+    if prop_upper.startswith(_CIRCUIT_PROP_PREFIX):
+        suffix = prop[len(_CIRCUIT_PROP_PREFIX):]
+    elif prop_upper in _CIRCUIT_SCOPED_PROPS:
+        suffix = prop
+    else:
+        return prop
+    return f"OKRUH{circuit}-{suffix}"
 
 
 def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
@@ -73,7 +86,10 @@ def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
     match = _OKRUH_PROP_RE.match((prop or "").upper())
     if not match:
         return prop, None
-    return f"{_CIRCUIT_PROP_PREFIX}{match.group(2)}", int(match.group(1))
+    suffix = match.group(2)
+    if suffix in _CIRCUIT_SCOPED_PROPS:
+        return suffix, int(match.group(1))
+    return f"{_CIRCUIT_PROP_PREFIX}{suffix}", int(match.group(1))
 
 
 class XCCClient:
