@@ -64,7 +64,7 @@ DEVICE_CLASS_MAPPING = {
     UnitOfFrequency.HERTZ: SensorDeviceClass.FREQUENCY,
     UnitOfPressure.BAR: SensorDeviceClass.PRESSURE,
     "Pa": SensorDeviceClass.PRESSURE,  # Pascal not available in this HA version
-    PERCENTAGE: SensorDeviceClass.POWER_FACTOR,  # For efficiency percentages
+    PERCENTAGE: None,  # A percentage alone does not imply electrical power factor.
 }
 
 # State class mapping
@@ -255,6 +255,13 @@ class XCCSensor(XCCEntity, SensorEntity):
         entity_data: dict[str, Any],
     ) -> SensorEntityDescription:
         """Create entity description for the sensor."""
+        # get_entities_by_type returns registry metadata, whereas the fallback
+        # platform path supplies processed state data. Preserve raw type hints
+        # in both shapes before deriving numeric metadata.
+        if "data" in entity_data:
+            raw = entity_data.get("data", {})
+            entity_data = {**entity_data, "attributes": raw.get("attributes", {}),
+                           "state": raw.get("state")}
         entity_id = entity_data.get("entity_id", "")
         prop = entity_data.get("prop", "").upper()
 
@@ -262,7 +269,7 @@ class XCCSensor(XCCEntity, SensorEntity):
         entity_config = coordinator.get_entity_config(prop)
 
         # Get unit from descriptor or entity data
-        xcc_unit = entity_config.get("unit") or entity_data.get("unit", "")
+        xcc_unit = entity_config.get("unit", entity_data.get("unit", ""))
         ha_unit = UNIT_MAPPING.get(xcc_unit, xcc_unit) if xcc_unit else None
 
         # A numeric unit forces HA to coerce the state to float, so a non-numeric
@@ -276,7 +283,7 @@ class XCCSensor(XCCEntity, SensorEntity):
             or entity_config.get("data_type")
             or ""
         ).lower()
-        if resolved_data_type in ("datetime", "date", "time", "string"):
+        if resolved_data_type in ("datetime", "date", "time", "string", "bool", "boolean"):
             ha_unit = None
 
         # Determine device class - prioritize descriptor information
@@ -304,6 +311,11 @@ class XCCSensor(XCCEntity, SensorEntity):
             )
 
         # Second, try unit-based device class
+        elif ha_unit == PERCENTAGE:
+            # Humidity is a physical percentage; HP demand/limits are not power
+            # factor. Leave other percentages unclassified without proof.
+            if "VLHKOST" in prop or "HUMIDITY" in prop:
+                device_class = SensorDeviceClass.HUMIDITY
         elif ha_unit in DEVICE_CLASS_MAPPING:
             device_class = DEVICE_CLASS_MAPPING[ha_unit]
             _LOGGER.debug(
@@ -312,7 +324,7 @@ class XCCSensor(XCCEntity, SensorEntity):
                 ha_unit,
                 device_class,
             )
-        else:
+        elif ha_unit:
             # Fallback: Try to determine device class from field name patterns
             field_name_lower = entity_id.lower()
             if "temp" in field_name_lower or "teplota" in field_name_lower:
@@ -352,7 +364,8 @@ class XCCSensor(XCCEntity, SensorEntity):
 
             # Look for clear indicators of string types
             is_clearly_string = (
-                "STRING" in xml_name.upper()
+                resolved_data_type in ("datetime", "date", "time", "string", "enum")
+                or "STRING" in xml_name.upper()
                 or "TIME" in xml_name.upper()  # Time values like "03:00"
                 or "_s" in xml_name  # String suffix
                 or "Thh:mm" in xml_name  # Time format indicator
@@ -368,7 +381,8 @@ class XCCSensor(XCCEntity, SensorEntity):
 
             # Look for clear indicators of boolean types (should not have state class)
             is_clearly_boolean = (
-                "BOOL" in xml_name.upper()
+                resolved_data_type in ("bool", "boolean")
+                or "BOOL" in xml_name.upper()
                 or "_BOOL_" in xml_name.upper()
                 or prop in [
                     "SZAPNUTO",  # Known boolean system status
@@ -386,7 +400,8 @@ class XCCSensor(XCCEntity, SensorEntity):
 
             # Look for clear indicators of numeric types (should have state class)
             is_clearly_numeric = (
-                "REAL" in xml_name.upper()
+                resolved_data_type in ("numeric", "real", "float", "int", "integer")
+                or "REAL" in xml_name.upper()
                 or "INT" in xml_name.upper()
                 or "FLOAT" in xml_name.upper()
                 or "_f" in xml_name  # Float suffix
@@ -432,6 +447,10 @@ class XCCSensor(XCCEntity, SensorEntity):
                     except (ValueError, TypeError):
                         # Current value is not numeric - no state class
                         state_class = None
+
+        # Non-numeric protocol types must not retain inferred numeric metadata.
+        if resolved_data_type in ("datetime", "date", "time", "string", "enum", "bool", "boolean"):
+            ha_unit = device_class = state_class = None
 
         # Get entity name using coordinator's language-aware method
         entity_name = coordinator._get_friendly_name(entity_config, prop)

@@ -41,6 +41,19 @@ def circuit_of_prop(prop: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def adaptive_band_unit(prop: str, data: dict[str, Any]) -> str | None:
+    """Resolve the adaptive band's unit from its own circuit's raw selector.
+
+    Unknown/missing selector values deliberately have no unit; never borrow
+    circuit zero's mode for a secondary circuit.
+    """
+    selector = prop.upper().removesuffix("ROZPTYLEKV") + "ROZPTYLPCT"
+    key = f"xcc_{format_entity_id_suffix(selector)}"
+    entry = data.get("selects", {}).get(key, {})
+    value = entry.get("attributes", {}).get("value", entry.get("state"))
+    return {"0": "°C", "1": "%"}.get(str(value))
+
+
 def format_entity_id_suffix(prop: str) -> str:
     """Format an XCC property name into a valid Home Assistant entity-ID suffix.
 
@@ -357,10 +370,7 @@ def process_entities(
             friendly_name = _resolve_friendly_name(
                 descriptor_config, prop, language
             )
-            unit = (
-                descriptor_config.get("unit")
-                or entity["attributes"].get("unit", "")
-            )
+            unit = descriptor_config.get("unit", entity["attributes"].get("unit", ""))
             entity_id = f"xcc_{format_entity_id_suffix(prop)}"
             page = entity["attributes"].get("page", "unknown")
 

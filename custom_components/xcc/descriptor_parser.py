@@ -1,6 +1,7 @@
 """XCC Descriptor Parser for determining entity types and capabilities."""
 
 import logging
+import re
 from typing import Any
 from xml.etree import ElementTree as ET
 
@@ -131,11 +132,7 @@ class XCCDescriptorParser:
         friendly_name_cz = text or text_en or self._format_prop_name_czech(prop)
 
         # Get unit from element (try both unit and unit_en)
-        unit = element.get("unit_en") or element.get("unit", "")
-
-        # If no unit on element, try to infer from context or prop name
-        if not unit:
-            unit = self._infer_unit_from_context(prop, row, element)
+        unit = self._resolve_unit(prop, row, element)
 
         # Determine device class from unit
         device_class = self._determine_device_class_from_unit(unit)
@@ -216,10 +213,60 @@ class XCCDescriptorParser:
 
         return unit_to_device_class.get(unit)
 
+    def _resolve_unit(self, prop: str, row: ET.Element, element: ET.Element) -> str:
+        """Resolve explicit units, known telemetry, then conservative inference.
+
+        XCC uses unit="" to hide some display suffixes, including run-hours.
+        Only these verified numeric telemetry families override that empty
+        display attribute; arbitrary priorities and other controls stay unitless.
+        """
+        explicit = element.get("unit_en") or element.get("unit", "")
+        if explicit:
+            return explicit
+        if element.tag == "number" and "readonly" in element.get("config", ""):
+            key = prop.upper()
+            if key in {"TTUV", "TTUVDRUHA"} or re.fullmatch(
+                r"TCSTAV\d+-(TCJ|TS|TD|TE|TL)", key
+            ):
+                return "°C"
+            if key in {"BIVALENCEMOTOHODINY", "TUVEXTERNIOHREVMOTOHODINY"} or re.fullmatch(
+                r"BIVALENCEMOTOHODINYSTUPNE[123]", key
+            ):
+                return "h"
+        if "unit" in element.attrib or "unit_en" in element.attrib:
+            return ""
+        return self._infer_unit_from_context(prop, row, element)
+
     def _infer_unit_from_context(
         self, prop: str, row: ET.Element, element: ET.Element,
     ) -> str:
         """Infer unit from context when not explicitly specified."""
+        # Naming context may intentionally come from a previous titled row.
+        # Units must only use the physical row containing this element.
+        if element is not None:
+            immediate_row = self._find_immediate_parent_row(element)
+            if immediate_row is not None:
+                row = immediate_row
+        # These are control influences, not absolute room temperatures or
+        # durations (POCASI contains CAS). The controller descriptor supplies
+        # no unit: leave it unspecified rather than inventing hours or Celsius.
+        if prop.upper() in {
+            "TOPNEOKRUHYOUT-POCASIVLIV",
+            "TOPNEOKRUHYADAPTACEOUT",
+        }:
+            return ""
+
+        # Row labels can describe several unrelated controls. Never borrow a
+        # neighbour's unit (e.g. priority, surplus watts and temperature uplift).
+        # Boolean option labels likewise must not inherit runhours.
+        if element is not None and element.find("option") is not None:
+            return ""
+        if row is not None and len(row.findall(".//*[@prop]")) > 1:
+            row = None  # Keep property-specific inference, discard mixed row context.
+
+        if prop.upper() == "TTUV":
+            return "°C"  # DHW measured water temperature; often shares a control row.
+
         # Check row context first for temperature-related text
         if row is not None:
             row_text = (row.get("text_en", "") or row.get("text", "")).lower()
@@ -452,9 +499,7 @@ class XCCDescriptorParser:
 
         elif element.tag == "number":
             # Get unit with enhanced detection
-            unit = element.get("unit_en") or element.get("unit", "")
-            if not unit:
-                unit = self._infer_unit_from_context(prop, parent_row, element)
+            unit = self._resolve_unit(prop, parent_row, element)
 
             # Determine device class from unit
             device_class = self._determine_device_class_from_unit(unit)

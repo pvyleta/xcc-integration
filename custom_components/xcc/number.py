@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
+from .entity_helpers import adaptive_band_unit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,6 +168,13 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         # feature name equals the device name.
         if self._attr_name == device_info.get("name"):
             self._attr_name = None
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Use the live circuit-specific selector for the adaptive band."""
+        if self._prop.endswith("-ADAPTACE-ROZPTYLEKV"):
+            return adaptive_band_unit(self._prop, self.coordinator.data or {})
+        return getattr(self, "_attr_native_unit_of_measurement", None)
 
     @property
     def native_value(self) -> float | None:
