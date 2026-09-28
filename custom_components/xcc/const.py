@@ -283,6 +283,24 @@ HIDDEN_SWITCHES: dict = {
 # Like HIDDEN_SWITCHES, these entries OVERRIDE the type inferred from the _BOOL_i register
 # suffix so the entity appears as a binary_sensor instead of a switch.
 HIDDEN_BINARY_SENSORS: dict = {
+    # Confirmed indicator-only properties in the controller descriptors. A BOOL
+    # register address is not evidence that a status is a user-facing control.
+    **{
+        prop: {
+            "friendly_name_en": name,
+            "unit": "",
+            "entity_type": "binary_sensor",
+            "writable": False,
+            "device_class": "running",
+        }
+        for prop, name in {
+            "TCRVYSTUP": "DHW circulation running",
+            "BIVALENCE": "Auxiliary source active",
+            "ALTERNATIVNIREZIMAKTIVNI": "Alternative mode active",
+            "TO-NATOP-STAT-RUN": "Slow heating up active",
+            "TUVEXTERNIVYSTUP": "DHW external heating active",
+        }.items()
+    },
     # Consumption-prioritizer "active" flags (BLOKYSPOTREBY = consumption block)
     # Each consumer has a -OK flag that turns 1 when the HP is currently serving it.
     # All six share the same semantics and are named systematically as

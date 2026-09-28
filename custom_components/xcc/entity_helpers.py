@@ -331,12 +331,12 @@ def process_entities(
 
             config = lookup_with_normalized_fallback(prop, entity_configs)
             entity_type = (config or {}).get("entity_type", "sensor")
-            if entity_type == "sensor" and prop not in entity_configs:
+            if entity_type == "sensor" and config is None:
                 parsed_type = entity.get("entity_type")
                 if parsed_type and parsed_type != "sensor":
                     entity_type = parsed_type
 
-            descriptor_config = entity_configs.get(prop, {})
+            descriptor_config = config or {}
             if (
                 entity["attributes"].get("page", "").upper().startswith("NAST")
                 and not descriptor_config
