@@ -32,7 +32,6 @@ from .entity_helpers import format_entity_id_suffix
 from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER.setLevel(logging.DEBUG)  # Force debug logging for sensor platform
 
 # Unit mapping from XCC to Home Assistant
 UNIT_MAPPING = {
