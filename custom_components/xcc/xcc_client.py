@@ -38,6 +38,36 @@ _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 _CIRCUIT_PROP_PREFIX = "TO-"
 
 
+_CIRCUIT_SCOPED_PROPS = frozenset(
+    {
+        "TOPNEOKRUHYOUT-POCASIVLIV",
+        "TOPNEOKRUHYADAPTACEOUT",
+        "MZ",
+        "WEB-VOLBYVLIVUPROSTORU",
+        "WEB-BLOKREZIM-UTLUMBIVALENCE",
+        "WEB-BLOKREZIM-PROSTORADAPTIVNI",
+        "WEB-VLIVPROSTORU-ADAPTIVNIMAXT",
+        "WEB-VLIVPROSTORU-ADAPTIVNIMINT",
+        "OKRUHDOCASNEBEZCIDLA",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-BOOST",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-ECO",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-OFF",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-IGNORED",
+    }
+)
+
+
+def qualify_page_prop(prop: str, page: str) -> str:
+    """Namespace page-local diagnostics without reusing mixed schedule history."""
+    if not prop:
+        return prop
+    if (prop.upper() in {"PAGENAME", "ICONNO"} or re.fullmatch(
+        r"(?:US|CS|CT)-(?:MON|TUE|WED|THU|FRI|SAT|SUN)-T(?:ON|OFF)[12]", prop.upper()
+    )) and re.fullmatch(r"[A-Z0-9]+\.XML", page.upper()):
+        return f"PAGE-{page.upper()[:-4]}-{prop}"
+    return qualify_circuit_prop(prop, circuit_from_okruh_page(page))
+
+
 def okruh_data_page(circuit: int) -> str:
     """Return the data-page filename carrying ``circuit``'s live values."""
     return f"OKRUH1{circuit}.XML"
@@ -50,18 +80,21 @@ def circuit_from_okruh_page(page: str) -> int | None:
 
 
 def qualify_circuit_prop(prop: str, circuit: int | None) -> str:
-    """Namespace a circuit-scoped ``TO-*`` prop for circuits above 0.
+    """Namespace a circuit-scoped prop for circuits above 0.
 
-    Only ``TO-*`` props are circuit-scoped. The other props on an okruh data
-    page (SVENKU, BLOKYSPOTREBY-*, FVE-*, ...) are system-wide duplicates of
-    values published on other pages and must keep their global names so they
-    continue to dedupe against them.
+    Known local diagnostics and controls are scoped by their source circuit.
+    Other properties remain global duplicates and keep their names.
     """
     if not circuit or not prop:
         return prop
-    if prop.upper().startswith(_CIRCUIT_PROP_PREFIX):
-        return f"OKRUH{circuit}-{prop[len(_CIRCUIT_PROP_PREFIX):]}"
-    return prop
+    prop_upper = prop.upper()
+    if prop_upper.startswith(_CIRCUIT_PROP_PREFIX):
+        suffix = prop[len(_CIRCUIT_PROP_PREFIX):]
+    elif prop_upper in _CIRCUIT_SCOPED_PROPS:
+        suffix = prop
+    else:
+        return prop
+    return f"OKRUH{circuit}-{suffix}"
 
 
 def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
@@ -73,7 +106,10 @@ def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
     match = _OKRUH_PROP_RE.match((prop or "").upper())
     if not match:
         return prop, None
-    return f"{_CIRCUIT_PROP_PREFIX}{match.group(2)}", int(match.group(1))
+    suffix = match.group(2)
+    if suffix in _CIRCUIT_SCOPED_PROPS:
+        return suffix, int(match.group(1))
+    return f"{_CIRCUIT_PROP_PREFIX}{suffix}", int(match.group(1))
 
 
 class XCCClient:
@@ -1102,7 +1138,7 @@ def parse_xml_entities(
         skipped_count = 0
 
         for i, elem in enumerate(input_elements):
-            prop = qualify_circuit_prop(elem.get("P"), circuit)
+            prop = qualify_page_prop(elem.get("P"), page_name)
             value = elem.get("VALUE")
 
             # Only log first 3 elements once per function call to avoid spam (they're always the same)
@@ -1247,7 +1283,7 @@ def parse_xml_entities(
         _LOGGER.debug("Processing prop elements for %s", page_name)
 
     for elem in prop_elements:
-        prop = qualify_circuit_prop(elem.get("prop"), circuit)
+        prop = qualify_page_prop(elem.get("prop"), page_name)
         if not prop:
             continue
 
@@ -1297,7 +1333,7 @@ def parse_xml_entities(
         nast_processed = 0
 
         for elem in nast_elements:
-            prop = qualify_circuit_prop(elem.get("prop"), circuit)
+            prop = qualify_page_prop(elem.get("prop"), page_name)
             if not prop:
                 continue
 

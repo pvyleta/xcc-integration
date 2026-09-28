@@ -816,6 +816,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     def is_writable(self, prop: str) -> bool:
         """Check if a property is writable with smart matching."""
+        if prop.upper().startswith("PAGE-"):
+            return False
         if not self.entity_configs:
             return False
         config = lookup_with_normalized_fallback(prop, self.entity_configs)

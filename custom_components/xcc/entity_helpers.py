@@ -29,10 +29,35 @@ _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 
 
+_CIRCUIT_SCOPED_PROPS = frozenset(
+    {
+        "TOPNEOKRUHYOUT-POCASIVLIV",
+        "TOPNEOKRUHYADAPTACEOUT",
+        "MZ",
+        "WEB-VOLBYVLIVUPROSTORU",
+        "WEB-BLOKREZIM-UTLUMBIVALENCE",
+        "WEB-BLOKREZIM-PROSTORADAPTIVNI",
+        "WEB-VLIVPROSTORU-ADAPTIVNIMAXT",
+        "WEB-VLIVPROSTORU-ADAPTIVNIMINT",
+        "OKRUHDOCASNEBEZCIDLA",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-BOOST",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-ECO",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-OFF",
+        "MAIN-PRIORIZATORSPOTREBY-PRITOPNEOKRUHY-SPOTSTATS-IGNORED",
+    }
+)
+
+
 def _circuit_base_prop(prop: str) -> str | None:
     """Return the bare ``TO-*`` prop behind a circuit-namespaced one, else None."""
+    page_match = re.fullmatch(r"PAGE-[A-Z0-9]+-(.+)", (prop or "").upper())
+    if page_match:
+        return page_match.group(1)
     match = _OKRUH_PROP_RE.match((prop or "").upper())
-    return f"TO-{match.group(2)}" if match else None
+    if not match:
+        return None
+    suffix = match.group(2)
+    return suffix if suffix in _CIRCUIT_SCOPED_PROPS else f"TO-{suffix}"
 
 
 def circuit_of_prop(prop: str) -> int | None:
@@ -336,7 +361,12 @@ def process_entities(
                 if parsed_type and parsed_type != "sensor":
                     entity_type = parsed_type
 
-            descriptor_config = entity_configs.get(prop, {})
+            descriptor_config = config or {}
+            if prop.startswith("PAGE-"):
+                entity_type = "sensor"
+                descriptor_config = {**descriptor_config, "entity_type": "sensor",
+                                     "writable": False, "unit": "",
+                                     "data_type": "string"}
             if (
                 entity["attributes"].get("page", "").upper().startswith("NAST")
                 and not descriptor_config
