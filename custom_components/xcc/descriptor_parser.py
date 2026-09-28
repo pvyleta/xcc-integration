@@ -1,6 +1,7 @@
 """XCC Descriptor Parser for determining entity types and capabilities."""
 
 import logging
+import re
 from typing import Any
 from xml.etree import ElementTree as ET
 
@@ -108,6 +109,16 @@ class XCCDescriptorParser:
                     )
                     if sensor_config:
                         entity_configs[prop] = sensor_config
+
+        # The web resolves row titles through a live name property. Retain that
+        # reference rather than turning an installer-configured name into a
+        # guessed translation (e.g. H0/H4 becoming "Pool room").
+        for element in root.iter():
+            prop = element.get("prop")
+            row = self._find_immediate_parent_row(element)
+            reference = row.get("prop", "") if row is not None else ""
+            if prop in entity_configs and re.fullmatch(r"B\d+-CONFIG-NAZEV", reference) and prop != reference:
+                entity_configs[prop]["name_reference"] = reference
 
         return entity_configs
 

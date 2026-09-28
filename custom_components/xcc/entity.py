@@ -253,25 +253,15 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             entity_entry = registry.async_get(self.entity_id)
 
             if entity_entry:
-                current_name = self._get_entity_name()
-
-                # Check if the name needs to be updated
-                if entity_entry.name != current_name:
-                    _LOGGER.info(
-                        "🔄 UPDATING ENTITY NAME: %s from '%s' to '%s'",
-                        self.entity_id, entity_entry.name or "None", current_name
-                    )
-
-                    # Update the entity registry
-                    registry.async_update_entity(
-                        self.entity_id,
-                        name=current_name
-                    )
-                else:
-                    _LOGGER.debug(
-                        "✅ Entity name already correct: %s = '%s'",
-                        self.entity_id, current_name
-                    )
+                config = self._entity_data.get("descriptor_config", {})
+                legacy_names = config.get("legacy_generated_names", [])
+                # Old versions wrote generated names into HA's user-name field.
+                # Clear only recognisable old generated names; never overwrite
+                # an unrelated user customisation with the controller's name.
+                if config.get("configured_name"):
+                    if entity_entry.name and entity_entry.name in legacy_names:
+                        registry.async_update_entity(self.entity_id, name=None)
+                    return
             else:
                 _LOGGER.debug("Entity not found in registry: %s", self.entity_id)
 

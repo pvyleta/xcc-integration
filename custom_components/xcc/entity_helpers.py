@@ -178,6 +178,45 @@ _BUCKET_BY_TYPE: dict[str, str] = {
 }
 
 
+def configured_name_config(prop: str, page: str, config: dict, values: dict) -> dict:
+    """Resolve names from fetched data; never equate block and circuit indices.
+
+    Copy descriptors: every circuit shares the same base descriptor. Names are
+    presentation only and must never participate in identity/write routing.
+    """
+    def usable(value):
+        text = str(value).strip() if value is not None else ""
+        return text if text.lower() not in ("", "unknown", "unavailable", "none") else ""
+
+    page_key = page.upper().removesuffix(".XML")
+    reference = config.get("name_reference")
+    prefix = usable(values.get(reference)) if reference else ""
+    feature_en = config.get("friendly_name_en") or config.get("friendly_name") or prop
+    feature_cs = config.get("friendly_name") or config.get("friendly_name_en") or prop
+    if reference:
+        prefix = prefix or f"Block {reference.split('-')[0][1:]}"
+        # Column meanings on nast.xml's per-block power restriction rows.
+        if re.fullmatch(r"H\d+", prop):
+            feature_en, feature_cs = "Power restriction enabled", "Omezení výkonu povoleno"
+        elif re.fullmatch(r"E\d+", prop):
+            feature_en, feature_cs = "Power limit", "Omezení výkonu"
+        else:
+            # A technical suffix is preferable to a fabricated room type.
+            feature_en = feature_cs = prop
+    else:
+        circuit = circuit_of_prop(prop)
+        is_local = prop.startswith("TO-") or circuit is not None
+        if _OKRUH_DATA_PAGE_RE.fullmatch(page.upper()) and is_local:
+            index = int(_OKRUH_DATA_PAGE_RE.fullmatch(page.upper()).group(1))
+            prefix = usable(values.get(f"PAGE-{page_key}-PAGENAME")) or f"Heating circuit {index + 1}"
+    if not prefix:
+        return config
+    return {**config, "configured_name": True,
+            "legacy_generated_names": [config.get("friendly_name"), config.get("friendly_name_en"), prop],
+            "friendly_name_en": f"{prefix} — {feature_en}",
+            "friendly_name": f"{prefix} — {feature_cs}"}
+
+
 def _resolve_friendly_name(
     config: dict[str, Any], prop: str, language: str
 ) -> str:
@@ -203,7 +242,7 @@ def _resolve_friendly_name(
     # Secondary circuits inherit circuit 0's descriptor, so without a qualifier
     # every circuit would render under the same name.
     circuit = circuit_of_prop(prop)
-    if circuit is not None:
+    if circuit is not None and not config.get("configured_name"):
         return f"Okruh {circuit} {name}"
     return name
 
@@ -294,6 +333,15 @@ def process_entities(
 
     entities_with_descriptors: list[dict[str, Any]] = []
     entities_without_descriptors: list[dict[str, Any]] = []
+    name_values = {e["attributes"]["field_name"]: e.get("state", e["attributes"].get("value"))
+                   for e in raw_entities}
+    # Upstream has bare PAGENAME fields. Keep a page-local lookup only for
+    # presentation; do not change entity identities or register routing.
+    for entity in raw_entities:
+        attrs = entity["attributes"]
+        if attrs["field_name"] == "PAGENAME":
+            page_key = attrs.get("page", "").upper().removesuffix(".XML")
+            name_values[f"PAGE-{page_key}-PAGENAME"] = entity.get("state", attrs.get("value"))
 
     for entity in raw_entities:
         prop = entity["attributes"]["field_name"]
@@ -337,6 +385,11 @@ def process_entities(
                     entity_type = parsed_type
 
             descriptor_config = entity_configs.get(prop, {})
+            # Inherit only presentation fields for secondary circuits here.
+            # Unit/type metadata corrections are intentionally a separate change.
+            if not descriptor_config and circuit_of_prop(prop) is not None and config:
+                descriptor_config = {key: config[key] for key in
+                                     ("friendly_name", "friendly_name_en") if key in config}
             if (
                 entity["attributes"].get("page", "").upper().startswith("NAST")
                 and not descriptor_config
@@ -354,6 +407,9 @@ def process_entities(
                     "source": "NAST",
                 }
 
+            descriptor_config = configured_name_config(
+                prop, entity["attributes"].get("page", ""), descriptor_config, name_values
+            )
             friendly_name = _resolve_friendly_name(
                 descriptor_config, prop, language
             )

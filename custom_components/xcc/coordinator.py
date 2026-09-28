@@ -396,6 +396,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _get_friendly_name(self, descriptor_config: dict[str, Any], prop: str) -> str:
         """Get friendly name based on language preference."""
+        resolved = self.get_entity_config(prop)
+        if resolved.get("configured_name"):
+            descriptor_config = resolved
         if self.language == LANGUAGE_ENGLISH:
             # Prefer English, fallback to Czech, then prop
             return (
@@ -823,4 +826,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     def get_entity_config(self, prop: str) -> dict:
         """Get the full entity configuration for a property with smart matching."""
+        metadata = self.entities.get(f"xcc_{format_entity_id_suffix(prop)}", {})
+        resolved = metadata.get("descriptor_config", {})
+        if resolved.get("configured_name"):
+            return resolved
         return lookup_with_normalized_fallback(prop, self.entity_configs, default={}) or {}
