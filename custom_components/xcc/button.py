@@ -7,6 +7,7 @@ from typing import Any
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
@@ -123,9 +124,13 @@ class XCCButton(XCCEntity, ButtonEntity):
                 await self.coordinator.async_request_refresh()
             else:
                 _LOGGER.error("❌ Button action failed: %s", prop)
+                raise HomeAssistantError("XCC did not confirm the requested button action")
                 
+        except HomeAssistantError:
+            raise
         except Exception as e:
             _LOGGER.error("❌ Error executing button action for %s: %s", prop, e)
+            raise HomeAssistantError("Unable to complete the XCC button action") from e
 
     @property
     def available(self) -> bool:

@@ -11,6 +11,7 @@ from homeassistant.components.number import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -228,7 +229,7 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             # Validate input value
             if value is None:
                 _LOGGER.error("❌ Cannot set number %s: value is None", self.name)
-                return
+                raise HomeAssistantError("A numeric value is required")
 
             # Convert float to string for XCC
             str_value = str(value)
@@ -241,12 +242,12 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
             # Validate entity data
             if not self._entity_data:
                 _LOGGER.error("❌ Cannot set number %s: no entity data available", self.name)
-                return
+                raise HomeAssistantError("XCC entity data is unavailable")
 
             entity_id = self._entity_data.get("entity_id")
             if not entity_id:
                 _LOGGER.error("❌ Cannot set number %s: no entity_id in entity data", self.name)
-                return
+                raise HomeAssistantError("XCC entity identity is unavailable")
 
             # Use coordinator's set_entity_value method
             _LOGGER.debug("Calling coordinator.async_set_entity_value with entity_id=%s, value=%s", entity_id, str_value)
@@ -257,11 +258,15 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
                 # Note: coordinator already requests refresh, no need to do it again here
             else:
                 _LOGGER.error("❌ Failed to set number %s to %s", self.name, value)
+                raise HomeAssistantError("XCC did not confirm the requested number change")
 
+        except HomeAssistantError:
+            raise
         except Exception as err:
             _LOGGER.error("❌ Exception setting number %s to %s: %s", self.name, value, err)
             import traceback
             _LOGGER.debug("Full traceback: %s", traceback.format_exc())
+            raise HomeAssistantError("Unable to complete the XCC number change") from err
 
     @property
     def available(self) -> bool:
