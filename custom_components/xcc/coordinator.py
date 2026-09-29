@@ -37,6 +37,7 @@ from .entity_helpers import (
     process_entities as _process_entities_core,
 )
 from .value_writer import resolve_property
+from .system_faults import FaultTracker, fault_definitions
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         self.descriptor_parser = None  # Parser for entity type detection
         self.entity_configs = {}  # Cached entity configurations
         self._descriptors_loaded = False  # Track if descriptors have been loaded
+        self.system_faults = FaultTracker()
 
         # One-shot flag set by ``async_setup_entry`` when the user opted in
         # to entity-ID regeneration. ``XCCEntity._migrate_legacy_entity_id``
@@ -219,8 +221,22 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             if not self._descriptors_loaded:
                 await self._load_descriptors(client)
 
+            # Diagnostics stay separate from generic discovery: no reset controls.
+            self.system_faults.available = False
+            if not self.system_faults.definitions:
+                try:
+                    descriptor = await client.fetch_page("diag.xml?tab=1")
+                    self.system_faults.definitions = fault_definitions(
+                        descriptor, self.language == LANGUAGE_ENGLISH
+                    )
+                except Exception as err:
+                    _LOGGER.debug("XCC fault definitions unavailable: %s", err)
+
             # Use discovered data pages or fall back to default
             data_pages = self._discovered_data_pages if self._discovered_data_pages else XCC_DATA_PAGES
+            data_pages = [page for page in data_pages if page.upper() != "DIAG1.XML"]
+            if self.system_faults.definitions:
+                data_pages.append("DIAG1.XML")
 
             # Fetch only data pages (not descriptors)
             _LOGGER.debug(
@@ -241,6 +257,17 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             all_entities = []
             page_counts = []
             for page_name, xml_content in pages_data.items():
+                if page_name.upper() == "DIAG1.XML":
+                    try:
+                        changes = self.system_faults.update(xml_content)
+                    except Exception as err:
+                        _LOGGER.debug("XCC system fault snapshot unavailable: %s", err)
+                    else:
+                        for code, label, active in changes:
+                            # Warning level preserves both edges at HA's default level.
+                            _LOGGER.warning("XCC system fault %s: %s (%s)",
+                                            "ACTIVE" if active else "CLEARED", label, code)
+                    continue
                 if not xml_content.startswith("Error:"):
                     entities = parse_xml_entities(xml_content, page_name)
                     page_counts.append(f"{page_name}:{len(entities)}")
