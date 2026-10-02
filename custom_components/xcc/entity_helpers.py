@@ -27,6 +27,7 @@ _REPEATED_UNDERSCORES = re.compile(r"_+")
 # local so this module stays dependency-free (see module docstring).
 _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
+_TEMPERATURE_SETPOINT_PROPS = {"TO-POZADOVANA", "TUVPOZADOVANA"}
 
 
 def _circuit_base_prop(prop: str) -> str | None:
@@ -39,6 +40,22 @@ def circuit_of_prop(prop: str) -> int | None:
     """Return the circuit index a namespaced prop belongs to, else None."""
     match = _OKRUH_PROP_RE.match((prop or "").upper())
     return int(match.group(1)) if match else None
+
+
+def number_step_for_prop(prop: str, configured_step: float | None) -> float:
+    """Return the HA increment for an XCC number property.
+
+    XCC omits ``step`` from the descriptors for its primary room and DHW
+    temperature setpoints, even though their registers expose one decimal
+    place. Use 0.1 °C for room and DHW targets, matching that precision.
+    Preserve descriptor steps and the existing 1.0 default for unrelated
+    numbers.
+    """
+    normalized_prop = (prop or "").upper()
+    base_prop = _circuit_base_prop(normalized_prop) or normalized_prop
+    if base_prop in _TEMPERATURE_SETPOINT_PROPS:
+        return 0.1
+    return configured_step if configured_step is not None else 1.0
 
 
 def format_entity_id_suffix(prop: str) -> str:

@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import XCCDataUpdateCoordinator
+from .entity_helpers import number_step_for_prop
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -137,7 +138,9 @@ class XCCNumber(CoordinatorEntity[XCCDataUpdateCoordinator], NumberEntity):
         # Use full float range when limits are not specified
         self._attr_native_min_value = min_val if min_val is not None else -sys.float_info.max
         self._attr_native_max_value = max_val if max_val is not None else sys.float_info.max
-        self._attr_native_step = self._entity_config.get("step", 1.0)
+        self._attr_native_step = number_step_for_prop(
+            self._prop, self._entity_config.get("step")
+        )
 
         # Log when using unlimited range for debugging
         if min_val is None or max_val is None:

@@ -769,16 +769,15 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Apply DESCRIPTOR_OVERRIDES — the single source of manual metadata edits.
                 # See const.py for the grouping (STATUS_XML_DESCRIPTOR / HIDDEN_SWITCHES /
-                # HIDDEN_BINARY_SENSORS). Every entry replaces any descriptor-derived config
-                # for that prop because the override table is curated by hand from TRANSF.XSL
-                # and field-suffix analysis, while descriptor parsing infers types from
-                # register suffixes (e.g. _BOOL_i → switch) which is wrong for read-only
-                # status outputs and incomplete for STATUS.XML (no descriptor file exists).
+                # HIDDEN_BINARY_SENSORS / ENGLISH_NAME_OVERRIDES). Entries merge over
+                # descriptor-derived metadata so translation-only fixes retain the type,
+                # range, unit, options, and writeability discovered from the controller.
                 overridden = 0
                 for prop, config in DESCRIPTOR_OVERRIDES.items():
                     if prop in self.entity_configs:
                         overridden += 1
-                    self.entity_configs[prop] = config
+                    descriptor_config = self.entity_configs.get(prop, {})
+                    self.entity_configs[prop] = {**descriptor_config, **config}
 
                 _LOGGER.info(
                     "Loaded %d entity configurations from %d descriptor files "

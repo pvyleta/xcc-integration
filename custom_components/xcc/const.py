@@ -233,19 +233,20 @@ STATUS_XML_DESCRIPTOR: dict = {
         "writable": False,
     },
 }
-# SOBEH0–9: per-circuit run/visibility flags rendered as icon-only switchGo elements in
-# TRANSF.XSL — no per-index text labels exist in the XSL, names follow XCC convention.
+# SOBEH0–9: circulation-pump run/visibility flags rendered as icon-only switchGo
+# elements under the "Circulation pumps" heading in TRANSF.XSL. No per-index
+# text labels exist in the XSL, so retain the controller's zero-based numbering.
 for _i in range(10):
     STATUS_XML_DESCRIPTOR[f"SOBEH{_i}RUN"] = {
-        "friendly_name": f"Oběh {_i} běží",
-        "friendly_name_en": f"Circuit {_i} running",
+        "friendly_name": f"Oběhové čerpadlo {_i} běží",
+        "friendly_name_en": f"Circulation pump {_i} running",
         "unit": "",
         "entity_type": "binary_sensor",
         "writable": False,
     }
     STATUS_XML_DESCRIPTOR[f"SOBEH{_i}VIS"] = {
-        "friendly_name": f"Oběh {_i} aktivní",
-        "friendly_name_en": f"Circuit {_i} active",
+        "friendly_name": f"Oběhové čerpadlo {_i} dostupné",
+        "friendly_name_en": f"Circulation pump {_i} available",
         "unit": "",
         "entity_type": "binary_sensor",
         "writable": False,
@@ -383,15 +384,92 @@ HIDDEN_BINARY_SENSORS: dict = {
     },
 }
 
+# English names for fields whose controller descriptor only provides Czech text.
+# These are applied after descriptor parsing without replacing type, unit, range,
+# options, or writeability metadata discovered from the controller.
+ENGLISH_NAME_OVERRIDES: dict[str, dict[str, str]] = {
+    # Common data-page fields have no descriptor labels, so the raw Czech
+    # register names otherwise leak into English entity names.
+    "SCAS": {"friendly_name_en": "Controller date and time"},
+    "SCHYBA": {"friendly_name_en": "Controller error code"},
+    "SNAZEV1": {"friendly_name_en": "Controller name"},
+    "SNAZEV2": {"friendly_name_en": "Installation name"},
+    # The heating-circuit descriptor translates the individual column labels
+    # but omits text_en for the parent row ("Přetápění z FVE").  Supply complete
+    # names so English mode never combines that Czech prefix with English text.
+    "TO-FVEPRETOPENI-PRIORITA": {
+        "friendly_name_en": "PV overheating - Priority"
+    },
+    "TO-FVEPRETOPENI-PREBYTEK": {
+        "friendly_name_en": "PV overheating - Minimum surplus"
+    },
+    "TO-FVEPRETOPENI-T": {
+        "friendly_name_en": "PV overheating - Overheat by"
+    },
+    "TO-FVEPRETOPENI-POVOLENI": {
+        "friendly_name_en": "PV overheating - Enable"
+    },
+    "FVESTATS-SSR-OUTPUT0": {"friendly_name_en": "SSR output 1"},
+    "FVESTATS-SSR-OUTPUT1": {"friendly_name_en": "SSR output 2"},
+    "FVESTATS-SSR-OUTPUT2": {"friendly_name_en": "SSR output 3"},
+    "FVESTATS-SSR-SPOTREBASUM": {"friendly_name_en": "Total SSR power"},
+    "FVE-SSR-OUTPUT0-ENABLED": {"friendly_name_en": "SSR output 1 enabled"},
+    "FVE-NZUCHARGELIMITENABLED": {
+        "friendly_name_en": (
+            "Charge battery only after the permitted grid export is reached"
+        )
+    },
+    "FVESTATS-NZUCHARGELIMITACTIVE": {
+        "friendly_name_en": "Charging limitation active"
+    },
+    "FVE-NODISCHRGLOWPRICEENABLED": {
+        "friendly_name_en": (
+            "Disable battery discharge when the electricity price is low"
+        )
+    },
+    "FVE-NODISCHRGLOWPRICE": {
+        "friendly_name_en": (
+            "Do not discharge battery below this electricity price"
+        )
+    },
+    "FVE-CHARGEATCHEAPHOUR": {
+        "friendly_name_en": (
+            "Charge battery from the grid when the electricity price is low"
+        )
+    },
+    "FVE-CHARGEATCHEAPMAXPRICE": {
+        "friendly_name_en": (
+            "Charge battery from the grid below this electricity price"
+        )
+    },
+    "FVE-CHARGEATCHEAPMAXSOC": {
+        "friendly_name_en": "Stop grid charging above this battery SOC"
+    },
+    "FVE-CHARGEATCHEAPCHRGPOWER": {"friendly_name_en": "Grid charging power"},
+}
+
+for _slot in range(3):
+    ENGLISH_NAME_OVERRIDES[f"FLASH-HEADER{_slot}-NAME"] = {
+        "friendly_name_en": f"Backup slot {_slot + 1} name"
+    }
+    ENGLISH_NAME_OVERRIDES[f"FLASH-HEADER{_slot}-VERSION"] = {
+        "friendly_name_en": f"Backup slot {_slot + 1} version"
+    }
+    ENGLISH_NAME_OVERRIDES[f"FLASH-HEADER{_slot}-DATETIME"] = {
+        "friendly_name_en": f"Backup slot {_slot + 1} date"
+    }
+
 # Single descriptor-override table consumed by the coordinator at descriptor-load time.
 # Sources are grouped above purely for readability; semantically all entries replace any
 # config inferred from descriptor XML or from the _BOOL_i register suffix:
 #   * STATUS_XML_DESCRIPTOR  — metadata for STATUS.XML (no paired descriptor file)
 #   * HIDDEN_SWITCHES        — promotes hidden _BOOL_i fields to writable switches
 #   * HIDDEN_BINARY_SENSORS  — pins read-only _BOOL_i status fields as binary_sensor
-# Add new manual overrides to whichever of the three source dicts fits the intent.
+#   * ENGLISH_NAME_OVERRIDES — supplies names omitted by controller descriptors
+# Add new manual overrides to whichever source dict fits the intent.
 DESCRIPTOR_OVERRIDES: dict = {
     **STATUS_XML_DESCRIPTOR,
     **HIDDEN_SWITCHES,
     **HIDDEN_BINARY_SENSORS,
+    **ENGLISH_NAME_OVERRIDES,
 }

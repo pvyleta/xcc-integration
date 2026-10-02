@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, LANGUAGE_ENGLISH
 from .coordinator import XCCDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
 
             for opt in options:
                 # Get localized option text using coordinator's language preference
-                if coordinator.language == "en":
+                if coordinator.language == LANGUAGE_ENGLISH:
                     # English preference: text_en -> text -> value
                     option_text = opt.get('text_en', opt.get('text', opt.get('value', '')))
                 else:

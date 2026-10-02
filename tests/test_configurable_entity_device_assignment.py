@@ -85,7 +85,7 @@ def mock_coordinator():
         "min": 0, "max": 100, "step": 1, "unit_en": "%"
     })
     coordinator._get_friendly_name = Mock(return_value="Test Entity")
-    coordinator.language = "en"  # Add language attribute for select entities
+    coordinator.language = "english"
     
     return coordinator
 
@@ -143,9 +143,9 @@ def test_select_entity_device_assignment(mock_coordinator):
     # Mock select-specific config
     mock_coordinator.get_entity_config.return_value = {
         "options": [
-            {"value": "auto", "text_en": "Auto", "text": "Auto"},
-            {"value": "manual", "text_en": "Manual", "text": "Manual"},
-            {"value": "off", "text_en": "Off", "text": "Off"}
+            {"value": "auto", "text_en": "Automatic", "text": "Automatický"},
+            {"value": "manual", "text_en": "Manual", "text": "Ruční"},
+            {"value": "off", "text_en": "Off", "text": "Vypnuto"}
         ],
         "unit_en": ""
     }
@@ -156,6 +156,7 @@ def test_select_entity_device_assignment(mock_coordinator):
     assert select_entity._attr_device_info["name"] == "XCC Hot Water"
     assert select_entity._attr_device_info["identifiers"] == {("xcc", "192.168.1.100_tuv1")}
     assert select_entity._attr_device_info["model"] == "Hot Water Module"
+    assert select_entity.options == ["Automatic", "Manual", "Off"]
     
     print("✅ Select entity correctly assigned to TUV1 device")
 

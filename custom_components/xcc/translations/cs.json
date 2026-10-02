@@ -9,6 +9,7 @@
           "username": "Uživatelské jméno",
           "password": "Heslo",
           "scan_interval": "Interval skenování (sekundy)",
+          "language": "Jazyk",
           "regenerate_entity_ids": "Přegenerovat ID entit (zahodit stávající)"
         },
         "data_description": {
@@ -16,6 +17,7 @@
           "username": "Uživatelské jméno pro XCC regulátor (výchozí: xcc)",
           "password": "Heslo pro XCC regulátor (výchozí: xcc)",
           "scan_interval": "Jak často aktualizovat data z regulátoru v sekundách (10-3600, výchozí: 120)",
+          "language": "Jazyk použitý pro názvy entit a volitelné možnosti",
           "regenerate_entity_ids": "Nechte nezaškrtnuté, aby se při opětovném přidání integrace zachovala stávající ID entit a jejich historie. Zaškrtněte jen pokud chcete zastaralá ID s IP adresou (např. sensor.stav_jednotky_192_168_0_50_*) přepsat na kanonický tvar xcc_* — přejmenovaným entitám se tím resetuje historie."
         }
       }
