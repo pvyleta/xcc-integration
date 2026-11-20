@@ -52,16 +52,28 @@ def circuit_from_okruh_page(page: str) -> int | None:
 def qualify_circuit_prop(prop: str, circuit: int | None) -> str:
     """Namespace a circuit-scoped ``TO-*`` prop for circuits above 0.
 
-    Only ``TO-*`` props are circuit-scoped. The other props on an okruh data
-    page (SVENKU, BLOKYSPOTREBY-*, FVE-*, ...) are system-wide duplicates of
-    values published on other pages and must keep their global names so they
-    continue to dedupe against them.
+    Only ``TO-*`` props are namespaced. Many other props on an okruh data page
+    are page-local as well (BLOKYSPOTREBY-*, PAGENAME, US-*: own register per
+    circuit) but still keep bare names, so circuit 0 owns them through
+    :func:`ordered_unique_pages` and other circuits' copies are dropped.
     """
     if not circuit or not prop:
         return prop
     if prop.upper().startswith(_CIRCUIT_PROP_PREFIX):
         return f"OKRUH{circuit}-{prop[len(_CIRCUIT_PROP_PREFIX):]}"
     return prop
+
+
+def ordered_unique_pages(pages: list[str]) -> list[str]:
+    """Dedupe data pages into a stable order.
+
+    ``process_entities`` keeps the first entity per prop in fetch order, so this
+    order decides which page owns a prop that several pages publish. Set order
+    follows per-process string hashing and reshuffled that owner on every HA
+    start. Sorted, ``OKRUH10.XML`` (circuit 0) precedes every other circuit's
+    page, so bare props shared by okruh pages resolve to circuit 0.
+    """
+    return sorted(set(pages))
 
 
 def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
@@ -538,7 +550,7 @@ class XCCClient:
                             pass
 
                 # Remove duplicates and filter valid pages
-                unique_pages = list(set(data_pages))
+                unique_pages = ordered_unique_pages(data_pages)
                 valid_pages = []
 
                 for page in unique_pages:
@@ -640,8 +652,7 @@ class XCCClient:
                 ]
                 data_pages.extend(circuit_pages)
 
-            # Remove duplicates
-            data_pages = list(set(data_pages))
+            data_pages = ordered_unique_pages(data_pages)
 
             _LOGGER.info(
                 "Auto-discovery complete: %d descriptor pages, %d data pages",

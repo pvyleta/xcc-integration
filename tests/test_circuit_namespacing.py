@@ -7,6 +7,7 @@ Circuit 0 must stay bare — its entity_ids/unique_ids are already in service.
 
 import importlib.util
 import os
+import random
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -39,9 +40,11 @@ _circuit_base_prop = _entity_helpers._circuit_base_prop
 _normalize_page_to_device = _entity_helpers._normalize_page_to_device
 circuit_of_prop = _entity_helpers.circuit_of_prop
 lookup_with_normalized_fallback = _entity_helpers.lookup_with_normalized_fallback
+process_entities = _entity_helpers.process_entities
 
 circuit_from_okruh_page = _xcc_client.circuit_from_okruh_page
 okruh_data_page = _xcc_client.okruh_data_page
+ordered_unique_pages = _xcc_client.ordered_unique_pages
 parse_xml_entities = _xcc_client.parse_xml_entities
 qualify_circuit_prop = _xcc_client.qualify_circuit_prop
 unqualify_circuit_prop = _xcc_client.unqualify_circuit_prop
@@ -150,3 +153,47 @@ class TestParseRealCircuitPage:
         merged.update(self._props("OKRUH12.XML", "OKRUH12.XML"))
         assert merged["TO-KONSTANTA"] != merged["OKRUH2-KONSTANTA"]
         assert merged["OKRUH2-CONFIG-CHLAZENI"] == "1"
+
+
+class TestPageOrder:
+    """Fetch order decides which page owns a bare prop several okruh pages carry.
+
+    Set order follows per-process string hashing, so before ordering was pinned
+    every HA start re-rolled whether circuit 0 or circuit 2 owned e.g.
+    ``BLOKYSPOTREBY-SET``.
+    """
+
+    _PAGES = [
+        "STATUS.XML", "OKRUH12.XML", "TUV11.XML", "OKRUH10.XML",
+        "OKRUH11.XML", "OKRUH110.XML", "FVE4.XML", "OKRUH12.XML",
+    ]
+
+    def test_independent_of_input_order(self):
+        rng = random.Random(0)
+        expected = ordered_unique_pages(self._PAGES)
+        for _ in range(50):
+            shuffled = self._PAGES[:]
+            rng.shuffle(shuffled)
+            assert ordered_unique_pages(shuffled) == expected
+
+    def test_deduped_and_circuit_zero_first(self):
+        ordered = ordered_unique_pages(self._PAGES)
+        assert len(ordered) == len(set(self._PAGES))
+        okruh = [p for p in ordered if circuit_from_okruh_page(p) is not None]
+        assert okruh[0] == "OKRUH10.XML"
+
+    @pytest.mark.skipif(
+        not (SAMPLE_DIR / "OKRUH12.XML").exists(), reason="OKRUH12.XML sample missing"
+    )
+    @pytest.mark.parametrize(
+        "pages",
+        [["OKRUH10.XML", "OKRUH12.XML"], ["OKRUH12.XML", "OKRUH10.XML"]],
+    )
+    def test_shared_bare_props_owned_by_circuit_zero(self, pages):
+        raw = []
+        for page in ordered_unique_pages(pages):
+            xml = (SAMPLE_DIR / page).read_bytes().decode("windows-1250", errors="replace")
+            raw.extend(parse_xml_entities(xml, page))
+        _, metadata = process_entities(raw, {}, "english")
+        for entity_id in ("xcc_pagename", "xcc_blokyspotreby_set", "xcc_us_mon_ton1"):
+            assert metadata[entity_id]["page"] == "OKRUH10.XML", entity_id

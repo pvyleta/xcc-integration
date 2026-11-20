@@ -2,6 +2,26 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.15.18] - 2026-11-20
+
+### 🐛 Bug Fixes
+
+#### **Shared okruh props no longer change circuit on restart**
+With two heating circuits enabled, the bare props both okruh data pages carry
+(`BLOKYSPOTREBY-SET`, `PAGENAME`, the `US-*` schedule, ...) were owned by
+whichever page came first in a `set`-ordered page list. String hashing is
+per-process, so every HA start re-rolled that order: e.g.
+`sensor.xcc_blokyspotreby_set` showed the radiator circuit's requested water
+temperature after one restart and the idle cooling circuit's `0.0` after the
+next. The `xcc_page` attribute showed which page owned it.
+
+- Data pages are now deduped into sorted order (`ordered_unique_pages`).
+  `OKRUH10.XML` (circuit 0) always sorts first, so circuit 0 owns those bare
+  entities on every start. No entity is added, removed or renamed.
+- The 1.15.17 note that these props are system-wide duplicates was wrong: most
+  sit on a separate register per circuit. Namespacing them per circuit is
+  planned; until then other circuits' copies are not exposed.
+
 ## [1.15.17] - 2026-08-03
 
 ### ✨ New Features
