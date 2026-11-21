@@ -28,6 +28,7 @@ from .const import (
     XCC_DESCRIPTOR_PAGES,
 )
 from .entity_helpers import (
+    circuit_page_name,
     format_entity_id_suffix,
     infer_entity_type_from_attributes,
     lookup_with_normalized_fallback,
@@ -35,6 +36,7 @@ from .entity_helpers import (
     next_gather_health,
     normalize_property_name,
     process_entities as _process_entities_core,
+    qualify_circuit_name,
 )
 from .value_writer import resolve_property
 
@@ -398,18 +400,23 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         """Get friendly name based on language preference."""
         if self.language == LANGUAGE_ENGLISH:
             # Prefer English, fallback to Czech, then prop
-            return (
+            name = (
                 descriptor_config.get("friendly_name_en")
                 or descriptor_config.get("friendly_name")
                 or prop
             )
         else:
             # Prefer Czech, fallback to English, then prop
-            return (
+            name = (
                 descriptor_config.get("friendly_name")
                 or descriptor_config.get("friendly_name_en")
                 or prop
             )
+        return self.qualify_circuit_name(name, prop)
+
+    def qualify_circuit_name(self, name: str, prop: str) -> str:
+        """Prefix a secondary circuit's name with that circuit's live PAGENAME."""
+        return qualify_circuit_name(name, prop, circuit_page_name(self.entities, prop))
 
     def _init_device_info(self) -> None:
         """Initialize device info for all sub-devices."""

@@ -56,6 +56,48 @@ def circuit_of_prop(prop: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def own_or_twin_config(prop: str, table: dict[str, Any]) -> dict[str, Any]:
+    """Exact descriptor entry for ``prop``, else its circuit-0 twin's, else ``{}``."""
+    for key in (prop, *_circuit_base_props(prop)):
+        if key in table:
+            return table[key]
+    return {}
+
+
+def circuit_label(circuit: int, page_name: str | None = None) -> str:
+    """The controller's name for a circuit: its ``PAGENAME``, else the default.
+
+    main.xml numbers ``okruh.xml?page=n`` as ``n + 1`` and names unrenamed
+    circuits ``Okruh <n + 1>``, so the page index alone would be off by one.
+    """
+    return (page_name or "").strip() or f"Okruh {circuit + 1}"
+
+
+def circuit_page_name(entities: dict[str, dict[str, Any]], prop: str) -> str | None:
+    """Live ``PAGENAME`` of the circuit ``prop`` belongs to, from entity metadata."""
+    circuit = circuit_of_prop(prop)
+    if circuit is None:
+        return None
+    meta = entities.get(f"xcc_okruh{circuit}_pagename") or {}
+    return (meta.get("data") or {}).get("state")
+
+
+def qualify_circuit_name(name: str, prop: str, page_name: str | None = None) -> str:
+    """Prefix a secondary circuit's entity name with its circuit's label.
+
+    Secondary circuits inherit circuit 0's descriptor, so without this every
+    circuit renders under the same name. Circuit 0 and non-circuit props are
+    returned unchanged. A name that is just the namespaced prop falls back to
+    the bare prop, matching how circuit 0's undescribed twin is named.
+    """
+    circuit = circuit_of_prop(prop)
+    if circuit is None:
+        return name
+    if not name or name.upper() == prop.upper():
+        name = prop.split("-", 1)[1]
+    return f"{circuit_label(circuit, page_name)} {name}"
+
+
 def format_entity_id_suffix(prop: str) -> str:
     """Format an XCC property name into a valid Home Assistant entity-ID suffix.
 
@@ -196,7 +238,10 @@ _BUCKET_BY_TYPE: dict[str, str] = {
 
 
 def _resolve_friendly_name(
-    config: dict[str, Any], prop: str, language: str
+    config: dict[str, Any],
+    prop: str,
+    language: str,
+    page_names: dict[int, str] | None = None,
 ) -> str:
     """Return the preferred friendly name for the given descriptor config.
 
@@ -217,12 +262,9 @@ def _resolve_friendly_name(
             or prop
         )
 
-    # Secondary circuits inherit circuit 0's descriptor, so without a qualifier
-    # every circuit would render under the same name.
     circuit = circuit_of_prop(prop)
-    if circuit is not None:
-        return f"Okruh {circuit} {name}"
-    return name
+    page_name = (page_names or {}).get(circuit) if circuit is not None else None
+    return qualify_circuit_name(name, prop, page_name)
 
 
 def _normalize_page_to_device(page: str, prop: str) -> str:
@@ -311,11 +353,15 @@ def process_entities(
 
     entities_with_descriptors: list[dict[str, Any]] = []
     entities_without_descriptors: list[dict[str, Any]] = []
+    page_names: dict[int, str] = {}
 
     for entity in raw_entities:
         prop = entity["attributes"]["field_name"]
         page = entity["attributes"].get("page", "unknown")
         has_descriptor = _in_table(prop, entity_configs)
+        circuit = circuit_of_prop(prop)
+        if circuit is not None and prop.upper() == f"OKRUH{circuit}-PAGENAME":
+            page_names[circuit] = entity.get("state") or ""
         is_nast_entity = page.upper().startswith("NAST")
         is_sysconfig_entity = prop.startswith("SYSCONFIG-")
         if has_descriptor or is_nast_entity or is_sysconfig_entity:
@@ -350,7 +396,7 @@ def process_entities(
                 if parsed_type and parsed_type != "sensor":
                     entity_type = parsed_type
 
-            descriptor_config = entity_configs.get(prop, {})
+            descriptor_config = own_or_twin_config(prop, entity_configs)
             if (
                 entity["attributes"].get("page", "").upper().startswith("NAST")
                 and not descriptor_config
@@ -369,7 +415,7 @@ def process_entities(
                 }
 
             friendly_name = _resolve_friendly_name(
-                descriptor_config, prop, language
+                descriptor_config, prop, language, page_names
             )
             unit = (
                 descriptor_config.get("unit")

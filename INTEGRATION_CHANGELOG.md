@@ -2,6 +2,25 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.16.1] - 2026-11-21
+
+### 🐛 Bug Fixes
+
+#### **Secondary-circuit entities say which circuit they belong to**
+Entities of circuits above 0 rendered either as the raw prop
+(`OKRUH2-VSTUPNIT`, sensors and binary sensors) or under exactly the same name
+as circuit 0's twin (`Heating Circuits Constant` for both, numbers, switches and
+selects). They are now named `<circuit name> <circuit 0's name>`, e.g.
+`Chlazení Constant`, where the circuit name is that circuit's live `PAGENAME`
+(the name set on the controller), falling back to the controller's default
+`Okruh <n+1>`. Circuit 0 and every entity_id / unique_id are unchanged.
+
+- Sensors and binary sensors of secondary circuits now also take their
+  circuit-0 twin's descriptor (data type, settable flag), not only its
+  entity type.
+- The previous `Okruh <n>` prefix in the processed-data names used the page
+  index, one lower than the controller's own numbering.
+
 ## [1.16.0] - 2026-11-21
 
 ### ✨ New Features

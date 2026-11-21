@@ -13,7 +13,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LANGUAGE_ENGLISH
 from .coordinator import XCCDataUpdateCoordinator
-from .entity_helpers import format_entity_id_suffix
+from .entity_helpers import (
+    circuit_page_name,
+    format_entity_id_suffix,
+    qualify_circuit_name,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -172,6 +176,12 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
             else:
                 selected_name = self.entity_id_suffix
                 source = "entity_id"
+
+        selected_name = qualify_circuit_name(
+            selected_name,
+            field_name,
+            circuit_page_name(getattr(self.coordinator, "entities", {}), field_name),
+        )
 
         # Consolidated entity name selection log with attributes
         _LOGGER.debug(

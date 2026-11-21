@@ -45,6 +45,9 @@ _xcc_client = _load_module("_xcc_client_ns", "xcc_client.py")
 _circuit_base_props = _entity_helpers._circuit_base_props
 _normalize_page_to_device = _entity_helpers._normalize_page_to_device
 circuit_of_prop = _entity_helpers.circuit_of_prop
+circuit_label = _entity_helpers.circuit_label
+circuit_page_name = _entity_helpers.circuit_page_name
+qualify_circuit_name = _entity_helpers.qualify_circuit_name
 lookup_with_normalized_fallback = _entity_helpers.lookup_with_normalized_fallback
 process_entities = _entity_helpers.process_entities
 
@@ -240,7 +243,7 @@ class TestParseRealCircuitPage:
         assert merged["OKRUH2-CONFIG-CHLAZENI"] == "1"
 
 
-def _circuit_entities():
+def _circuit_processed():
     descriptors = {
         name: read_sample_xml(SAMPLE_DIR / name)
         for name in ("okruh.xml", "tuv1.xml", "fve.xml", "spot.xml", "biv.xml", "stavjed.xml")
@@ -251,8 +254,11 @@ def _circuit_entities():
     raw = []
     for page in ordered_unique_pages(list(CIRCUIT_PAGES)):
         raw.extend(parse_xml_entities(read_sample_xml(SAMPLE_DIR / page), page))
-    _, metadata = process_entities(raw, configs, "english")
-    return metadata
+    return process_entities(raw, configs, "english")
+
+
+def _circuit_entities():
+    return _circuit_processed()[1]
 
 
 @needs_circuit_pages
@@ -291,6 +297,58 @@ class TestNamespacedEntityTypes:
                     assert prop not in owned
                 else:
                     assert circuit_of_prop(prop) == circuit and prop in owned, prop
+
+
+class TestCircuitNames:
+    def test_label_prefers_page_name(self):
+        assert circuit_label(2, "Chlazení") == "Chlazení"
+
+    def test_label_default_matches_controller_numbering(self):
+        """main.xml lists okruh.xml?page=n as entry n+1, default name "Okruh n+1"."""
+        assert circuit_label(2) == "Okruh 3"
+        assert circuit_label(2, "  ") == "Okruh 3"
+
+    def test_qualify_secondary_circuit_only(self):
+        assert qualify_circuit_name("Constant", "OKRUH2-KONSTANTA", "Chlazení") == "Chlazení Constant"
+        assert qualify_circuit_name("Constant", "TO-KONSTANTA", "Chlazení") == "Constant"
+        assert qualify_circuit_name("Outside temperature", "SVENKU") == "Outside temperature"
+
+    def test_raw_prop_name_falls_back_to_bare_prop(self):
+        assert qualify_circuit_name("OKRUH2-MZ", "OKRUH2-MZ") == "Okruh 3 MZ"
+        assert qualify_circuit_name("", "OKRUH2-US-MON-TON1", "Chlazení") == "Chlazení US-MON-TON1"
+
+    def test_page_name_from_metadata(self):
+        entities = {"xcc_okruh2_pagename": {"data": {"state": "Chlazení"}}}
+        assert circuit_page_name(entities, "OKRUH2-KONSTANTA") == "Chlazení"
+        assert circuit_page_name(entities, "OKRUH1-KONSTANTA") is None
+        assert circuit_page_name(entities, "TO-KONSTANTA") is None
+
+
+@needs_circuit_pages
+class TestCircuitNamesFromCapture:
+    def test_twin_descriptor_and_qualified_name(self):
+        processed, metadata = _circuit_processed()
+        names = {
+            eid: data["name"]
+            for bucket in ("sensors", "binary_sensors", "switches", "numbers", "selects")
+            for eid, data in processed[bucket].items()
+        }
+        labels = {1: "Podlahovka", 2: "Chlazení"}
+        by_prop = {m["prop"]: m for m in metadata.values()}
+        checked = 0
+        for meta in metadata.values():
+            circuit = circuit_of_prop(meta["prop"])
+            if circuit is None:
+                continue
+            twin = next(by_prop[b] for b in _circuit_base_props(meta["prop"]) if b in by_prop)
+            assert meta["descriptor_config"] == twin["descriptor_config"], meta["prop"]
+            twin_name = names[twin["entity_id"]]
+            if twin_name == twin["prop"]:
+                # Undescribed: named by the prop, minus the namespace (and TO-).
+                twin_name = meta["prop"].split("-", 1)[1]
+            assert names[meta["entity_id"]] == f"{labels[circuit]} {twin_name}", meta["prop"]
+            checked += 1
+        assert checked
 
 
 @needs_circuit_pages
