@@ -26,16 +26,38 @@ _auth_locks = {}
 # Heating-circuit (okruh) namespacing
 #
 # Every circuit's data page (OKRUH10.XML = circuit 0, OKRUH12.XML = circuit 2,
-# ...) carries the SAME unprefixed ``TO-*`` prop names, and the okruh.xml
-# descriptor is byte-identical for every ``?page=N``. Entities are keyed by
-# prop alone, so without a namespace two circuits collide and one is silently
-# dropped. Circuit 0 keeps the bare ``TO-*`` names so existing entity_ids and
-# unique_ids (and their recorder history) are untouched; every other circuit
-# is namespaced to ``OKRUH<n>-*``.
+# ...) carries the SAME prop names, and the okruh.xml descriptor is
+# byte-identical for every ``?page=N``. Almost every prop on those pages is
+# page-local (own register per circuit). Entities are keyed by prop alone, so
+# without a namespace two circuits collide and one is silently dropped.
+# Circuit 0 keeps the bare names so existing entity_ids and unique_ids (and
+# their recorder history) are untouched; every other circuit is namespaced to
+# ``OKRUH<n>-*``.
 # ---------------------------------------------------------------------------
 _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 _CIRCUIT_PROP_PREFIX = "TO-"
+
+# Props an okruh page carries on the same register for every circuit: one
+# value system-wide, so they stay bare and dedupe across pages. Anything not
+# listed is treated as page-local; a missed global only costs a redundant
+# entity, a missed page-local prop would be dropped. Pinned against a
+# same-moment capture of every circuit page by tests/test_circuit_namespacing.py.
+CIRCUIT_GLOBAL_PROPS: frozenset[str] = frozenset({
+    "CELKOVEPRAZDNINY",
+    "FVE-CONFIG-ENABLED",
+    "FVE-CONFIG-SCHOVATPRETAPENI",
+    "SCAS",
+    "SCHYBA",
+    "SCOMPACT",
+    "SNAZEV1",
+    "SNAZEV2",
+    "SPOTOVECENY-DSMODE",
+    "SVENKU",
+    "SZAPNUTO",
+    "VARIANTAMETEO",
+    "WEB-OKRUHYODKAZPOCASI",
+})
 
 
 def okruh_data_page(circuit: int) -> str:
@@ -50,18 +72,21 @@ def circuit_from_okruh_page(page: str) -> int | None:
 
 
 def qualify_circuit_prop(prop: str, circuit: int | None) -> str:
-    """Namespace a circuit-scoped ``TO-*`` prop for circuits above 0.
+    """Namespace a page-local prop of a circuit above 0 to ``OKRUH<n>-*``.
 
-    Only ``TO-*`` props are namespaced. Many other props on an okruh data page
-    are page-local as well (BLOKYSPOTREBY-*, PAGENAME, US-*: own register per
-    circuit) but still keep bare names, so circuit 0 owns them through
-    :func:`ordered_unique_pages` and other circuits' copies are dropped.
+    ``TO-X`` becomes ``OKRUH<n>-X`` (the v1.15.17 form, kept for its
+    unique_ids); any other prop ``X`` becomes ``OKRUH<n>-X`` whole. No okruh
+    page publishes both ``TO-X`` and ``X``, so the two forms cannot collide.
+    :data:`CIRCUIT_GLOBAL_PROPS` stay bare.
     """
     if not circuit or not prop:
         return prop
-    if prop.upper().startswith(_CIRCUIT_PROP_PREFIX):
-        return f"OKRUH{circuit}-{prop[len(_CIRCUIT_PROP_PREFIX):]}"
-    return prop
+    upper = prop.upper()
+    if upper in CIRCUIT_GLOBAL_PROPS:
+        return prop
+    if upper.startswith(_CIRCUIT_PROP_PREFIX):
+        prop = prop[len(_CIRCUIT_PROP_PREFIX):]
+    return f"OKRUH{circuit}-{prop}"
 
 
 def ordered_unique_pages(pages: list[str]) -> list[str]:
@@ -71,21 +96,24 @@ def ordered_unique_pages(pages: list[str]) -> list[str]:
     order decides which page owns a prop that several pages publish. Set order
     follows per-process string hashing and reshuffled that owner on every HA
     start. Sorted, ``OKRUH10.XML`` (circuit 0) precedes every other circuit's
-    page, so bare props shared by okruh pages resolve to circuit 0.
+    page, so a bare prop several okruh pages share resolves to circuit 0.
     """
     return sorted(set(pages))
 
 
-def unqualify_circuit_prop(prop: str) -> tuple[str, int | None]:
+def unqualify_circuit_prop(prop: str) -> tuple[tuple[str, ...], int | None]:
     """Inverse of :func:`qualify_circuit_prop`.
 
-    Returns ``(base_prop, circuit)``. ``circuit`` is None when ``prop`` is not
-    circuit-namespaced, in which case ``base_prop`` is returned unchanged.
+    Returns ``(bases, circuit)``: the page's own name for ``OKRUH<n>-X`` is
+    either ``TO-X`` or ``X``, so ``bases`` lists both, ``TO-X`` first. The
+    caller picks the one its page or descriptor table holds. Not namespaced:
+    ``((prop,), None)``.
     """
     match = _OKRUH_PROP_RE.match((prop or "").upper())
     if not match:
-        return prop, None
-    return f"{_CIRCUIT_PROP_PREFIX}{match.group(2)}", int(match.group(1))
+        return (prop,), None
+    rest = match.group(2)
+    return (f"{_CIRCUIT_PROP_PREFIX}{rest}", rest), int(match.group(1))
 
 
 class XCCClient:
@@ -994,11 +1022,10 @@ class XCCClient:
 
             # Circuit-namespaced props (OKRUH<n>-*) resolve to that circuit's
             # own data page; the page itself carries the prop under its bare
-            # TO-* name, so unqualify before the NAME lookup below.
-            lookup_prop, prop_circuit = unqualify_circuit_prop(prop)
+            # name, so unqualify before the NAME lookup below.
+            lookup_props, prop_circuit = unqualify_circuit_prop(prop)
             if prop_circuit is not None:
                 page_to_fetch = okruh_data_page(prop_circuit)
-                prop_upper = lookup_prop.upper()
 
             tuv_keywords = ["TUV", "DHW", "ZASOBNIK", "TEPLOTA", "TALT"]
             if page_to_fetch is not None:
@@ -1029,7 +1056,9 @@ class XCCClient:
             if not internal_name:
                 page_content = await self.fetch_page(page_to_fetch)
                 name_mapping = self._extract_name_mapping_from_xml(page_content)
-                internal_name = name_mapping.get(lookup_prop)
+                internal_name = next(
+                    (name_mapping[p] for p in lookup_props if p in name_mapping), None
+                )
 
             if not internal_name:
                 _LOGGER.error("❌ Could not find internal NAME for property %s in %s", prop, page_to_fetch)

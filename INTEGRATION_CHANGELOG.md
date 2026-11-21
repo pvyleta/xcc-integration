@@ -2,6 +2,37 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.16.0] - 2026-11-21
+
+### ✨ New Features
+
+#### **Every circuit's own settings, not just its `TO-*` props**
+Circuits above 0 now expose all their page-local props, namespaced whole:
+`BLOKYSPOTREBY-SET` on circuit 2 becomes `OKRUH2-BLOKYSPOTREBY-SET` →
+`sensor.xcc_okruh2_blokyspotreby_set`. That covers the consumption-block flags
+and setpoint, `PAGENAME`, the `US-*` time schedule, the room-influence and
+spot-statistics settings and more. A same-moment capture of three circuit
+pages showed each of them on its own register per circuit.
+
+- Props on one system-wide register (`SVENKU`, the `S*` status props,
+  `FVE-CONFIG-ENABLED`, `SPOTOVECENY-DSMODE`, ...) stay bare: they are listed
+  in `CIRCUIT_GLOBAL_PROPS` (`xcc_client.py`) and pinned against the capture
+  by a test.
+- Additive: circuit 0's entities and the existing `xcc_okruh<n>_*` entities
+  keep their entity_ids and unique_ids.
+- Writes to `OKRUH<n>-X` look up `TO-X` or `X`, whichever that circuit's page
+  publishes, and still POST to the circuit's own page.
+
+### 🐛 Bug Fixes
+
+#### **Secondary-circuit entities take their circuit-0 twin's type**
+A namespaced prop whose descriptor marks it read-only, but whose register is a
+`_BOOL_i`, fell back to the writable-switch default because the namespaced key
+is never an exact descriptor key. On a two-circuit install that made
+`switch.xcc_okruh2_natop_stat_run` writable while circuit 0's twin is a sensor.
+It is now `sensor.xcc_okruh2_natop_stat_run`; the old switch entity is left
+orphaned in the entity registry and can be removed.
+
 ## [1.15.18] - 2026-11-20
 
 ### 🐛 Bug Fixes

@@ -29,10 +29,25 @@ _OKRUH_DATA_PAGE_RE = re.compile(r"^OKRUH1(\d+)\.XML$")
 _OKRUH_PROP_RE = re.compile(r"^OKRUH(\d+)-(.+)$")
 
 
-def _circuit_base_prop(prop: str) -> str | None:
-    """Return the bare ``TO-*`` prop behind a circuit-namespaced one, else None."""
+def _circuit_base_props(prop: str) -> tuple[str, ...]:
+    """Return the bare names a circuit-namespaced prop may stand for.
+
+    ``OKRUH<n>-X`` was either ``TO-X`` or ``X`` on its page; ``TO-X`` first.
+    Empty when ``prop`` is not namespaced.
+    """
     match = _OKRUH_PROP_RE.match((prop or "").upper())
-    return f"TO-{match.group(2)}" if match else None
+    if not match:
+        return ()
+    return f"TO-{match.group(2)}", match.group(2)
+
+
+def _in_table(prop: str, table: dict[str, Any]) -> bool:
+    """Exact key match, counting a namespaced prop's bare counterpart.
+
+    okruh.xml is shared across circuits, so ``OKRUH<n>-X`` is described (and
+    pinned) wherever its circuit-0 twin is.
+    """
+    return prop in table or any(base in table for base in _circuit_base_props(prop))
 
 
 def circuit_of_prop(prop: str) -> int | None:
@@ -132,11 +147,13 @@ def lookup_with_normalized_fallback(
 
     # Circuit-namespaced props (OKRUH<n>-KONSTANTA) have no descriptor of their
     # own — okruh.xml is byte-identical for every ?page=N and describes them
-    # under the bare TO-* name. Fall back to that so secondary circuits inherit
-    # circuit 0's entity type, unit, and select options.
-    base_prop = _circuit_base_prop(prop)
-    if base_prop is not None:
-        return lookup_with_normalized_fallback(base_prop, table, default)
+    # under the bare name. Fall back to that so secondary circuits inherit
+    # circuit 0's entity type, unit, select options and read-only pins.
+    missing = object()
+    for base_prop in _circuit_base_props(prop):
+        config = lookup_with_normalized_fallback(base_prop, table, missing)
+        if config is not missing:
+            return config
 
     return default
 
@@ -298,10 +315,7 @@ def process_entities(
     for entity in raw_entities:
         prop = entity["attributes"]["field_name"]
         page = entity["attributes"].get("page", "unknown")
-        # Circuit-namespaced props are described by their bare TO-* counterpart
-        # (okruh.xml is shared across circuits), so they are descriptor-backed
-        # even though the namespaced key itself is absent from the table.
-        has_descriptor = prop in entity_configs or _circuit_base_prop(prop) in entity_configs
+        has_descriptor = _in_table(prop, entity_configs)
         is_nast_entity = page.upper().startswith("NAST")
         is_sysconfig_entity = prop.startswith("SYSCONFIG-")
         if has_descriptor or is_nast_entity or is_sysconfig_entity:
@@ -331,7 +345,7 @@ def process_entities(
 
             config = lookup_with_normalized_fallback(prop, entity_configs)
             entity_type = (config or {}).get("entity_type", "sensor")
-            if entity_type == "sensor" and prop not in entity_configs:
+            if entity_type == "sensor" and not _in_table(prop, entity_configs):
                 parsed_type = entity.get("entity_type")
                 if parsed_type and parsed_type != "sensor":
                     entity_type = parsed_type
