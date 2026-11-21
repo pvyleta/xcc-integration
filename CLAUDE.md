@@ -82,7 +82,7 @@ The user's live controller is at **192.168.0.50** (default creds `xcc`/`xcc`); t
 1. `GET /LOGIN.XML` → grab the `SoftPLC` session cookie.
 2. `passhash = sha1(session_id + password)`; `POST {USER, PASS}` to `/RPC/WEBSES/create.asp` (200 + no `<LOGIN>` = success).
 3. `GET /<page>` for each page. Use ONE connection, sequential, with ~200 ms gaps (the controller enforces a 1-connection limit → HTTP 500 otherwise).
-4. Save **raw bytes** so each file keeps its own encoding declaration — descriptor pages are lowercase UTF-8 (e.g. `fvesoc.xml`), data pages are UPPERCASE `windows-1250` (e.g. `FVESOC1.XML`). New fixtures go in `tests/sample_data/`.
+4. Save **raw bytes** so each file keeps its own encoding declaration — descriptor pages are lowercase UTF-8 (e.g. `fvesoc.xml`), data pages are UPPERCASE `windows-1250` (e.g. `FVESOC1.XML`). New fixtures go in `tests/sample_data/`. Older fixtures were re-saved as UTF-8 under the same declaration (non-ASCII already lost), so tests read samples through `tests/sample_io.read_sample_xml`, never `open(..., encoding="utf-8")`.
 
 **Logout:** there is no working logout endpoint — `POST /RPC/WEBSES/destroy.asp` just returns "Server disconnected". Free the controller's single connection slot by closing the HTTP session; the server-side `SoftPLC` session then times out on its own.
 

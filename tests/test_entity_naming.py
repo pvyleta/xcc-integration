@@ -21,6 +21,8 @@ from types import ModuleType
 
 import pytest
 
+from tests.sample_io import read_sample_xml
+
 # The integration's ``__init__.py`` imports ``homeassistant`` at module load,
 # so we cannot ``from custom_components.xcc.const import ...`` in a pure-unit
 # environment. Load the three HA-free helper modules directly from their file
@@ -101,8 +103,7 @@ def _load_all(sample_dir: str) -> tuple[dict, list]:
         path = os.path.join(sample_dir, name)
         if not os.path.exists(path):
             continue
-        with open(path, encoding="utf-8") as fh:
-            raw_entities.extend(parse_xml_entities(fh.read(), name))
+        raw_entities.extend(parse_xml_entities(read_sample_xml(path), name))
 
     return entity_configs, raw_entities
 

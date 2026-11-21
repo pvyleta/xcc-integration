@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 import re
 
+from tests.sample_io import read_sample_xml
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -189,8 +191,7 @@ def test_integration_data_completeness():
             print(f"  ✅ {filename:15s} - {description} ({file_size} bytes)")
             
             # Check if it's a real data file (not login page)
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            content = read_sample_xml(file_path)
             
             if '<LOGIN>' in content:
                 print(f"      ⚠️  WARNING: {filename} contains login page instead of real data")

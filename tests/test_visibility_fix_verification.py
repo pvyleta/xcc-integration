@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 import re
 
+from tests.sample_io import read_sample_xml
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -120,8 +122,7 @@ def test_before_after_comparison():
     for data_file in data_files:
         data_path = sample_dir / data_file
         if data_path.exists():
-            with open(data_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            content = read_sample_xml(data_path)
             
             matches = re.findall(r'<INPUT[^>]*P="([^"]*)"[^>]*VALUE="([^"]*)"', content)
             for prop, value in matches:

@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 import re
 
+from tests.sample_io import read_sample_xml
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -129,8 +131,7 @@ def test_comprehensive_entity_coverage():
             with open(desc_path, 'r', encoding='utf-8') as f:
                 desc_content = f.read()
             
-            with open(data_path, 'r', encoding='utf-8') as f:
-                data_content = f.read()
+            data_content = read_sample_xml(data_path)
             
             # Count entities
             desc_entities = set(re.findall(r'prop="([^"]*)"', desc_content))
