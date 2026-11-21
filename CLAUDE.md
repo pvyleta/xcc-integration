@@ -14,6 +14,7 @@ Plus separate **standalone tooling at repo root** — `xcc_cli.py`, `xcc_scraper
 # Unit tests (no Home Assistant) — fast, what CI runs first
 pip install -r tests/requirements-test.txt
 pytest tests/ -v --tb=short
+# Windows: python -X utf8 -m pytest tests/ (test_enhanced_entity_generation fails under cp1252)
 
 # Full suite WITH Home Assistant + coverage (CI's test-ha job)
 pip install -r requirements-dev.txt
