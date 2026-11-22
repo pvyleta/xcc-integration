@@ -8,6 +8,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -187,9 +188,13 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
                 await self.coordinator.async_request_refresh()
             else:
                 _LOGGER.error("Failed to set switch %s to %s", self.name, "ON" if state else "OFF")
+                raise HomeAssistantError("XCC did not confirm the requested switch change")
 
+        except HomeAssistantError:
+            raise
         except Exception as err:
             _LOGGER.error("Error setting switch %s: %s", self.name, err)
+            raise HomeAssistantError("Unable to complete the XCC switch change") from err
 
     @property
     def available(self) -> bool:

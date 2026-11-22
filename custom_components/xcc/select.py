@@ -8,6 +8,7 @@ from typing import Any
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -168,9 +169,13 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
                 await self.coordinator.async_request_refresh()
             else:
                 _LOGGER.error("Failed to set select %s to %s", self.name, option)
+                raise HomeAssistantError("XCC did not confirm the requested option change")
 
+        except HomeAssistantError:
+            raise
         except Exception as err:
             _LOGGER.error("Error setting select %s: %s", self.name, err)
+            raise HomeAssistantError("Unable to complete the XCC option change") from err
 
     @property
     def available(self) -> bool:
