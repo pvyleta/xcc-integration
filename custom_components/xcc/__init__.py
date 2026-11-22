@@ -76,12 +76,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
         raise ConfigEntryNotReady(f"Error fetching initial data: {err}") from err
 
-    # Register the main XCC controller device BEFORE setting up platforms
-    # This ensures the device exists when sub-devices try to reference it via via_device
+    # Register the main XCC controller device BEFORE setting up platforms:
+    # sub-devices link to it by its registry id.
     device_registry = dr.async_get(hass)
     if coordinator.device_info:
         _LOGGER.debug("Registering main XCC controller device in device registry")
-        device_registry.async_get_or_create(
+        main_device = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers=coordinator.device_info["identifiers"],
             name=coordinator.device_info["name"],
@@ -90,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sw_version=coordinator.device_info.get("sw_version"),
             configuration_url=coordinator.device_info.get("configuration_url"),
         )
+        coordinator.set_main_device_id(main_device.id)
         _LOGGER.info("✅ Main XCC controller device registered")
     else:
         _LOGGER.warning("⚠️  Coordinator device_info not available, device registration skipped")

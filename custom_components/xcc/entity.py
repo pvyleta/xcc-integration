@@ -111,16 +111,10 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
         self._attr_unique_id = f"{coordinator.ip_address}_{entity_id}"
 
         # Set device info based on entity's assigned device
+        # Pass the parent link only when the device has one: HA reports even an
+        # explicit via_device=None as deprecated.
         device_info = coordinator.get_device_info_for_entity(entity_id)
-        self._attr_device_info = DeviceInfo(
-            identifiers=device_info["identifiers"],
-            name=device_info["name"],
-            manufacturer=device_info["manufacturer"],
-            model=device_info["model"],
-            sw_version=device_info.get("sw_version"),
-            configuration_url=device_info.get("configuration_url"),
-            via_device=device_info.get("via_device"),  # Link to parent device if applicable
-        )
+        self._attr_device_info = DeviceInfo(**device_info)
 
         # Set feature-level entity name (has_entity_name=True composes the
         # display label as "<device name> <entity name>"). If the derived

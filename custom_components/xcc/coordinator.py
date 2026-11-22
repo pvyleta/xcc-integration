@@ -8,7 +8,13 @@ from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import (
+    CONF_IP_ADDRESS,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    MAJOR_VERSION,
+    MINOR_VERSION,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
@@ -43,6 +49,11 @@ from .value_writer import resolve_property
 
 _LOGGER = logging.getLogger(__name__)
 
+# HA 2026.8 added via_device_id (a device registry id) and deprecated the
+# (domain, identifier) via_device tuple, removed in 2027.8. Older cores reject
+# via_device_id outright.
+_HAS_VIA_DEVICE_ID = (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8)
+
 
 class XCCDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the XCC controller."""
@@ -71,6 +82,8 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
         # Store discovered entities and their metadata
         self.entities: dict[str, dict[str, Any]] = {}
         self.device_info: dict[str, Any] = {}
+        # Registry id of the main controller device, set by async_setup_entry.
+        self.main_device_id: str | None = None
         self._client = None  # Persistent XCC client for session reuse
         self.descriptor_parser = None  # Parser for entity type detection
         self.entity_configs = {}  # Cached entity configurations
@@ -488,8 +501,19 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 "model": config["model"],
                 "sw_version": "Unknown",
                 "configuration_url": f"http://{self.ip_address}",
-                "via_device": (DOMAIN, self.ip_address),  # Link to main controller
+                **self._parent_device_link(),
             }
+
+    def _parent_device_link(self) -> dict[str, Any]:
+        """Return the device_info entry linking a sub-device to the controller."""
+        if _HAS_VIA_DEVICE_ID and self.main_device_id:
+            return {"via_device_id": self.main_device_id}
+        return {"via_device": (DOMAIN, self.ip_address)}
+
+    def set_main_device_id(self, device_id: str) -> None:
+        """Record the registered controller device and relink the sub-devices."""
+        self.main_device_id = device_id
+        self._init_device_info()
 
     def get_device_info_for_entity(self, entity_id: str) -> dict[str, Any]:
         """Get device info for a specific entity."""
