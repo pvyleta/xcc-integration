@@ -52,9 +52,40 @@ async def async_setup_entry(
     except Exception as err:
         _LOGGER.error("Error creating XCC data-incomplete diagnostic sensor: %s", err)
 
+    entities.append(XCCSystemFaultBinarySensor(coordinator))
+
     if entities:
         async_add_entities(entities)
         _LOGGER.info("Added %d XCC binary sensor entities", len(entities))
+
+
+class XCCSystemFaultBinarySensor(CoordinatorEntity[XCCDataUpdateCoordinator], BinarySensorEntity):
+    """Current controller faults, not HA/integration connectivity errors."""
+
+    _attr_has_entity_name = True
+    _attr_name = "System fault"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: XCCDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.ip_address}_xcc_system_fault"
+        self.entity_id = "binary_sensor.xcc_system_fault"
+        self._attr_device_info = {"identifiers": {(DOMAIN, coordinator.ip_address)}}
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success and self.coordinator.system_faults.available
+
+    @property
+    def is_on(self) -> bool | None:
+        return bool(self.coordinator.system_faults.active) if self.available else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        active = self.coordinator.system_faults.active
+        return {"active_faults": active, "fault_count": len(active),
+                "source": "DIAG1.XML", "read_only": True}
 
 
 class XCCBinarySensor(XCCEntity, BinarySensorEntity):
