@@ -47,7 +47,7 @@ async def async_setup_entry(
             continue
         switch = XCCSwitch(coordinator, entity_data)
         switches.append(switch)
-        _LOGGER.info("✅ Switch: %s | ID:%s", switch.name, entity_id)
+        _LOGGER.debug("✅ Switch: %s | ID:%s", switch.name, entity_id)
 
     if switches:
         async_add_entities(switches)
@@ -134,7 +134,7 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
                     import time
                     timestamp = time.strftime("%H:%M:%S")
                     status_icon = "🟢 ON" if result else "🔴 OFF"
-                    _LOGGER.info("📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator switches data)",
+                    _LOGGER.debug("📊 ENTITY VALUE UPDATE [%s]: %s = %s (switch from coordinator switches data)",
                                timestamp, self.entity_id, status_icon)
 
             return result
@@ -167,7 +167,7 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
             # Convert boolean to appropriate value for XCC
             value = "1" if state else "0"
 
-            _LOGGER.info("🔘 Setting switch %s (%s) to %s", self.name, self._prop, value)
+            _LOGGER.debug("🔘 Setting switch %s (%s) to %s", self.name, self._prop, value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(
@@ -176,7 +176,7 @@ class XCCSwitch(CoordinatorEntity[XCCDataUpdateCoordinator], SwitchEntity):
             )
 
             if success:
-                _LOGGER.info("Successfully set switch %s to %s", self.name, "ON" if state else "OFF")
+                _LOGGER.debug("Successfully set switch %s to %s", self.name, "ON" if state else "OFF")
 
                 # IMMEDIATE STATE UPDATE: Update the entity's internal state immediately
                 # This ensures the UI reflects the change instantly, regardless of coordinator refresh timing

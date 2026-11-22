@@ -32,7 +32,6 @@ from .entity_helpers import format_entity_id_suffix
 from .entity import XCCEntity
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER.setLevel(logging.DEBUG)  # Force debug logging for sensor platform
 
 # Unit mapping from XCC to Home Assistant
 UNIT_MAPPING = {
@@ -85,7 +84,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up XCC sensor entities from a config entry."""
-    _LOGGER.info("Setting up XCC sensor platform")
+    _LOGGER.debug("Setting up XCC sensor platform")
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     # NEVER call async_config_entry_first_refresh() here — __init__ already ran it
@@ -102,9 +101,9 @@ async def async_setup_entry(
     sensors = []
 
     # Detailed logging of coordinator data structure
-    _LOGGER.info("=== SENSOR PLATFORM SETUP DEBUG ===")
-    _LOGGER.info("Coordinator data type: %s", type(coordinator.data))
-    _LOGGER.info(
+    _LOGGER.debug("=== SENSOR PLATFORM SETUP DEBUG ===")
+    _LOGGER.debug("Coordinator data type: %s", type(coordinator.data))
+    _LOGGER.debug(
         "Coordinator data keys: %s",
         list(coordinator.data.keys()) if coordinator.data else "No data",
     )
@@ -112,19 +111,19 @@ async def async_setup_entry(
     if coordinator.data:
         for key, value in coordinator.data.items():
             if isinstance(value, dict):
-                _LOGGER.info("Data[%s]: %d items", key, len(value))
+                _LOGGER.debug("Data[%s]: %d items", key, len(value))
             else:
-                _LOGGER.info("Data[%s]: %s", key, type(value))
+                _LOGGER.debug("Data[%s]: %s", key, type(value))
 
     sensor_entities = coordinator.get_entities_by_type("sensor")
-    _LOGGER.info(
+    _LOGGER.debug(
         "Found %d sensor entities in coordinator.get_entities_by_type('sensor')",
         len(sensor_entities),
     )
 
     # Also check the coordinator data structure directly
     sensors_in_data = coordinator.data.get("sensors", {})
-    _LOGGER.info(
+    _LOGGER.debug(
         "Found %d sensors in coordinator.data['sensors']", len(sensors_in_data)
     )
 
@@ -134,7 +133,7 @@ async def async_setup_entry(
         )
         # Check if entities are stored differently
         entities_list = coordinator.data.get("entities", [])
-        _LOGGER.info(
+        _LOGGER.debug(
             "Found %d entities in coordinator.data['entities']", len(entities_list)
         )
 
@@ -144,18 +143,18 @@ async def async_setup_entry(
             entity_type = entity.get("type", "unknown")
             if entity_type == "sensor":
                 sensor_count += 1
-        _LOGGER.info("Found %d sensor-type entities in entities list", sensor_count)
+        _LOGGER.debug("Found %d sensor-type entities in entities list", sensor_count)
 
     # Use sensors from coordinator.data if available, otherwise use get_entities_by_type
     if sensors_in_data and not sensor_entities:
-        _LOGGER.info(
+        _LOGGER.debug(
             "Using sensors from coordinator.data['sensors'] instead of get_entities_by_type"
         )
         # Convert the data structure to match what the sensor creation expects
         sensor_entities = {}
         for entity_id, state_data in sensors_in_data.items():
             sensor_entities[entity_id] = state_data
-        _LOGGER.info("Converted %d sensors from coordinator data", len(sensor_entities))
+        _LOGGER.debug("Converted %d sensors from coordinator data", len(sensor_entities))
 
     for entity_id, entity_data in sensor_entities.items():
         try:
@@ -171,7 +170,7 @@ async def async_setup_entry(
             sensors.append(sensor)
 
             # Log sensor creation with key details in a single line
-            _LOGGER.info(
+            _LOGGER.debug(
                 "✅ Sensor: %s | ID:%s | Class:%s/%s | Unit:%s | Value:%s",
                 getattr(sensor, "name", "unknown"),
                 entity_id.split('.')[-1] if '.' in entity_id else entity_id,
@@ -188,8 +187,8 @@ async def async_setup_entry(
 
             _LOGGER.error("Full traceback: %s", traceback.format_exc())
 
-    _LOGGER.info("=== SENSOR CREATION SUMMARY ===")
-    _LOGGER.info("Total sensors created: %d", len(sensors))
+    _LOGGER.debug("=== SENSOR CREATION SUMMARY ===")
+    _LOGGER.debug("Total sensors created: %d", len(sensors))
 
     if sensors:
         async_add_entities(sensors)

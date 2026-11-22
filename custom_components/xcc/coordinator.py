@@ -289,7 +289,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Log summary of processed data
             entity_counts = {key: len(value) for key, value in processed_data.items()}
-            _LOGGER.info("XCC data update successful: %s", entity_counts)
+            _LOGGER.debug("XCC data update successful: %s", entity_counts)
 
             # Update device info on first successful fetch
             if not self.device_info:
@@ -394,9 +394,9 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             "sensors": len(processed_data["sensors"]),
             "total": len(processed_data["entities"]),
         }
-        _LOGGER.info("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
-        _LOGGER.info("Final entity distribution: %s", entity_counts)
-        _LOGGER.info(
+        _LOGGER.debug("=== COORDINATOR ENTITY PROCESSING COMPLETE ===")
+        _LOGGER.debug("Final entity distribution: %s", entity_counts)
+        _LOGGER.debug(
             "Returning processed_data with keys: %s", list(processed_data.keys())
         )
         return processed_data
@@ -509,7 +509,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_force_update(self) -> None:
         """Force an immediate update of all entity values."""
-        _LOGGER.info("🔄 FORCING IMMEDIATE COORDINATOR UPDATE")
+        _LOGGER.debug("🔄 FORCING IMMEDIATE COORDINATOR UPDATE")
         self._update_source = "force_update"
         await self.async_request_refresh()
 
@@ -536,7 +536,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_entity_value(self, entity_id: str, value: Any) -> bool:
         """Set a value on the XCC controller (method name expected by entities)."""
         try:
-            _LOGGER.info("🎛️ Setting entity %s to value %s", entity_id, value)
+            _LOGGER.debug("🎛️ Setting entity %s to value %s", entity_id, value)
 
             resolution = resolve_property(entity_id, self.data, self.entity_configs)
             prop = resolution.prop
@@ -557,7 +557,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 entity_id, prop, resolution.method,
             )
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 "🔧 Setting XCC property %s to value %s for entity %s",
                 prop,
                 value,
@@ -571,7 +571,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                 try:
                     success = await client.set_value(prop, value, internal_name=internal_name)
                     if success:
-                        _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
+                        _LOGGER.debug("✅ Successfully set XCC property %s to %s", prop, value)
                         # Request immediate data refresh to update state
                         _LOGGER.debug("Requesting data refresh after successful property set")
                         await self.async_request_refresh()
@@ -597,7 +597,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
                     ) as client:
                         success = await client.set_value(prop, value, internal_name=internal_name)
                         if success:
-                            _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
+                            _LOGGER.debug("✅ Successfully set XCC property %s to %s", prop, value)
                             # Request immediate data refresh to update state
                             _LOGGER.debug("Requesting data refresh after successful property set")
                             await self.async_request_refresh()

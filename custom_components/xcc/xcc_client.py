@@ -464,7 +464,7 @@ class XCCClient:
                     },
                 })
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Parsed %d system config entities from main.xml", len(entities)
             )
 
@@ -1039,7 +1039,7 @@ class XCCClient:
         _LOGGER = logging.getLogger(__name__)
 
         try:
-            _LOGGER.info("🔧 Setting XCC property %s to value %s", prop, value)
+            _LOGGER.debug("🔧 Setting XCC property %s to value %s", prop, value)
 
             # Determine which page this property is on based on common patterns
             prop_upper = prop.upper()
@@ -1075,7 +1075,7 @@ class XCCClient:
             else:
                 page_to_fetch = "STAVJED1.XML"
 
-            _LOGGER.info("🎯 Using page %s for property %s", page_to_fetch, prop)
+            _LOGGER.debug("🎯 Using page %s for property %s", page_to_fetch, prop)
 
             # If internal_name not provided, fetch page and look it up
             if not internal_name:
@@ -1094,13 +1094,13 @@ class XCCClient:
             url = f"http://{self.ip}/{page_to_fetch}"
             data = {internal_name: value}
 
-            _LOGGER.info("🔄 Setting %s=%s via POST to %s", internal_name, value, page_to_fetch)
+            _LOGGER.debug("🔄 Setting %s=%s via POST to %s", internal_name, value, page_to_fetch)
 
             async with self.session.post(url, data=data) as resp:
-                _LOGGER.info("📡 POST response: status=%d", resp.status)
+                _LOGGER.debug("📡 POST response: status=%d", resp.status)
 
                 if resp.status == 200:
-                    _LOGGER.info("✅ Successfully set XCC property %s to %s", prop, value)
+                    _LOGGER.debug("✅ Successfully set XCC property %s to %s", prop, value)
                     return True
                 else:
                     _LOGGER.error("❌ POST failed with status %d", resp.status)

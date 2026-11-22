@@ -40,7 +40,7 @@ async def async_setup_entry(
         if entity_type == "select" and coordinator.is_writable(prop):
             select = XCCSelect(coordinator, entity_data)
             selects.append(select)
-            _LOGGER.info("✅ Select: %s | Options:%d | Value:%s", select.name, len(select.options), select.current_option)
+            _LOGGER.debug("✅ Select: %s | Options:%d | Value:%s", select.name, len(select.options), select.current_option)
 
     if selects:
         async_add_entities(selects)
@@ -154,7 +154,7 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
             # Convert display option to XCC value
             value = self._option_to_value.get(option, option)
 
-            _LOGGER.info("📋 Setting select %s (%s) to %s (value: %s)", self.name, self._prop, option, value)
+            _LOGGER.debug("📋 Setting select %s (%s) to %s (value: %s)", self.name, self._prop, option, value)
 
             # Use coordinator's set_entity_value method
             success = await self.coordinator.async_set_entity_value(
@@ -163,7 +163,7 @@ class XCCSelect(CoordinatorEntity[XCCDataUpdateCoordinator], SelectEntity):
             )
 
             if success:
-                _LOGGER.info("Successfully set select %s to %s", self.name, option)
+                _LOGGER.debug("Successfully set select %s to %s", self.name, option)
                 # Request immediate data refresh to update state
                 await self.coordinator.async_request_refresh()
             else:

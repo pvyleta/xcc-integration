@@ -459,7 +459,7 @@ class XCCEntity(CoordinatorEntity[XCCDataUpdateCoordinator]):
                             if unit
                             else str(state_value)
                         )
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "📊 ENTITY VALUE UPDATE [%s]: %s = %s (sensor from coordinator data)",
                             timestamp,
                             self.entity_id,

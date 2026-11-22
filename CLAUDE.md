@@ -52,6 +52,7 @@ The same `tests/` dir is run by both CI jobs. HA-dependent tests guard themselve
 - **unique_id is always `f"{ip_address}_{base_entity_id}"`** (namespaces multiple controllers; `async_regenerate_entity_ids` parses it).
 - `_attr_has_entity_name = True` everywhere; `_attr_name` is set to `None` when the feature name equals the device name.
 - **Manual metadata fixes go through one table:** `DESCRIPTOR_OVERRIDES` in const.py = `STATUS_XML_DESCRIPTOR` + `HIDDEN_SWITCHES` + `HIDDEN_BINARY_SENSORS`, merged over descriptor output. Don't scatter type fixes elsewhere. To expose a hidden switch: find it in `hidden_switches_report.txt`, add to `HIDDEN_SWITCHES` (see [HIDDEN_SWITCHES.md](HIDDEN_SWITCHES.md)).
+- **Log levels:** INFO only for once-per-setup lines (discovery, descriptor load, "Added N entities", auth, entity_id migration). Anything per poll, per entity, per value update or per write is DEBUG: HA logs "Module ... is logging too frequently" past 200 INFO+ records per module per 5 min, and ~1370 entities plus write-triggered refreshes cross that easily. Never `_LOGGER.setLevel(...)` in a module: it overrides the user's `logger:` config.
 - Bilingual: configs carry `friendly_name` (CZ) + `friendly_name_en`; resolution order depends on `coordinator.language` (from `CONF_LANGUAGE`, default English).
 - Test imports: rely on `tests/conftest.py` paths; import as `from custom_components.xcc.<mod>` or `from xcc.<mod>`. Never `sys.path.insert` in a test.
 

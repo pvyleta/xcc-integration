@@ -24,7 +24,7 @@ async def async_setup_entry(
     """Set up XCC button entities from a config entry."""
     coordinator: XCCDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    _LOGGER.info("🚀 Setting up XCC button platform")
+    _LOGGER.debug("🚀 Setting up XCC button platform")
     
     # Create button entities immediately if data is available
     def _create_button_entities():
@@ -34,7 +34,7 @@ async def async_setup_entry(
             return []
         
         buttons_data = coordinator.data.get("buttons", {})
-        _LOGGER.info("📊 Found %d button entities in coordinator data", len(buttons_data))
+        _LOGGER.debug("📊 Found %d button entities in coordinator data", len(buttons_data))
         
         if not buttons_data:
             _LOGGER.warning("❌ No button data in coordinator - check entity processing")
@@ -49,7 +49,7 @@ async def async_setup_entry(
                 if entity_type == "button":
                     button = XCCButton(coordinator, entity_data)
                     buttons.append(button)
-                    _LOGGER.info("✅ Button: %s | Action:%s", button.name, entity_data.get("value", "N/A"))
+                    _LOGGER.debug("✅ Button: %s | Action:%s", button.name, entity_data.get("value", "N/A"))
                 else:
                     _LOGGER.debug("Skipping %s: type=%s", prop, entity_type)
             except Exception as e:
@@ -76,7 +76,7 @@ async def async_setup_entry(
         
         # Register the update listener
         coordinator.async_add_listener(_on_coordinator_update)
-        _LOGGER.info("📡 Registered listener for future coordinator updates")
+        _LOGGER.debug("📡 Registered listener for future coordinator updates")
 
 
 class XCCButton(XCCEntity, ButtonEntity):
@@ -109,7 +109,7 @@ class XCCButton(XCCEntity, ButtonEntity):
         """Handle the button press."""
         prop = self._entity_data.get("prop", "").upper()
         
-        _LOGGER.info("🔘 Button pressed: %s (prop: %s)", self.name, prop)
+        _LOGGER.debug("🔘 Button pressed: %s (prop: %s)", self.name, prop)
         
         try:
             # Use the button value if specified, otherwise use a default action value
@@ -118,7 +118,7 @@ class XCCButton(XCCEntity, ButtonEntity):
             success = await self.coordinator.async_set_value(prop, value)
             
             if success:
-                _LOGGER.info("✅ Button action successful: %s = %s", prop, value)
+                _LOGGER.debug("✅ Button action successful: %s = %s", prop, value)
                 # Trigger coordinator refresh to get updated state
                 await self.coordinator.async_request_refresh()
             else:
