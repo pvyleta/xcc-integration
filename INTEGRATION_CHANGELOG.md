@@ -2,6 +2,34 @@
 
 All notable changes to the XCC Heat Pump Controller Home Assistant integration.
 
+## [1.16.2] - 2026-11-22
+
+### 🐛 Bug Fixes
+
+#### **A slow page no longer takes the whole poll down**
+All data pages of a poll (21 on a three-circuit controller) shared one 10 s
+timeout, and a healthy poll already takes ~7 s. Any slowdown, typically during
+HA startup, cancelled the poll mid-way: every entity went `unavailable` and
+automations writing to XCC in that window failed. Each page now has its own
+10 s timeout and the whole poll a 60 s one. A page that overruns is reported
+as missing (it counts toward `binary_sensor.xcc_data_incomplete`) and the
+other pages' entities stay live. A poll that gets no page at all still marks
+the integration unavailable.
+
+#### **No more "logging too frequently" warnings**
+Per-entity value updates, per-poll summaries, per-entity setup lines and
+every step of a write logged at INFO, enough for HA to flag the sensor,
+switch, number and entity modules. They now log at DEBUG; enable debug
+logging for `custom_components.xcc` to see them. The sensor platform no
+longer forces its own logger to DEBUG, so the `logger:` config applies to it.
+
+#### **Device links ready for HA 2027.8**
+On HA 2026.8 and later, sub-devices (Hot Water System, Heating Circuits, ...)
+link to the controller with `via_device_id` instead of the deprecated
+`via_device`, which stops working in 2027.8 and logged a deprecation warning
+at every start. Older HA versions keep the previous link. Devices and their
+grouping are unchanged.
+
 ## [1.16.1] - 2026-11-21
 
 ### 🐛 Bug Fixes
