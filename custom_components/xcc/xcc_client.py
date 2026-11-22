@@ -945,13 +945,25 @@ class XCCClient:
             _LOGGER.warning("Timeout fetching %s", page)
             raise
 
-    async def fetch_pages(self, pages: list[str]) -> dict[str, str]:
-        """Fetch multiple pages with delays to avoid overwhelming XCC controller."""
+    async def fetch_pages(
+        self,
+        pages: list[str],
+        page_timeout: float | None = None,
+        total_timeout: float | None = None,
+    ) -> dict[str, str]:
+        """Fetch multiple pages with delays to avoid overwhelming XCC controller.
+
+        A page that overruns ``page_timeout``, or is not reached before
+        ``total_timeout`` runs out, maps to ``"Error: Timeout"``. Pages already
+        fetched are kept: one slow page must not discard the whole poll.
+        """
         import asyncio
         import logging
 
         _LOGGER = logging.getLogger(__name__)
 
+        loop = asyncio.get_running_loop()
+        deadline = None if total_timeout is None else loop.time() + total_timeout
         results = {}
         for i, page in enumerate(pages):
             try:
@@ -959,7 +971,20 @@ class XCCClient:
                 if i > 0:
                     await asyncio.sleep(0.2)  # 200ms delay between requests
 
-                results[page] = await self.fetch_page(page)
+                budget = page_timeout
+                if deadline is not None:
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        skipped = pages[i:]
+                        _LOGGER.warning(
+                            "Poll deadline of %ss reached; skipping %d page(s): %s",
+                            total_timeout, len(skipped), skipped,
+                        )
+                        results.update(dict.fromkeys(skipped, "Error: Timeout"))
+                        break
+                    budget = remaining if budget is None else min(budget, remaining)
+
+                results[page] = await asyncio.wait_for(self.fetch_page(page), budget)
                 _LOGGER.debug(
                     "Successfully fetched page %s (%d/%d)", page, i + 1, len(pages)
                 )

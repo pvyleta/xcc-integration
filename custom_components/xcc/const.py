@@ -37,7 +37,10 @@ CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
 DEFAULT_USERNAME: Final = "xcc"
 DEFAULT_PASSWORD: Final = "xcc"
 DEFAULT_SCAN_INTERVAL: Final = 120  # seconds (2 minutes)
-DEFAULT_TIMEOUT: Final = 10  # seconds
+DEFAULT_TIMEOUT: Final = 10  # seconds, per request
+# Whole data-page batch of one poll. A healthy ~21-page poll takes ~7 s and up
+# to ~3x that while HA is starting; stays under DEFAULT_SCAN_INTERVAL.
+DEFAULT_POLL_TIMEOUT: Final = 60  # seconds
 # Consecutive incomplete/failed polls before binary_sensor.xcc_data_incomplete
 # (+ a Repairs issue) fires. 5 x 120 s default scan ~= 10 min of missing data.
 DEFAULT_MISSING_PAGE_ALERT_POLLS: Final = 5

@@ -19,6 +19,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     DEFAULT_LANGUAGE,
     DEFAULT_MISSING_PAGE_ALERT_POLLS,
+    DEFAULT_POLL_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
     DESCRIPTOR_OVERRIDES,
@@ -231,10 +232,18 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug(
                 "Update triggered by: %s", getattr(self, "_update_source", "unknown")
             )
-            pages_data = await asyncio.wait_for(
-                client.fetch_pages(data_pages),
-                timeout=DEFAULT_TIMEOUT,
+            pages_data = await client.fetch_pages(
+                data_pages,
+                page_timeout=DEFAULT_TIMEOUT,
+                total_timeout=DEFAULT_POLL_TIMEOUT,
             )
+            missing_pages = missing_data_pages(data_pages, pages_data)
+            # Per-page timeouts never raise, so an unreachable controller would
+            # otherwise "succeed" with no entities instead of going unavailable.
+            if data_pages and len(missing_pages) == len(set(data_pages)):
+                raise UpdateFailed(
+                    f"no data page fetched ({len(missing_pages)} failed)"
+                )
             _LOGGER.debug(
                 "Successfully fetched %d pages from XCC controller", len(pages_data)
             )
@@ -273,7 +282,7 @@ class XCCDataUpdateCoordinator(DataUpdateCoordinator):
             # Record data-gathering health: which expected data pages failed to
             # fetch this poll (fetch_pages returns "Error:" for the ones it missed).
             self._note_gather_result(
-                missing_data_pages(data_pages, pages_data),
+                missing_pages,
                 poll_failed=False,
                 expected=len(data_pages),
             )
