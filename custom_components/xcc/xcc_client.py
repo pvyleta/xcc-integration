@@ -220,7 +220,30 @@ class XCCClient:
         Returns:
             True if the content appears to be a LOGIN page, False otherwise
         """
-        return "<LOGIN>" in content and "USER VALUE" in content
+        # Older firmware serves XML; newer firmware serves an HTML login form
+        # (also with HTTP 200 at protected data URLs). Do not treat an ordinary
+        # page mentioning login, or a settings/password-change form, as logout.
+        if re.search(r"<login\b", content, re.IGNORECASE):
+            return True
+        if not re.search(r"<(?:!doctype\s+html|html|form)\b", content, re.IGNORECASE):
+            return False
+        document = etree.HTML(content, parser=etree.HTMLParser(no_network=True))
+        if document is None:
+            return False
+        login_assets = any(
+            re.search(r"(?:^|/)login\.(?:js|css)(?:[?#]|$)", asset, re.IGNORECASE)
+            for asset in document.xpath("//script/@src | //link/@href")
+        )
+        for form in document.xpath("//form"):
+            has_password = any(
+                field.get("type", "").lower() == "password"
+                for field in form.xpath(".//input")
+            )
+            if has_password and (
+                form.get("id", "").lower() == "loginform" or login_assets
+            ):
+                return True
+        return False
 
     def _is_session_valid(self, status: int, content: str) -> bool:
         """Check if a response indicates a valid session.
@@ -248,7 +271,11 @@ class XCCClient:
         Returns:
             Decoded and sanitized content string
         """
-        content = raw_bytes.decode(encoding, errors="replace")
+        try:
+            content = raw_bytes.decode(encoding, errors="replace")
+        except (UnicodeError, LookupError):
+            # Keep codec fallback local to decoding, never to authentication.
+            content = raw_bytes.decode("utf-8", errors="replace")
         # Basic sanitization like the working script
         content = (
             content.replace("\u00a0", " ")
@@ -818,11 +845,11 @@ class XCCClient:
             )
 
             # Check both status and content like the working script
-            if resp.status != 200 or "<LOGIN>" in response_text:
+            if resp.status != 200 or self._is_login_page(response_text):
                 _LOGGER.error(
                     "Authentication failed: status=%d, contains_login=%s, content=%s",
                     resp.status,
-                    "<LOGIN>" in response_text,
+                    self._is_login_page(response_text),
                     response_text[:200],
                 )
                 raise Exception("Authentication failed")
@@ -936,8 +963,8 @@ class XCCClient:
                     # Re-raise timeout errors
                     raise
                 except Exception as e:
-                    _LOGGER.warning("Failed to decode %s with %s: %s", page, encoding, e)
-                    return raw_bytes.decode("utf-8", errors="replace")
+                    _LOGGER.warning("Failed to fetch authenticated page %s: %s", page, e)
+                    raise
         except asyncio.CancelledError:
             _LOGGER.warning("Request cancelled for %s", page)
             raise
